@@ -33,6 +33,22 @@ export const createTransaction = createAsyncThunk(
     }
 );
 
+// ✅ Delete Transaction
+export const deleteTransactionApi = createAsyncThunk(
+    "transactions/deleteTransaction",
+    async (id, thunkAPI) => {
+        try {
+            const token = localStorage.getItem("token");
+            await axiosClient.delete(`/transactions-delete/${id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            return id; // Returning deleted transaction ID
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error.response?.data || "Failed to delete transaction");
+        }
+    }
+);
+
 const transactionSlice = createSlice({
     name: "transactions",
     initialState: {
@@ -78,6 +94,20 @@ const transactionSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
                 state.success = false;
+            })
+
+            // ✅ Delete Transaction Cases
+            .addCase(deleteTransactionApi.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(deleteTransactionApi.fulfilled, (state, action) => {
+                state.loading = false;
+                state.transactions = state.transactions.filter(txn => txn.id !== action.payload); // ✅ Remove deleted transaction
+            })
+            .addCase(deleteTransactionApi.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             });
     },
 });

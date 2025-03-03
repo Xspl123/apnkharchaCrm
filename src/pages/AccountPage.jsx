@@ -1,48 +1,103 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { createAccountAPI, getAccountAPI, updateAccountAPI, deleteAccountAPI } from "../redux/features/accountSlice";
+import { 
+    createAccountAPI, 
+    getAccountAPI, 
+    updateAccountAPI, 
+    deleteAccountAPI 
+} from "../redux/features/accountSlice";
 import {
-    Container,
-    TextField,
-    Button,
-    Typography,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    CircularProgress,
-    Alert,
-    Box,
-    IconButton,
-    Snackbar,
-    Grid
+    Container, Typography, Table, TableHead, TableRow, TableCell,
+    TableBody, CircularProgress, Alert, Paper, TableContainer,
+    TextField, Button, Grid, Snackbar, IconButton, Box
 } from "@mui/material";
 import { Edit, Delete } from "@mui/icons-material";
 
 const AccountPage = () => {
     const dispatch = useDispatch();
-    const { list = [], loading, error } = useSelector((state) => state.accounts);
-
-    const [accountData, setAccountData] = useState({
-        account_name: "",
-        account_balance: "",
-    });
-    const [visibleAccounts, setVisibleAccounts] = useState(6);
-    const [editMode, setEditMode] = useState(false);
+    const [accountName, setAccountName] = useState("");
     const [editId, setEditId] = useState(null);
+    const [showForm, setShowForm] = useState(false);
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState("");
     const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+    const [visibleCount, setVisibleCount] = useState(5);
+
+    const { list: accounts, loading, error } = useSelector((state) => state.accounts);
 
     useEffect(() => {
         dispatch(getAccountAPI());
     }, [dispatch]);
 
-    const handleChange = (e) => {
-        setAccountData({ ...accountData, [e.target.name]: e.target.value });
+    const handleAddOrUpdateAccount = async (e) => {
+        e.preventDefault();
+        if (!accountName.trim()) {
+            showSnackbar("Account name is required!", "error");
+            return;
+        }
+
+        try {
+            if (editId) {
+                await dispatch(updateAccountAPI({ id: editId, account_name: accountName })).unwrap();
+                showSnackbar("Account updated successfully!", "success");
+            } else {
+                await dispatch(createAccountAPI({ account_name: accountName })).unwrap();
+                showSnackbar("Account added successfully!", "success");
+            }
+            resetForm();
+            dispatch(getAccountAPI());
+        } catch (error) {
+            showSnackbar(error?.message || "Failed to process account!", "error");
+        }
+    };
+
+    const handleEdit = (account) => {
+        setAccountName(account.account_name);
+        setEditId(account.id);
+        setShowForm(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm("Are you sure you want to delete this account?")) {
+            try {
+                await dispatch(deleteAccountAPI(id)).unwrap();
+                setSnackbarMessage("Account deleted successfully!");
+                setSnackbarSeverity("success");
+                dispatch(getAccountAPI());
+            } catch (error) {
+                console.error("Delete Error:", error); // Debugging: Print full error in console
+    
+                let errorMessage = "Failed to delete account!";
+                
+                // Handle different possible error structures
+                if (typeof error === "string") {
+                    errorMessage = error;
+                } else if (error?.message) {
+                    errorMessage = error.message;
+                } else if (error?.error) {
+                    errorMessage = error.error;
+                } else if (error?.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                }
+    
+                // Check for specific transaction-related error
+                if (errorMessage.includes("associated transactions")) {
+                    setSnackbarMessage("Cannot delete this account because it has transactions. Delete the transactions first.");
+                } else {
+                    setSnackbarMessage(errorMessage);
+                }
+                setSnackbarSeverity("error");
+            }
+            setOpenSnackbar(true);
+        }
+    };
+    
+    
+
+    const resetForm = () => {
+        setAccountName("");
+        setEditId(null);
+        setShowForm(false);
     };
 
     const showSnackbar = (message, severity) => {
@@ -51,144 +106,77 @@ const AccountPage = () => {
         setOpenSnackbar(true);
     };
 
-    const handleSubmit = useCallback(
-        (e) => {
-            e.preventDefault();
-            if (!accountData.account_name || !accountData.account_balance) return;
-
-            if (editMode) {
-                dispatch(updateAccountAPI({ id: editId, ...accountData })).then(() => {
-                    setEditMode(false);
-                    setEditId(null);
-                    setAccountData({ account_name: "", account_balance: "" });
-                    showSnackbar("Account updated successfully", "success");
-                });
-            } else {
-                dispatch(createAccountAPI(accountData)).then(() => {
-                    setAccountData({ account_name: "", account_balance: "" });
-                    showSnackbar("Account created successfully", "success");
-                });
-            }
-        },
-        [dispatch, editMode, editId, accountData]
-    );
-
-    const handleEdit = useCallback((account) => {
-        setAccountData({ account_name: account.account_name, account_balance: account.account_balance });
-        setEditMode(true);
-        setEditId(account.id);
-    }, []);
-
-    const handleDelete = async (id) => {
-        if (window.confirm("Are you sure you want to delete this account?")) {
-            try {
-                await dispatch(deleteAccountAPI(id)).unwrap();
-                showSnackbar("Account deleted successfully", "success");
-            } catch (error) {
-                showSnackbar(error || "Failed to delete account", "error");
-            }
-        }
-    };
-
-    const displayedAccounts = useMemo(() => list.slice(0, visibleAccounts), [list, visibleAccounts]);
-
     return (
-        <Container maxWidth="lg">
-            <Typography variant="h4" align="center" gutterBottom>
-                Manage Accounts
+        <Container>
+            <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: "bold", color: "#1976d2" }}>
+                Accounts
             </Typography>
 
-            {/* ✅ Grid Layout for Side-by-Side Form & Table */}
-            <Grid container spacing={3}>
-                {/* ✅ Form Section */}
+            <Button variant="contained" color="primary" onClick={() => setShowForm(!showForm)} sx={{ mb: 2 }}>
+                {showForm ? "Cancel" : "Add Account"}
+            </Button>
+
+            {showForm && (
                 <Grid item xs={12} md={6}>
-                    <Paper sx={{ padding: 3 }}>
-                        <Typography variant="h6" gutterBottom>{editMode ? "Edit Account" : "Create New Account"}</Typography>
-                        <form onSubmit={handleSubmit}>
-                            <TextField
-                                label="Account Name"
-                                name="account_name"
-                                value={accountData.account_name}
-                                onChange={handleChange}
-                                fullWidth
-                                margin="normal"
-                                required
-                            />
-                            <TextField
-                                label="Balance"
-                                name="account_balance"
-                                type="number"
-                                value={accountData.account_balance}
-                                onChange={handleChange}
-                                fullWidth
-                                margin="normal"
-                                required
-                            />
-                            <Button type="submit" variant="contained" color="primary" fullWidth>
-                                {editMode ? "Update Account" : "Create Account"}
+                    <Box p={4} sx={{ border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#fff", boxShadow: 2, maxWidth: "500px", mx: "auto" }}>
+                        <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold", textAlign: "center" }}>
+                            {editId ? "Edit Account" : "Add New Account"}
+                        </Typography>
+                        <form onSubmit={handleAddOrUpdateAccount}>
+                            <TextField fullWidth label="Account Name" variant="outlined" value={accountName} onChange={(e) => setAccountName(e.target.value)} sx={{ mb: 2 }} />
+                            <Button variant="contained" color="primary" type="submit" fullWidth sx={{ py: 1.5, fontSize: "16px" }}>
+                                {editId ? "Update Account" : "Add Account"}
                             </Button>
                         </form>
-                    </Paper>
+                    </Box>
                 </Grid>
+            )}
 
-                {/* ✅ Table Section */}
-                <Grid item xs={12} md={6}>
-                    <Paper sx={{ padding: 3 }}>
-                        <Typography variant="h6" gutterBottom>Account List</Typography>
-                        {loading ? (
-                            <CircularProgress />
-                        ) : error ? (
-                            <Alert severity="error">{error}</Alert>
-                        ) : (
-                            <TableContainer>
-                                <Table>
-                                    <TableHead>
-                                        <TableRow>
-                                            <TableCell>#</TableCell>
-                                            <TableCell>Account Name</TableCell>
-                                            <TableCell>Balance</TableCell>
-                                            <TableCell>Actions</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {displayedAccounts.map((account, index) => (
-                                            <TableRow key={account.id}>
-                                                <TableCell>{index + 1}</TableCell>
-                                                <TableCell>{account.account_name}</TableCell>
-                                                <TableCell>₹ {account.account_balance}</TableCell>
-                                                <TableCell>
-                                                    <IconButton color="primary" onClick={() => handleEdit(account)}>
-                                                        <Edit />
-                                                    </IconButton>
-                                                    <IconButton color="error" onClick={() => handleDelete(account.id)}>
-                                                        <Delete />
-                                                    </IconButton>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        )}
+            {loading ? (
+                <CircularProgress />
+            ) : error ? (
+                <Alert severity="error">{error.includes("Forbidden") ? "Access Denied: Admin access required" : error}</Alert>
+            ) : accounts?.length === 0 ? (
+                <Alert severity="info">No accounts found.</Alert>
+            ) : (
+                <>
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead>
+                                <TableRow sx={{ backgroundColor: "#1976d2" }}>
+                                    <TableCell sx={{ color: "white" }}><strong>ID</strong></TableCell>
+                                    <TableCell sx={{ color: "white" }}><strong>Account Name</strong></TableCell>
+                                    <TableCell sx={{ color: "white" }}><strong>Actions</strong></TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {accounts.slice(0, visibleCount).map((item, index) => (
+                                    <TableRow key={item?.id || index}>
+                                        <TableCell>{item?.id ?? "N/A"}</TableCell>
+                                        <TableCell>{item?.account_name ?? "Unnamed"}</TableCell>
+                                        <TableCell>
+                                            <IconButton color="primary" onClick={() => handleEdit(item)}>
+                                                <Edit />
+                                            </IconButton>
+                                            <IconButton color="error" onClick={() => handleDelete(item?.id)}>
+                                                <Delete />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
 
-                        {/* ✅ Load More Button */}
-                        {list.length > visibleAccounts && (
-                            <Box textAlign="center" mt={2}>
-                                <Button
-                                    variant="contained"
-                                    color="secondary"
-                                    onClick={() => setVisibleAccounts(visibleAccounts + 6)}
-                                >
-                                    Load More
-                                </Button>
-                            </Box>
-                        )}
-                    </Paper>
-                </Grid>
-            </Grid>
+                    {visibleCount < accounts.length && (
+                        <Button variant="contained" color="secondary" onClick={() => setVisibleCount(visibleCount + 5)} sx={{ mt: 2 }}>
+                            Load More
+                        </Button>
+                    )}
+                </>
+            )}
 
-            {/* ✅ Snackbar for notifications */}
-            <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
+            <Snackbar open={openSnackbar} autoHideDuration={5000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
                 <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} variant="filled">
                     {snackbarMessage}
                 </Alert>

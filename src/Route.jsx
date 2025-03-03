@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import CategoryPage from "./pages/CategoryCreate"; // ✅ Import Category Page
 import Accountpage from "./pages/AccountPage"; // ✅ Import Category Page
 import Transactions from "./pages/Transactions";
+import BudgetPage from "./pages/BudgetPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { useSelector } from "react-redux";
@@ -40,6 +41,7 @@ const AppRoutes = () => {
                                 <Route path="categories" element={<CategoryPage />} />
                                 <Route path="accounts" element={<Accountpage />} />
                                 <Route path="transactions" element={<Transactions />} /> 
+                                <Route path="budgets" element={<BudgetPage />} /> 
                             </Routes>
                         </Layout>
                     }

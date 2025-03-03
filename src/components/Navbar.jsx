@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { useState, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../redux/features/authSlice";
 import axiosClient from "../api/axiosClient"; 
@@ -11,12 +11,15 @@ import {
 } from "@mui/material";
 import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess } from "@mui/icons-material";
 
-const Navbar = ({ toggleSidebar,themeColor, setThemeColor }) => {
+const Navbar = ({ toggleSidebar, themeColor, setThemeColor }) => {
     const [profileAnchorEl, setProfileAnchorEl] = useState(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+    // Get user data from Redux
+    const user = useSelector((state) => state.auth.user);
 
     const handleProfileMenuOpen = useCallback((event) => {
         setProfileAnchorEl(event.currentTarget);
@@ -26,21 +29,19 @@ const Navbar = ({ toggleSidebar,themeColor, setThemeColor }) => {
         setProfileAnchorEl(null);
     }, []);
 
-    // ✅ Logout Function
     const handleLogout = async () => {
         try {
-            await axiosClient.post("/users/logout"); // ✅ Call API
+            await axiosClient.post("/users/logout");
 
-            dispatch(logout()); // ✅ Clear Redux State & LocalStorage
-            navigate("/login"); // ✅ Redirect to Login
+            dispatch(logout());
+            navigate("/login");
         } catch (error) {
             console.error("Logout failed:", error);
         } finally {
-            handleProfileMenuClose(); // ✅ Close Profile Menu
+            handleProfileMenuClose();
         }
     };
 
-    // ✅ Theme Change
     const changeTheme = useCallback((color) => {
         setThemeColor(color);
         handleProfileMenuClose();
@@ -59,15 +60,20 @@ const Navbar = ({ toggleSidebar,themeColor, setThemeColor }) => {
 
                 {/* Profile Avatar */}
                 <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0 }}>
-                    <Avatar alt="Profile" src="/profile.jpg" />
+                    <Avatar alt={user?.name || "User"} src="/profile.jpg" />
                 </IconButton>
 
                 {/* Profile Menu */}
                 <Menu anchorEl={profileAnchorEl} open={Boolean(profileAnchorEl)} onClose={handleProfileMenuClose}>
+                    <MenuItem disabled>
+                        <Typography variant="body1">
+                            Welcome to, <strong>{user?.name || "User"}</strong>
+                        </Typography>
+                    </MenuItem>
                     <MenuItem onClick={handleProfileMenuClose}>Reset Password</MenuItem>
                     <MenuItem onClick={handleProfileMenuClose}>Profile</MenuItem>
-                    <MenuItem onClick={handleLogout}>Logout</MenuItem> {/* ✅ Updated Logout */}
-                    
+                    <MenuItem onClick={handleLogout}>Logout</MenuItem>
+
                     {/* Theme Change Menu */}
                     <MenuItem onClick={() => setSettingsOpen(!settingsOpen)}>
                         <ListItemIcon><Settings /></ListItemIcon>
@@ -98,11 +104,9 @@ const Navbar = ({ toggleSidebar,themeColor, setThemeColor }) => {
 };
 
 Navbar.propTypes = {
-    sidebarOpen: PropTypes.string.isRequired,
-    toggleSidebar: PropTypes.string.isRequired,
+    toggleSidebar: PropTypes.func.isRequired,
     themeColor: PropTypes.string.isRequired,
-    setThemeColor: PropTypes.string.isRequired,
-    children: PropTypes.string.isRequired,
+    setThemeColor: PropTypes.func.isRequired,
 };
 
 export default Navbar;

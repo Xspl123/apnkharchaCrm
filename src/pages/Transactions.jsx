@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchTransactions, createTransaction } from "../redux/features/transactionSlice";
+import { fetchTransactions, createTransaction,deleteTransactionApi } from "../redux/features/transactionSlice";
 import { getCategoryAPI } from "../redux/features/categorySlice";
 import { getAccountAPI } from "../redux/features/accountSlice";
 import {
@@ -104,7 +104,16 @@ const Transactions = () => {
         };
     }).filter((data) => data.value > 0);
 
-
+    const handleDelete = (id) => {
+        dispatch(deleteTransactionApi(id))
+            .unwrap()
+            .then(() => {
+                setSnackbar({ open: true, message: "Transaction deleted successfully!", severity: "success" });
+            })
+            .catch(() => {
+                setSnackbar({ open: true, message: "Failed to delete transaction!", severity: "error" });
+            });
+    };
 
     return (
         <Container>
@@ -247,43 +256,41 @@ const Transactions = () => {
 
             {/* Animated Pie Chart */}
             <Paper sx={{ padding: 3, backgroundColor: "transparent", boxShadow: "none" }}>
-    <Typography variant="h6" align="center">Category-wise Expenses</Typography>
-    {categoryData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={400}>
-            <PieChart>
-                <Pie
-                    data={categoryData}
-                    cx="50%" cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={140} // Increased outer radius
-                    innerRadius={60}  // Added inner radius for donut effect
-                    dataKey="value"
-                    animationDuration={800}
-                    isAnimationActive
-                >
-                    {categoryData.map((entry, index) => (
-                        <Cell 
-                            key={`cell-${index}`} 
-                            fill={entry.color}
-                            stroke="#fff" 
-                            strokeWidth={2} // White stroke for a polished look
-                            style={{ transition: "transform 0.3s ease-in-out" }} 
-                            onMouseEnter={(e) => e.target.style.transform = "scale(1.1)"} 
-                            onMouseLeave={(e) => e.target.style.transform = "scale(1)"} 
-                        />
-                    ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: "rgba(238, 242, 243, 0.8)", color: "#fff", borderRadius: "8px" }} />
-                <Legend />
-            </PieChart>
-        </ResponsiveContainer>
-    ) : (
-        <Typography align="center" color="textSecondary">No data available</Typography>
-    )}
-</Paper>
-
-
+                <Typography variant="h6" align="center">Category-wise Expenses</Typography>
+                {categoryData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                        <PieChart>
+                            <Pie
+                                data={categoryData}
+                                cx="50%" cy="50%"
+                                labelLine={false}
+                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                outerRadius={140} // Increased outer radius
+                                innerRadius={60}  // Added inner radius for donut effect
+                                dataKey="value"
+                                animationDuration={800}
+                                isAnimationActive
+                            >
+                                {categoryData.map((entry, index) => (
+                                    <Cell 
+                                        key={`cell-${index}`} 
+                                        fill={entry.color}
+                                        stroke="#fff" 
+                                        strokeWidth={2} // White stroke for a polished look
+                                        style={{ transition: "transform 0.3s ease-in-out" }} 
+                                        onMouseEnter={(e) => e.target.style.transform = "scale(1.1)"} 
+                                        onMouseLeave={(e) => e.target.style.transform = "scale(1)"} 
+                                    />
+                                ))}
+                            </Pie>
+                            <Tooltip contentStyle={{ backgroundColor: "rgba(238, 242, 243, 0.8)", color: "#fff", borderRadius: "8px" }} />
+                            <Legend />
+                        </PieChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <Typography align="center" color="textSecondary">No data available</Typography>
+                )}
+            </Paper>
 
             <Snackbar
                 open={snackbar.open}

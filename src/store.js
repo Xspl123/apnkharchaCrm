@@ -3,6 +3,7 @@ import authReducer from "./redux/features/authSlice";
 import categoryReducer from "./redux/features/categorySlice";
 import accountsReducer from "./redux/features/accountSlice";
 import transactionReducer from "./redux/features/transactionSlice";
+import budgetReducer from "./redux/features/budgetSlice";
 
 const store = configureStore({
     reducer: {
@@ -10,6 +11,7 @@ const store = configureStore({
         category:categoryReducer,
         accounts:accountsReducer,
         transactions: transactionReducer,
+        budget:budgetReducer
 
     },
 });
