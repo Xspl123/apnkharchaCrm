@@ -31,23 +31,29 @@ const AccountPage = () => {
 
     const handleAddOrUpdateAccount = async (e) => {
         e.preventDefault();
+        
         if (!accountName.trim()) {
             showSnackbar("Account name is required!", "error");
             return;
         }
-
+    
         try {
+            let message = "";
+            
             if (editId) {
                 await dispatch(updateAccountAPI({ id: editId, account_name: accountName })).unwrap();
-                showSnackbar("Account updated successfully!", "success");
+                message = "Account updated successfully!";
             } else {
                 await dispatch(createAccountAPI({ account_name: accountName })).unwrap();
-                showSnackbar("Account added successfully!", "success");
+                message = "Account added successfully!";
             }
+    
+            showSnackbar(message, "success");
             resetForm();
-            dispatch(getAccountAPI());
+            dispatch(getAccountAPI()); // ✅ Refresh list only after success
+    
         } catch (error) {
-            showSnackbar(error?.message || "Failed to process account!", "error");
+            showDynamicErrors(error);
         }
     };
 
@@ -61,38 +67,13 @@ const AccountPage = () => {
         if (window.confirm("Are you sure you want to delete this account?")) {
             try {
                 await dispatch(deleteAccountAPI(id)).unwrap();
-                setSnackbarMessage("Account deleted successfully!");
-                setSnackbarSeverity("success");
+                showSnackbar("Account deleted successfully!", "success");
                 dispatch(getAccountAPI());
             } catch (error) {
-                console.error("Delete Error:", error); // Debugging: Print full error in console
-    
-                let errorMessage = "Failed to delete account!";
-                
-                // Handle different possible error structures
-                if (typeof error === "string") {
-                    errorMessage = error;
-                } else if (error?.message) {
-                    errorMessage = error.message;
-                } else if (error?.error) {
-                    errorMessage = error.error;
-                } else if (error?.response?.data?.message) {
-                    errorMessage = error.response.data.message;
-                }
-    
-                // Check for specific transaction-related error
-                if (errorMessage.includes("associated transactions")) {
-                    setSnackbarMessage("Cannot delete this account because it has transactions. Delete the transactions first.");
-                } else {
-                    setSnackbarMessage(errorMessage);
-                }
-                setSnackbarSeverity("error");
+                showDynamicErrors(error);
             }
-            setOpenSnackbar(true);
         }
     };
-    
-    
 
     const resetForm = () => {
         setAccountName("");
@@ -104,6 +85,15 @@ const AccountPage = () => {
         setSnackbarMessage(message);
         setSnackbarSeverity(severity);
         setOpenSnackbar(true);
+    };
+
+    // ✅ Function to handle dynamic multiple errors
+    const showDynamicErrors = (error) => {
+        if (Array.isArray(error)) {
+            error.forEach(errMsg => showSnackbar(errMsg, "error"));
+        } else {
+            showSnackbar(error.message || "An unknown error occurred!", "error");
+        }
     };
 
     return (
@@ -135,7 +125,7 @@ const AccountPage = () => {
             {loading ? (
                 <CircularProgress />
             ) : error ? (
-                <Alert severity="error">{error.includes("Forbidden") ? "Access Denied: Admin access required" : error}</Alert>
+                <Alert severity="error">{error}</Alert>
             ) : accounts?.length === 0 ? (
                 <Alert severity="info">No accounts found.</Alert>
             ) : (

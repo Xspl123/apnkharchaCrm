@@ -1,10 +1,10 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosClient from "../../api/axiosClient";
 
-// ✅ Token helper function
+// ✅ Helper function to get token
 const getToken = () => localStorage.getItem("token");
 
-// ✅ Fetch Accounts (Prevent Unnecessary Calls)
+// ✅ Fetch Accounts (Avoid Duplicate Calls)
 export const getAccountAPI = createAsyncThunk(
     "accounts/fetch",
     async (_, { getState, rejectWithValue }) => {
@@ -18,12 +18,12 @@ export const getAccountAPI = createAsyncThunk(
             });
             return response.data;
         } catch (error) {
-            return rejectWithValue(error.response?.data || error.message);
+            return rejectWithValue(error.response?.data?.error?.message || error.message);
         }
     }
 );
 
-// ✅ Create Account (Optimized UI Update)
+// ✅ Create Account (Handles Multiple Errors)
 export const createAccountAPI = createAsyncThunk(
     "accounts/create",
     async (accountData, { rejectWithValue }) => {
@@ -34,12 +34,13 @@ export const createAccountAPI = createAsyncThunk(
             });
             return response.data.account;
         } catch (error) {
-            return rejectWithValue(error.response?.data || error.message);
+            const errorMessages = error.response?.data?.errors?.map(err => err.msg) || ["Something went wrong!"];
+            return rejectWithValue(errorMessages);
         }
     }
 );
 
-// ✅ Update Account (Only Update in State)
+// ✅ Update Account (Handles Multiple Errors)
 export const updateAccountAPI = createAsyncThunk(
     "accounts/update",
     async ({ id, account_name, account_balance }, { rejectWithValue }) => {
@@ -49,14 +50,15 @@ export const updateAccountAPI = createAsyncThunk(
                 { account_name, account_balance },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            return { id, account_name, account_balance }; // Return only updated data
+            return { id, account_name, account_balance };
         } catch (error) {
-            return rejectWithValue(error.response?.data || error.message);
+            const errorMessages = error.response?.data?.errors?.map(err => err.msg) || ["Something went wrong!"];
+            return rejectWithValue(errorMessages);
         }
     }
 );
 
-// ✅ Delete Account (Remove from Redux Store)
+// ✅ Delete Account
 export const deleteAccountAPI = createAsyncThunk(
     "accounts/delete",
     async (id, { rejectWithValue }) => {
@@ -65,9 +67,9 @@ export const deleteAccountAPI = createAsyncThunk(
             await axiosClient.delete(`/accounts-delete/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            return id; // Return deleted account ID to remove from state
+            return id;
         } catch (error) {
-            return rejectWithValue(error.response?.data || error.message);
+            return rejectWithValue(error.response?.data?.error || error.message);
         }
     }
 );
@@ -90,7 +92,7 @@ const accountSlice = createSlice({
             })
             .addCase(getAccountAPI.fulfilled, (state, action) => {
                 state.loading = false;
-                if (action.payload) state.list = action.payload.accounts; // ✅ Update state only if data exists
+                if (action.payload) state.list = action.payload.accounts;
             })
             .addCase(getAccountAPI.rejected, (state, action) => {
                 state.loading = false;
@@ -100,41 +102,48 @@ const accountSlice = createSlice({
             // ✅ Create Account
             .addCase(createAccountAPI.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(createAccountAPI.fulfilled, (state, action) => {
                 state.loading = false;
-                state.list = [...state.list, action.payload]; // ✅ Push new account in list without re-fetching all
+                state.list = [...state.list, action.payload];
             })
             .addCase(createAccountAPI.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload;
+                state.error = action.payload; // Array of errors
             })
 
-            // ✅ Update Account (Prevent Full Re-render)
+            // ✅ Update Account
             .addCase(updateAccountAPI.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(updateAccountAPI.fulfilled, (state, action) => {
                 state.loading = false;
-                const index = state.list.findIndex((acc) => acc.id === action.payload.id);
-                if (index !== -1) {
-                    state.list[index] = { ...state.list[index], ...action.payload };
+                state.error = null;
+                
+                const updatedIndex = state.list.findIndex(acc => acc.id === action.payload.id);
+                if (updatedIndex !== -1) {
+                    state.list[updatedIndex] = action.payload;
                 }
             })
             .addCase(updateAccountAPI.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload;
+                state.error = action.payload; // Array of errors
             })
 
-            // ✅ Delete Account (Remove from State)
+            // ✅ Delete Account
             .addCase(deleteAccountAPI.pending, (state) => {
                 state.loading = true;
             })
             .addCase(deleteAccountAPI.fulfilled, (state, action) => {
                 state.loading = false;
-                state.list = state.list.filter((account) => account.id !== action.meta.arg);
+                state.list = state.list.filter((account) => account.id !== action.payload);
+            })
+            .addCase(deleteAccountAPI.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             });
-            
     },
 });
 

@@ -28,7 +28,7 @@ export const createTransaction = createAsyncThunk(
             });
             return response.data.transaction;
         } catch (error) {
-            return thunkAPI.rejectWithValue(error.response?.data || "Failed to create transaction");
+            return thunkAPI.rejectWithValue(error.response?.data.error || "Failed to create transaction");
         }
     }
 );
