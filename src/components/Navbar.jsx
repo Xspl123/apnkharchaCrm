@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../redux/features/authSlice";
@@ -14,12 +14,22 @@ import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess } from "@mu
 const Navbar = ({ toggleSidebar, themeColor, setThemeColor }) => {
     const [profileAnchorEl, setProfileAnchorEl] = useState(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    
+    const [currentUser, setCurrentUser] = useState(null);
+
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     // Get user data from Redux
     const user = useSelector((state) => state.auth.user);
+
+    // Update current user every second
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentUser(user);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [user]);
 
     const handleProfileMenuOpen = useCallback((event) => {
         setProfileAnchorEl(event.currentTarget);
@@ -60,14 +70,14 @@ const Navbar = ({ toggleSidebar, themeColor, setThemeColor }) => {
 
                 {/* Profile Avatar */}
                 <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0 }}>
-                    <Avatar alt={user?.name || "User"} src="/profile.jpg" />
+                    <Avatar alt={currentUser?.name || "User"} src="/profile.jpg" />
                 </IconButton>
 
                 {/* Profile Menu */}
                 <Menu anchorEl={profileAnchorEl} open={Boolean(profileAnchorEl)} onClose={handleProfileMenuClose}>
                     <MenuItem disabled>
                         <Typography variant="body1">
-                            Welcome to, <strong>{user?.name || "User"}</strong>
+                            Welcome to, <strong>{currentUser?.name || "User"}</strong>
                         </Typography>
                     </MenuItem>
                     <MenuItem onClick={handleProfileMenuClose}>Reset Password</MenuItem>
