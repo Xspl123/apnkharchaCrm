@@ -10,7 +10,7 @@ export const createCategoryAPI = createAsyncThunk(
     async (categoryData, { rejectWithValue }) => {
         try {
             const token = getToken();
-            const response = await axiosClient.post("/category-create", categoryData, {
+            const response = await axiosClient.post("/categories/create", categoryData, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return response.data;
@@ -29,8 +29,10 @@ export const getCategoryAPI = createAsyncThunk(
             const response = await axiosClient.get("/categories", {
                 headers: { Authorization: `Bearer ${token}` },
             });
+            console.log("API Response testing:", response.data.data); // ✅ Debugging ke liye console log
             return response.data;
         } catch (error) {
+            console.error("API Fetch Error:", error);
             return rejectWithValue(error.response?.data || error.message);
         }
     }
@@ -42,7 +44,7 @@ export const updateCategoryAPI = createAsyncThunk(
     async ({ id, name, type }, { rejectWithValue }) => {
         try {
             const token = getToken();
-            const response = await axiosClient.put(`/category-update/${id}`, { name, type }, {
+            const response = await axiosClient.put(`/categories/${id}`, { name, type }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return response.data;
@@ -58,7 +60,7 @@ export const deleteCategoryAPI = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const token = getToken();
-            await axiosClient.delete(`/category-delete/${id}`, {
+            await axiosClient.delete(`/categories/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return id;
@@ -71,7 +73,8 @@ export const deleteCategoryAPI = createAsyncThunk(
 const categorySlice = createSlice({
     name: "categories",
     initialState: {
-        list: [],
+        list: [], // ✅ `list` me categories store ho rahi hai
+        pagination: {}, // ✅ Pagination Data Store Karne Ke Liye
         loading: false,
         error: null,
     },
@@ -79,46 +82,26 @@ const categorySlice = createSlice({
 
     extraReducers: (builder) => {
         builder
-            // 🚀 Get Categories API
             .addCase(getCategoryAPI.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(getCategoryAPI.fulfilled, (state, action) => {
+                console.log("Fetched Categories:", action.payload?.data); // ✅ Debugging ke liye log
                 state.loading = false;
-                
-                state.list = action.payload.categories || []; // ✅ Ensure categories exist
+                state.list = action.payload.data; // ✅ Yaha `list` me categories assign karni thi
+                state.pagination = {
+                    currentPage: action.payload.current_page,
+                    lastPage: action.payload.last_page,
+                    total: action.payload.total,
+                    perPage: action.payload.per_page,
+                };
             })
             .addCase(getCategoryAPI.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload || "Failed to fetch categories";
-            })
-    
-            // 🚀 Create Category API
-            .addCase(createCategoryAPI.fulfilled, (state, action) => {
-                if (action.payload && action.payload.category) {
-                    state.list.push(action.payload.category);
-                } else {
-                    console.error("Invalid response for createCategoryAPI:", action.payload);
-                }
-            })
-    
-            // 🚀 Update Category API
-            .addCase(updateCategoryAPI.fulfilled, (state, action) => {
-                if (!action.payload || !action.payload.category) {
-                    console.error("Invalid update response:", action.payload);
-                    return;
-                }
-
-                state.list = state.list.map((cat) =>
-                    cat.id === action.payload.category.id ? action.payload.category : cat
-                );
-            })
-    
-            // 🚀 Delete Category API
-            .addCase(deleteCategoryAPI.fulfilled, (state, action) => {
-                state.list = state.list.filter((cat) => cat.id !== action.payload);
+                state.error = action.payload;
             });
-    } // ❌ Removed incorrect semicolon here
+    }
 });
 
 export default categorySlice.reducer;

@@ -6,7 +6,7 @@ import { getUserAPI } from "../redux/features/authSlice";
 import { fetchTransactions } from "../redux/features/transactionSlice";
 
 import {
-    Box, Grid, Paper, Typography, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+    Box, Grid, Paper, Typography, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField
 } from "@mui/material";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, BarChart, Bar } from "recharts";
 
@@ -22,7 +22,7 @@ const Dashboard = () => {
     const { list: accounts = [], loading: accountLoading } = useSelector((state) => state.accounts);
     const { transactions = [], loading: transactionLoading } = useSelector((state) => state.transactions);
     const loggedInUser = useSelector((state) => state.auth.user);
-    
+
     useEffect(() => {
         dispatch(fetchTransactions());
         dispatch(getCategoryAPI());
@@ -34,11 +34,11 @@ const Dashboard = () => {
     const totalUsers = users.length;
     const totalAccounts = accounts.length;
     const totalTransactions = transactions.length;
-
+    const [search, setSearch] = useState("");
     const userTransactions = transactions.filter((t) => t.user_id === loggedInUser?.id);
     const totalAmountSpent = userTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
-    // 🟢 Category-wise Expense Data for Pie Chart
+    // 🟢 Category-wise Expense Data for Line Chart
     const categoryData = categories.map((category, index) => {
         const totalAmount = userTransactions
             .filter((t) => t.category_id === category.id)
@@ -55,19 +55,23 @@ const Dashboard = () => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthlyExpenseData = months.map((month, index) => {
         const totalAmount = userTransactions
-            .filter(t => new Date(t.date).getMonth() === index)
+            .filter(t => new Date(t.transaction_date).getMonth() === index)
             .reduce((sum, t) => sum + parseFloat(t.amount), 0);
         return { month, total: totalAmount };
     });
 
-    // 🟢 Last 10 Transactions Table Data
+    // 🟢 Last 10 Transactions with Search Filter
     const last10Transactions = userTransactions
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date))
         .slice(0, 10)
         .map(transaction => ({
             ...transaction,
             categoryName: categories.find(category => category.id === transaction.category_id)?.name || "Unknown"
-        }));
+        }))
+        .filter(t =>
+            t.categoryName.toLowerCase().includes(search.toLowerCase()) ||
+            t.amount.toString().includes(search)
+        );
 
     return (
         <Box sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, backgroundColor: "#f4f4f4", minHeight: "100vh" }}>
@@ -135,27 +139,46 @@ const Dashboard = () => {
                 </Grid>
             </Grid>
 
-            {/* Last 10 Transactions Table */}
             <Box sx={{ mt: 4 }}>
                 <Paper sx={{ p: 2, backgroundColor: "#FFF" }}>
                     <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>Last 10 Transactions</Typography>
-                    <TableContainer sx={{ maxHeight: 400, overflowY: "auto", borderRadius: "10px", border: "2px solid #333", boxShadow: "0px 4px 10px rgba(0,0,0,0.2)" }}>
+
+                    {/* 🔍 Search Box */}
+                    <TextField
+                        label="Search Transactions"
+                        variant="outlined"
+                        fullWidth
+                        sx={{ mb: 2 }}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+
+                    {/* Transactions Table */}
+                    <TableContainer sx={{ maxHeight: 400, overflowY: "auto", borderRadius: "10px", border: "2px solid #333", boxShadow: "0px 4px 10px rgba(141, 230, 39, 0.2)" }}>
                         <Table stickyHeader>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Date</TableCell>
-                                    <TableCell>Category</TableCell>
-                                    <TableCell>Amount (₹)</TableCell>
+                                    <TableCell sx={{color:"white",backgroundColor:"ActiveBorder",textAlign: "center"}}>Date</TableCell>
+                                    <TableCell sx={{color:"white",backgroundColor:"ActiveBorder",textAlign: "center"}}>Category</TableCell>
+                                    <TableCell sx={{color:"white",backgroundColor:"ActiveBorder",textAlign: "center"}}>Amount (₹)</TableCell>
+                                    <TableCell sx={{color:"white",backgroundColor:"ActiveBorder",textAlign: "center"}}>Description</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {last10Transactions.map((t) => (
-                                    <TableRow key={t.id}>
-                                        <TableCell>{new Date(t.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{t.categoryName}</TableCell>
-                                        <TableCell>₹{t.amount}</TableCell>
+                                {last10Transactions.length > 0 ? (
+                                    last10Transactions.map((t) => (
+                                        <TableRow key={t.id}>
+                                            <TableCell sx={{textAlign: "center"}}>{new Date(t.transaction_date).toLocaleDateString()}</TableCell>
+                                            <TableCell sx={{textAlign: "center"}}>{t.categoryName}</TableCell>
+                                            <TableCell sx={{textAlign: "center"}}>₹{t.amount}</TableCell>
+                                            <TableCell sx={{textAlign: "center"}}>{t.description}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} align="center">No matching transactions found.</TableCell>
                                     </TableRow>
-                                ))}
+                                )}
                             </TableBody>
                         </Table>
                     </TableContainer>

@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite --host"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -25,6 +25,7 @@
     "react-infinite-scroll-component": "^6.1.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.2.0",
+    "react-speech-recognition": "^4.0.0",
     "recharts": "^2.15.1"
   },
   "devDependencies": {

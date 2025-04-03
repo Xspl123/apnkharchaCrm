@@ -4,16 +4,13 @@ import axiosClient from "../../api/axiosClient";
 // ✅ Helper function to get token
 const getToken = () => localStorage.getItem("token");
 
-// ✅ Fetch Accounts (Avoid Duplicate Calls)
+// ✅ Fetch Accounts (with Pagination)
 export const getAccountAPI = createAsyncThunk(
     "accounts/fetch",
-    async (_, { getState, rejectWithValue }) => {
-        const { accounts } = getState();
-        if (accounts.list.length > 0) return; // 🚀 Prevent unnecessary API call if data exists
-
+    async (page = 1, { rejectWithValue }) => {
         try {
             const token = getToken();
-            const response = await axiosClient.get("/accounts", {
+            const response = await axiosClient.get(`/accounts?page=${page}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return response.data;
@@ -23,13 +20,13 @@ export const getAccountAPI = createAsyncThunk(
     }
 );
 
-// ✅ Create Account (Handles Multiple Errors)
+// ✅ Create Account
 export const createAccountAPI = createAsyncThunk(
     "accounts/create",
     async (accountData, { rejectWithValue }) => {
         try {
             const token = getToken();
-            const response = await axiosClient.post("/account-create", accountData, {
+            const response = await axiosClient.post("/accounts/create", accountData, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return response.data.account;
@@ -40,13 +37,13 @@ export const createAccountAPI = createAsyncThunk(
     }
 );
 
-// ✅ Update Account (Handles Multiple Errors)
+// ✅ Update Account
 export const updateAccountAPI = createAsyncThunk(
     "accounts/update",
     async ({ id, account_name, account_balance }, { rejectWithValue }) => {
         try {
             const token = getToken();
-            await axiosClient.put(`/accounts-update/${id}`, 
+            await axiosClient.put(`/accounts/${id}`, 
                 { account_name, account_balance },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -64,7 +61,7 @@ export const deleteAccountAPI = createAsyncThunk(
     async (id, { rejectWithValue }) => {
         try {
             const token = getToken();
-            await axiosClient.delete(`/accounts-delete/${id}`, {
+            await axiosClient.delete(`/accounts/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return id;
@@ -79,6 +76,12 @@ const accountSlice = createSlice({
     name: "accounts",
     initialState: {
         list: [],
+        pagination: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 10,
+            total: 0,
+        },
         loading: false,
         error: null,
     },
@@ -86,13 +89,21 @@ const accountSlice = createSlice({
 
     extraReducers: (builder) => {
         builder
-            // ✅ Fetch Accounts
+            // ✅ Fetch Accounts (Pagination Support)
             .addCase(getAccountAPI.pending, (state) => {
                 state.loading = true;
             })
             .addCase(getAccountAPI.fulfilled, (state, action) => {
                 state.loading = false;
-                if (action.payload) state.list = action.payload.accounts;
+                if (action.payload) {
+                    state.list = action.payload.data;
+                    state.pagination = {
+                        current_page: action.payload.current_page,
+                        last_page: action.payload.last_page,
+                        per_page: action.payload.per_page,
+                        total: action.payload.total,
+                    };
+                }
             })
             .addCase(getAccountAPI.rejected, (state, action) => {
                 state.loading = false;
@@ -110,7 +121,7 @@ const accountSlice = createSlice({
             })
             .addCase(createAccountAPI.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload; // Array of errors
+                state.error = action.payload;
             })
 
             // ✅ Update Account
@@ -129,7 +140,7 @@ const accountSlice = createSlice({
             })
             .addCase(updateAccountAPI.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload; // Array of errors
+                state.error = action.payload;
             })
 
             // ✅ Delete Account

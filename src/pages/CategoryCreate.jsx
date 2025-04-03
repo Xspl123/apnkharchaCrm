@@ -49,7 +49,6 @@ const CategoryPage = () => {
             setCategoryType("Expense");
             setEditId(null);
             setShowForm(false);
-
             dispatch(getCategoryAPI());
         } catch (error) {
             setSnackbarMessage(error?.message || "Failed to process category!");

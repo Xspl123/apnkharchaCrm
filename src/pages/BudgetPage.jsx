@@ -13,8 +13,10 @@ function BudgetPage() {
     const dispatch = useDispatch();
     
     // Fetch budget, categories, and user
-    const { budget, loading, error } = useSelector((state) => state.budget);
+    const { budgets, loading, error } = useSelector((state) => state.budget);
     const { list: categories } = useSelector((state) => state.category);
+    console.log("Categories: ---", categories);
+    console.log("budgets: ---", budgets);
     const loggedInUser = useSelector((state) => state.auth?.user);
 
     const [open, setOpen] = useState(false); // State for modal
@@ -60,7 +62,7 @@ function BudgetPage() {
             handleClose(); // Close modal
         });
     };
-
+    
     return (
         <>
             <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 3, p: 2 }}>
@@ -78,20 +80,18 @@ function BudgetPage() {
                     <CircularProgress sx={{ display: "block", margin: "auto", mt: 4 }} />
                 ) : error ? (
                     <Typography color="error" sx={{ textAlign: "center", mt: 2 }}>Error: {error}</Typography>
-                ) : budget && budget.length > 0 ? (
+                ) : budgets && budgets.length > 0 ? (
                     <Table>
                         <TableHead>
                             <TableRow sx={{ backgroundColor: "#1976d2" }}>
-                                <TableCell sx={{ color: "white", fontWeight: "bold" }}>User</TableCell>
                                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Category</TableCell>
                                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Total Amount (₹)</TableCell>
                                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Budget Amount (₹)</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {budget.map((item) => (
+                            {budgets?.map((item) => (
                                 <TableRow key={item.id}>
-                                    <TableCell>{item.user?.name || "N/A"}</TableCell>
                                     <TableCell>{item.category?.name || "N/A"}</TableCell>
                                     <TableCell>₹{item.total_amount}</TableCell>
                                     <TableCell>₹{item.budget_amount}</TableCell>
@@ -115,7 +115,7 @@ function BudgetPage() {
                                 value={formData.category}
                                 onChange={handleChange}
                             >
-                                {categories.map((cat) => (
+                                {categories?.map((cat) => (
                                     <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>
                                 ))}
                             </Select>

@@ -41,7 +41,7 @@ const Navbar = ({ toggleSidebar, themeColor, setThemeColor }) => {
 
     const handleLogout = async () => {
         try {
-            await axiosClient.post("/users/logout");
+            await axiosClient.post("/logout");
 
             dispatch(logout());
             navigate("/login");

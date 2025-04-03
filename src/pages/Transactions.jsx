@@ -21,10 +21,13 @@ import {
     Snackbar,
     IconButton,
     Collapse,
-    Alert
+    Alert,
+    TablePagination,
+    Card, 
+    CardContent
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 
 const Transactions = () => {
     const dispatch = useDispatch();
@@ -37,12 +40,13 @@ const Transactions = () => {
     const [showTable, setShowTable] = useState(false);
     const [formData, setFormData] = useState({
         amount: "",
-        date: "",
+        transaction_date: "",
         description: "",
         category: "",
         account: "",
     });
     const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+    const [selectedTab, setSelectedTab] = useState(0);
 
     // Helper function to format the createdAt date
     const formatDateTime = (dateStr) => {
@@ -75,13 +79,13 @@ const Transactions = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.amount || !formData.date || !formData.category || !formData.account) {
+        if (!formData.amount || !formData.transaction_date || !formData.category || !formData.account) {
             setSnackbar({ open: true, message: "Please fill in all required fields!", severity: "error" });
             return;
         }
         const transactionData = {
             amount: formData.amount,
-            date: formData.date,
+            transaction_date: formData.transaction_date,
             description: formData.description,
             category_id: formData.category,
             account_id: formData.account,
@@ -91,7 +95,9 @@ const Transactions = () => {
             await dispatch(createTransaction(transactionData)).unwrap();
             setSnackbar({ open: true, message: "Transaction added successfully!", severity: "success" });
             setShowForm(false);
-            setFormData({ amount: "", date: "", description: "", category: "", account: "" });
+            setFormData({ amount: "", transaction_date: "", description: "", category: "", account: "" });
+            dispatch(getAccountAPI())
+            dispatch(fetchTransactions());
         } catch (err) {
             const errorMessage = typeof err === "string" ? err : err?.error || "Failed to add transaction!";
             setSnackbar({ open: true, message: errorMessage, severity: "error" });
@@ -117,15 +123,56 @@ const Transactions = () => {
 
     const userTransactions = transactions.filter(transaction => transaction.user_id === loggedInUser?.id);
 
-    const categoryData = categories.map((category) => {
-        const totalAmount = userTransactions
-            .filter((t) => t.category_id === category.id)
-            .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-        return { name: category.name, value: totalAmount, color: generateColor() };
-    }).filter((data) => data.value > 0);
+    const categoryData = categories
+        .map((category) => {
+            let totalAmount = 0;
+            let dates = []; // Store transaction dates
+
+            // Summing transaction amounts and collecting dates
+            for (const t of userTransactions) {
+                if (t.category_id === category.id) {
+                    totalAmount += Number(t.amount);
+                    dates.push(new Date(t.transaction_date).toLocaleDateString('en-GB')); // Format date as DD/MM/YYYY
+                }
+            }
+
+            // Skip categories with zero value
+            if (totalAmount === 0) return null;
+
+            return {
+                name: category.name,
+                value: totalAmount,
+                dates: dates.join(', '), // Convert array to string for tooltip display
+                color: generateColor()
+            };
+        })
+        .filter(Boolean); // Removes null values efficiently
+
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+
+    // Pagination ke liye filter transactions
+    const paginatedTransactions = userTransactions.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+    );
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0); // Reset page to first
+    };
+
+
+
 
     return (
+        
         <Container>
+       
             <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: "bold", color: "#1976d2" }}>
                 Transactions
             </Typography>
@@ -144,6 +191,35 @@ const Transactions = () => {
                 </Grid>
             </Grid>
 
+    
+            {/* Account Details in Grid */}
+            {accounts.length > 0 && (
+                <Grid container spacing={2} justifyContent="center">
+                    {accounts.map((account, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={account.id}>
+                            <Card
+                                sx={{
+                                    borderRadius: 2,
+                                    boxShadow: selectedTab === index ? 6 : 2,
+                                    backgroundColor: selectedTab === index ? "#f5f5f5" : "white",
+                                    cursor: "pointer",
+                                }}
+                                onClick={() => setSelectedTab(index)}
+                            >
+                                <CardContent sx={{ textAlign: "center" }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                        {account.account_name}
+                                    </Typography>
+                                    <Typography variant="body1" color="textSecondary">
+                                        Balance: ₹{account.account_balance}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
+
             {/* Animated Form */}
             <Collapse in={showForm}>
                 <Paper sx={{ padding: 3, marginBottom: 3 }}>
@@ -156,7 +232,7 @@ const Transactions = () => {
                                 <TextField label="Amount" type="number" name="amount" fullWidth required value={formData.amount} onChange={handleChange} />
                             </Grid>
                             <Grid item xs={6}>
-                                <TextField label="Date" type="date" name="date" fullWidth required InputLabelProps={{ shrink: true }} value={formData.date} onChange={handleChange} />
+                                <TextField label="Date" type="date" name="transaction_date" fullWidth required InputLabelProps={{ shrink: true }} value={formData.transaction_date} onChange={handleChange} />
                             </Grid>
                             <Grid item xs={6}>
                                 <Select name="category" fullWidth required value={formData.category} onChange={handleChange} displayEmpty>
@@ -193,15 +269,15 @@ const Transactions = () => {
                     <Table>
                         <TableHead>
                             <TableRow sx={{ backgroundColor: "#1976d2" }}>
-                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Created At</TableCell>
-                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell> 
-                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Category</TableCell>
-                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Amount</TableCell>
-                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Actions</TableCell>
+                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Created At</TableCell>
+                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
+                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Category</TableCell>
+                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Amount</TableCell>
+                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {userTransactions.map((transaction) => (
+                            {paginatedTransactions.map((transaction) => (
                                 <TableRow
                                     key={transaction.id}
                                     sx={{
@@ -213,9 +289,9 @@ const Transactions = () => {
                                         }
                                     }}
                                 >
-                                    <TableCell>{formatDateTime(transaction.createdAt)}</TableCell>
-                                    <TableCell>{formatDateTime(transaction.date)}</TableCell>
-                                    <TableCell>{transaction.Category?.name || "N/A"}</TableCell>
+                                    <TableCell>{formatDateTime(transaction.created_at)}</TableCell>
+                                    <TableCell>{formatDateTime(transaction.transaction_date)}</TableCell>
+                                    <TableCell>{transaction.category?.name || "N/A"}</TableCell>
                                     <TableCell>₹{transaction.amount}</TableCell>
                                     <TableCell>
                                         <IconButton onClick={() => handleDelete(transaction.id)} color="error">
@@ -226,6 +302,15 @@ const Transactions = () => {
                             ))}
                         </TableBody>
                     </Table>
+                    <TablePagination
+                        rowsPerPageOptions={[5, 10, 25]}
+                        component="div"
+                        count={userTransactions.length}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
                 </TableContainer>
             </Collapse>
 
@@ -235,17 +320,26 @@ const Transactions = () => {
                     Transaction Categories
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                        <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+                    <BarChart
+                        data={categoryData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 50 }} // Adjust bottom margin for long category names
+                    >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} /> {/* Rotates category names to prevent overlap */}
+                        <YAxis />
+                        <Tooltip formatter={(value, _, props) => [`₹${value}`, `Dates: ${props?.payload?.dates || "N/A"}`]} />
+
+                        <Legend />
+                        <Bar dataKey="value" fill="#8884d8" barSize={50}>
                             {categoryData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                    </PieChart>
+                        </Bar>
+                    </BarChart>
                 </ResponsiveContainer>
             </Paper>
+
+
 
             <Snackbar
                 open={snackbar.open}

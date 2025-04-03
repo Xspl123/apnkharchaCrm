@@ -59,6 +59,7 @@ const AccountPage = () => {
 
     const handleEdit = (account) => {
         setAccountName(account.account_name);
+        
         setEditId(account.id);
         setShowForm(true);
     };
@@ -136,6 +137,7 @@ const AccountPage = () => {
                                 <TableRow sx={{ backgroundColor: "#1976d2" }}>
                                     <TableCell sx={{ color: "white" }}><strong>ID</strong></TableCell>
                                     <TableCell sx={{ color: "white" }}><strong>Account Name</strong></TableCell>
+                                    <TableCell sx={{ color: "white" }}><strong>Account Balance</strong></TableCell>
                                     <TableCell sx={{ color: "white" }}><strong>Actions</strong></TableCell>
                                 </TableRow>
                             </TableHead>
@@ -144,6 +146,7 @@ const AccountPage = () => {
                                     <TableRow key={item?.id || index}>
                                         <TableCell>{item?.id ?? "N/A"}</TableCell>
                                         <TableCell>{item?.account_name ?? "Unnamed"}</TableCell>
+                                        <TableCell>{item?.account_balance ?? 0}</TableCell>
                                         <TableCell>
                                             <IconButton color="primary" onClick={() => handleEdit(item)}>
                                                 <Edit />
