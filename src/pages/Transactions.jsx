@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTransactions, createTransaction, deleteTransactionApi } from "../redux/features/transactionSlice";
@@ -24,9 +25,12 @@ import {
     Alert,
     TablePagination,
     Card, 
-    CardContent
+    CardContent,
+    Modal,
+    Box
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 
 const Transactions = () => {
@@ -47,6 +51,91 @@ const Transactions = () => {
     });
     const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
     const [selectedTab, setSelectedTab] = useState(0);
+    const [calculatorOpen, setCalculatorOpen] = useState(false);
+    const [calculatedAmount, setCalculatedAmount] = useState("");
+
+    const handleCalculatorOpen = () => setCalculatorOpen(true);
+    const handleCalculatorClose = () => setCalculatorOpen(false);
+
+    const handleCalculatorSubmit = (value) => {
+        setFormData((prev) => ({
+            ...prev,
+            amount: value,
+        }));
+        setCalculatedAmount(value);
+        handleCalculatorClose();
+    };
+
+    const Calculator = ({ onSubmit, onClose }) => {
+        const [calcValue, setCalcValue] = useState("");
+
+        const handleButtonClick = (value) => {
+            if (value === "=") {
+                try {
+                    const result = eval(calcValue); // Simple evaluation
+                    setCalcValue(result.toString());
+                } catch {
+                    setCalcValue("Error");
+                }
+            } else if (value === "C") {
+                setCalcValue("");
+            } else {
+                setCalcValue((prev) => prev + value);
+            }
+        };
+
+        return (
+            <Box sx={{ p: 3, backgroundColor: "white", borderRadius: 2, width: 300, textAlign: "center" }}>
+                <Typography variant="h6" gutterBottom>Calculator</Typography>
+                <TextField value={calcValue} fullWidth disabled sx={{ mb: 2 }} />
+                <Grid container spacing={1}>
+                    {/* Number Buttons */}
+                    <Grid item xs={9}>
+                        <Grid container spacing={1}>
+                            {["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", "."].map((btn, index) => (
+                                <Grid item xs={4} key={index}>
+                                    <Button variant="outlined" fullWidth onClick={() => handleButtonClick(btn)}>
+                                        {btn}
+                                    </Button>
+                                </Grid>
+                            ))}
+                            <Grid item xs={4}>
+                                <Button variant="outlined" fullWidth onClick={() => handleButtonClick("C")}>
+                                    C
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                    {/* Operator Buttons */}
+                    <Grid item xs={3}>
+                        {["+", "-", "*", "/"].map((btn, index) => ( // Removed "%"
+                            <Grid item xs={12} key={index} sx={{ mb: 1 }}>
+                                <Button variant="outlined" fullWidth onClick={() => handleButtonClick(btn)}>
+                                    {btn}
+                                </Button>
+                            </Grid>
+                        ))}
+                    </Grid>
+                    {/* Action Buttons */}
+                    <Grid item xs={6}>
+                        <Button variant="contained" color="primary" fullWidth onClick={() => handleButtonClick("=")}>
+                            =
+                        </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <Button variant="contained" color="success" fullWidth onClick={() => onSubmit(calcValue)}>
+                            Use
+                        </Button>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Button variant="contained" color="error" fullWidth onClick={onClose}>
+                            Close
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Box>
+        );
+    };
 
     // Helper function to format the createdAt date
     const formatDateTime = (dateStr) => {
@@ -166,13 +255,8 @@ const Transactions = () => {
         setPage(0); // Reset page to first
     };
 
-
-
-
     return (
-        
         <Container>
-       
             <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: "bold", color: "#1976d2" }}>
                 Transactions
             </Typography>
@@ -191,7 +275,6 @@ const Transactions = () => {
                 </Grid>
             </Grid>
 
-    
             {/* Account Details in Grid */}
             {accounts.length > 0 && (
                 <Grid container spacing={2} justifyContent="center">
@@ -228,11 +311,31 @@ const Transactions = () => {
                     </Typography>
                     <form onSubmit={handleSubmit}>
                         <Grid container spacing={2}>
-                            <Grid item xs={6}>
-                                <TextField label="Amount" type="number" name="amount" fullWidth required value={formData.amount} onChange={handleChange} />
+                            <Grid item xs={6} sx={{ display: "flex", alignItems: "center" }}>
+                                <TextField
+                                    label="Amount"
+                                    type="number"
+                                    name="amount"
+                                    fullWidth
+                                    required
+                                    value={formData.amount}
+                                    onChange={handleChange}
+                                />
+                                <IconButton onClick={handleCalculatorOpen} color="primary">
+                                    <AddIcon />
+                                </IconButton>
                             </Grid>
                             <Grid item xs={6}>
-                                <TextField label="Date" type="date" name="transaction_date" fullWidth required InputLabelProps={{ shrink: true }} value={formData.transaction_date} onChange={handleChange} />
+                                <TextField
+                                    label="Date"
+                                    type="date"
+                                    name="transaction_date"
+                                    fullWidth
+                                    required
+                                    InputLabelProps={{ shrink: true }}
+                                    value={formData.transaction_date}
+                                    onChange={handleChange}
+                                />
                             </Grid>
                             <Grid item xs={6}>
                                 <Select name="category" fullWidth required value={formData.category} onChange={handleChange} displayEmpty>
@@ -262,6 +365,12 @@ const Transactions = () => {
                     </form>
                 </Paper>
             </Collapse>
+
+            <Modal open={calculatorOpen} onClose={handleCalculatorClose}>
+                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+                    <Calculator onSubmit={handleCalculatorSubmit} onClose={handleCalculatorClose} />
+                </Box>
+            </Modal>
 
             {/* Animated Table */}
             <Collapse in={showTable}>
@@ -339,8 +448,6 @@ const Transactions = () => {
                 </ResponsiveContainer>
             </Paper>
 
-
-
             <Snackbar
                 open={snackbar.open}
                 autoHideDuration={3000}
@@ -353,6 +460,14 @@ const Transactions = () => {
             </Snackbar>
         </Container>
     );
+};
+
+Transactions.propTypes = {
+    payload: PropTypes.arrayOf(
+        PropTypes.shape({
+            dates: PropTypes.string,
+        })
+    ),
 };
 
 export default Transactions;

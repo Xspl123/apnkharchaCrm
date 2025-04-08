@@ -16,6 +16,7 @@ import { Edit, Delete } from "@mui/icons-material";
 const AccountPage = () => {
     const dispatch = useDispatch();
     const [accountName, setAccountName] = useState("");
+    const [accountBalance, setAccountBalance] = useState(0); // New state for balance
     const [editId, setEditId] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -36,15 +37,20 @@ const AccountPage = () => {
             showSnackbar("Account name is required!", "error");
             return;
         }
+
+        if (accountBalance < 0) {
+            showSnackbar("Account balance cannot be negative!", "error");
+            return;
+        }
     
         try {
             let message = "";
             
             if (editId) {
-                await dispatch(updateAccountAPI({ id: editId, account_name: accountName })).unwrap();
+                await dispatch(updateAccountAPI({ id: editId, account_name: accountName, account_balance: accountBalance })).unwrap();
                 message = "Account updated successfully!";
             } else {
-                await dispatch(createAccountAPI({ account_name: accountName })).unwrap();
+                await dispatch(createAccountAPI({ account_name: accountName, account_balance: accountBalance })).unwrap();
                 message = "Account added successfully!";
             }
     
@@ -59,7 +65,7 @@ const AccountPage = () => {
 
     const handleEdit = (account) => {
         setAccountName(account.account_name);
-        
+        setAccountBalance(account.account_balance); // Set balance for editing
         setEditId(account.id);
         setShowForm(true);
     };
@@ -78,6 +84,7 @@ const AccountPage = () => {
 
     const resetForm = () => {
         setAccountName("");
+        setAccountBalance(0); // Reset balance
         setEditId(null);
         setShowForm(false);
     };
@@ -115,6 +122,7 @@ const AccountPage = () => {
                         </Typography>
                         <form onSubmit={handleAddOrUpdateAccount}>
                             <TextField fullWidth label="Account Name" variant="outlined" value={accountName} onChange={(e) => setAccountName(e.target.value)} sx={{ mb: 2 }} />
+                            <TextField fullWidth label="Account Balance" type="number" variant="outlined" value={accountBalance} onChange={(e) => setAccountBalance(Number(e.target.value))} sx={{ mb: 2 }} /> {/* New input for balance */}
                             <Button variant="contained" color="primary" type="submit" fullWidth sx={{ py: 1.5, fontSize: "16px" }}>
                                 {editId ? "Update Account" : "Add Account"}
                             </Button>

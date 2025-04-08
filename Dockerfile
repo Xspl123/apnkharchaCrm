@@ -6,13 +6,13 @@ WORKDIR /app
 
 # Copy package.json and install dependencies
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
+RUN npm install
 
 # Copy all project files
 COPY . .
 
-# Expose port 5173 (default for Vite)
+# Expose development port
 EXPOSE 5173
 
 # Start Vite development server
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host"]

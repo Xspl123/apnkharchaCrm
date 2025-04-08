@@ -49,7 +49,9 @@ export const updateAccountAPI = createAsyncThunk(
             );
             return { id, account_name, account_balance };
         } catch (error) {
-            const errorMessages = error.response?.data?.errors?.map(err => err.msg) || ["Something went wrong!"];
+            const errorMessages = error.response?.data?.errors
+                ? Object.values(error.response.data.errors).flat()
+                : [error.response?.data?.error || "Something went wrong!"];
             return rejectWithValue(errorMessages);
         }
     }
