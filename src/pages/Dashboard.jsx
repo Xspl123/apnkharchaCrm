@@ -205,6 +205,41 @@ const Dashboard = () => {
   const totalTransactions = filteredTransactions.length;
   const totalAccount = new Set(userTransactions.map((t) => t.account_id)).size;
 
+  // Function to calculate the highest expense category for each month
+  const calculateHighestExpenseCategory = () => {
+    const monthlyCategoryExpenses = {};
+
+    userTransactions.forEach((t) => {
+      const date = new Date(t.transaction_date);
+      const monthYear = `${date.getMonth()}-${date.getFullYear()}`;
+      const categoryName = t.category?.name;
+
+      if (!monthlyCategoryExpenses[monthYear]) {
+        monthlyCategoryExpenses[monthYear] = {};
+      }
+
+      if (!monthlyCategoryExpenses[monthYear][categoryName]) {
+        monthlyCategoryExpenses[monthYear][categoryName] = 0;
+      }
+
+      if (t.category?.type?.toLowerCase() === "expense") {
+        monthlyCategoryExpenses[monthYear][categoryName] += parseFloat(t.amount);
+      }
+    });
+
+    const highestExpenseCategories = Object.entries(monthlyCategoryExpenses).map(([monthYear, categories]) => {
+      const highestCategory = Object.entries(categories).reduce((max, [category, amount]) => {
+        return amount > max.amount ? { category, amount } : max;
+      }, { category: null, amount: 0 });
+
+      return { monthYear, ...highestCategory };
+    });
+
+    return highestExpenseCategories;
+  };
+
+  const highestExpenseCategories = calculateHighestExpenseCategory();
+
   return (
     <Box p={3} style={{ overflowX: "auto" }}>
       <Typography variant="h4" align="center" gutterBottom>
@@ -412,6 +447,34 @@ const Dashboard = () => {
                 <Bar dataKey="Income" fill="#4caf50" />
               </BarChart>
             </ResponsiveContainer>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Paper elevation={3} style={{ padding: 16, marginBottom: 16 }}>
+            <Typography variant="h6" align="center" gutterBottom>
+              Highest Expense Category by Month
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell style={{ fontWeight: "bold" }}>Month-Year</TableCell>
+                    <TableCell style={{ fontWeight: "bold" }}>Category</TableCell>
+                    <TableCell style={{ fontWeight: "bold" }}>Amount</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {highestExpenseCategories.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{item.monthYear}</TableCell>
+                      <TableCell>{item.category}</TableCell>
+                      <TableCell>₹{item.amount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Paper>
         </Grid>
 

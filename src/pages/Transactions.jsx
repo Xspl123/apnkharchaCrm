@@ -31,7 +31,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import { saveAs } from "file-saver";
 
 const Transactions = () => {
     const dispatch = useDispatch();
@@ -41,7 +41,6 @@ const Transactions = () => {
     const loggedInUser = useSelector((state) => state.auth.user);
 
     const [showForm, setShowForm] = useState(false);
-    const [showTable, setShowTable] = useState(false);
     const [formData, setFormData] = useState({
         amount: "",
         transaction_date: "",
@@ -52,7 +51,9 @@ const Transactions = () => {
     const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
     const [selectedTab, setSelectedTab] = useState(0);
     const [calculatorOpen, setCalculatorOpen] = useState(false);
-    const [calculatedAmount, setCalculatedAmount] = useState("");
+    const [searchQuery, setSearchQuery] = useState(""); // State for search query
+    const [startDate, setStartDate] = useState(""); // State for start date filter
+    const [endDate, setEndDate] = useState(""); // State for end date filter
 
     const handleCalculatorOpen = () => setCalculatorOpen(true);
     const handleCalculatorClose = () => setCalculatorOpen(false);
@@ -62,8 +63,40 @@ const Transactions = () => {
             ...prev,
             amount: value,
         }));
-        setCalculatedAmount(value);
         handleCalculatorClose();
+    };
+
+    const handleSpeechToText = (fieldName) => {
+        if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+            setSnackbar({ open: true, message: "Speech recognition not supported in this browser!", severity: "error" });
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {};
+        recognition.onend = () => {};
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            setFormData((prev) => ({
+                ...prev,
+                [fieldName]: transcript,
+            }));
+        };
+
+        recognition.onerror = (event) => {
+            const errorMessage = event.error === "no-speech" 
+                ? "No speech detected. Please try again." 
+                : `Error: ${event.error}`;
+            setSnackbar({ open: true, message: errorMessage, severity: "error" });
+        };
+
+        recognition.start();
     };
 
     const Calculator = ({ onSubmit, onClose }) => {
@@ -108,7 +141,7 @@ const Transactions = () => {
                     </Grid>
                     {/* Operator Buttons */}
                     <Grid item xs={3}>
-                        {["+", "-", "*", "/"].map((btn, index) => ( // Removed "%"
+                        {["+", "-", "*", "/"].map((btn, index) => (
                             <Grid item xs={12} key={index} sx={{ mb: 1 }}>
                                 <Button variant="outlined" fullWidth onClick={() => handleButtonClick(btn)}>
                                     {btn}
@@ -166,6 +199,11 @@ const Transactions = () => {
         }));
     };
 
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+        setPage(0); // Reset to the first page when search query changes
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.amount || !formData.transaction_date || !formData.category || !formData.account) {
@@ -202,12 +240,36 @@ const Transactions = () => {
         }
     };
 
-    const generateColor = () => {
-        const colors = [
-            "#8884d8", "#82ca9d", "#ffc658", "#d0ed57", "#ff7300",
-            "#0088FE", "#00C49F", "#FF6347", "#6A5ACD", "#20B2AA"
-        ];
-        return colors[Math.floor(Math.random() * colors.length)];
+    const exportTransactions = () => {
+        if (!startDate || !endDate) {
+            setSnackbar({ open: true, message: "Please select both start and end dates to export!", severity: "error" });
+            return;
+        }
+
+        const transactionsToExport = filteredTransactions.map((transaction) => ({
+            "Created At": formatDateTime(transaction.created_at), // Ensure consistent formatting
+            "Transaction Date": formatDateTime(transaction.transaction_date), // Ensure consistent formatting
+            "Category": transaction.category?.name || "N/A",
+            "Account": accounts.find(acc => acc.id === transaction.account_id)?.account_name || "N/A",
+            "Amount": transaction.amount,
+            "Description": transaction.description || "N/A",
+        }));
+
+        if (transactionsToExport.length === 0) {
+            setSnackbar({ open: true, message: "No transactions found for the selected date range!", severity: "error" });
+            return;
+        }
+
+        const csvHeaders = ["Created At", "Transaction Date", "Category", "Account", "Amount", "Description"];
+        const csvContent = [
+            csvHeaders.join(","), // Ensure consistent headers
+            ...transactionsToExport.map((row) =>
+                csvHeaders.map((header) => `"${row[header]}"`).join(",") // Ensure values align with headers
+            ),
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        saveAs(blob, `transactions_${startDate}_to_${endDate}.csv`);
     };
 
     const userTransactions = transactions.filter(transaction => transaction.user_id === loggedInUser?.id);
@@ -215,13 +277,11 @@ const Transactions = () => {
     const categoryData = categories
         .map((category) => {
             let totalAmount = 0;
-            let dates = []; // Store transaction dates
 
-            // Summing transaction amounts and collecting dates
+            // Summing transaction amounts
             for (const t of userTransactions) {
                 if (t.category_id === category.id) {
                     totalAmount += Number(t.amount);
-                    dates.push(new Date(t.transaction_date).toLocaleDateString('en-GB')); // Format date as DD/MM/YYYY
                 }
             }
 
@@ -231,8 +291,6 @@ const Transactions = () => {
             return {
                 name: category.name,
                 value: totalAmount,
-                dates: dates.join(', '), // Convert array to string for tooltip display
-                color: generateColor()
             };
         })
         .filter(Boolean); // Removes null values efficiently
@@ -240,8 +298,24 @@ const Transactions = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
 
-    // Pagination ke liye filter transactions
-    const paginatedTransactions = userTransactions.slice(
+    // Filter transactions based on search query and date range
+    const filteredTransactions = userTransactions.filter((transaction) => {
+        const searchLower = searchQuery.toLowerCase();
+        const transactionDate = new Date(transaction.transaction_date);
+        const isWithinDateRange =
+            (!startDate || transactionDate >= new Date(startDate)) &&
+            (!endDate || transactionDate <= new Date(endDate));
+        return (
+            isWithinDateRange &&
+            (transaction.category?.name.toLowerCase().includes(searchLower) ||
+            transaction.description?.toLowerCase().includes(searchLower) ||
+            transaction.amount.toString().includes(searchLower) ||
+            formatDateTime(transaction.transaction_date).toLowerCase().includes(searchLower))
+        );
+    });
+
+    // Apply pagination to filtered transactions
+    const paginatedTransactions = filteredTransactions.slice(
         page * rowsPerPage,
         page * rowsPerPage + rowsPerPage
     );
@@ -261,7 +335,7 @@ const Transactions = () => {
                 Transactions
             </Typography>
 
-            {/* Aligned Buttons for Form and Table */}
+            {/* Aligned Buttons for Form */}
             <Grid container spacing={2} justifyContent="center" alignItems="center" sx={{ mb: 2 }}>
                 <Grid item xs={6} sm="auto">
                     <Button variant="contained" color="primary" fullWidth onClick={() => setShowForm(!showForm)}>
@@ -269,8 +343,8 @@ const Transactions = () => {
                     </Button>
                 </Grid>
                 <Grid item xs={6} sm="auto">
-                    <Button variant="contained" color="secondary" fullWidth onClick={() => setShowTable(!showTable)}>
-                        {showTable ? "Hide Transactions" : "Show Transactions"}
+                    <Button variant="contained" color="secondary" fullWidth onClick={exportTransactions}>
+                        Export Transactions
                     </Button>
                 </Grid>
             </Grid>
@@ -324,6 +398,9 @@ const Transactions = () => {
                                 <IconButton onClick={handleCalculatorOpen} color="primary">
                                     <AddIcon />
                                 </IconButton>
+                                <IconButton onClick={() => handleSpeechToText("amount")} color="secondary">
+                                    🎤
+                                </IconButton>
                             </Grid>
                             <Grid item xs={6}>
                                 <TextField
@@ -353,8 +430,19 @@ const Transactions = () => {
                                     ))}
                                 </Select>
                             </Grid>
-                            <Grid item xs={12}>
-                                <TextField label="Description" name="description" fullWidth multiline rows={2} value={formData.description} onChange={handleChange} />
+                            <Grid item xs={12} sx={{ display: "flex", alignItems: "center" }}>
+                                <TextField
+                                    label="Description"
+                                    name="description"
+                                    fullWidth
+                                    multiline
+                                    rows={2}
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                />
+                                <IconButton onClick={() => handleSpeechToText("description")} color="secondary">
+                                    🎤
+                                </IconButton>
                             </Grid>
                             <Grid item xs={12}>
                                 <Button type="submit" variant="contained" color="success" fullWidth>
@@ -372,81 +460,90 @@ const Transactions = () => {
                 </Box>
             </Modal>
 
-            {/* Animated Table */}
-            <Collapse in={showTable}>
-                <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 3, mt: 2, overflow: "hidden" }}>
-                    <Table>
-                        <TableHead>
-                            <TableRow sx={{ backgroundColor: "#1976d2" }}>
-                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Created At</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Category</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Amount</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "white" }}>Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {paginatedTransactions.map((transaction) => (
-                                <TableRow
-                                    key={transaction.id}
-                                    sx={{
-                                        transition: "all 0.3s ease",
-                                        cursor: "pointer",
-                                        "&:hover": {
-                                            backgroundColor: "#f0f0f0",
-                                            boxShadow: "0px 4px 12px rgba(0,0,0,0.1)"
-                                        }
-                                    }}
-                                >
-                                    <TableCell>{formatDateTime(transaction.created_at)}</TableCell>
-                                    <TableCell>{formatDateTime(transaction.transaction_date)}</TableCell>
-                                    <TableCell>{transaction.category?.name || "N/A"}</TableCell>
-                                    <TableCell>₹{transaction.amount}</TableCell>
-                                    <TableCell>
-                                        <IconButton onClick={() => handleDelete(transaction.id)} color="error">
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                    <TablePagination
-                        rowsPerPageOptions={[5, 10, 25]}
-                        component="div"
-                        count={userTransactions.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
+            {/* Table is always displayed */}
+            <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 3, mt: 2, overflow: "hidden" }}>
+                {/* Search Input Inside Table */}
+                <Box sx={{ padding: 2 }}>
+                    <TextField
+                        label="Search Transactions"
+                        variant="outlined"
+                        fullWidth
+                        value={searchQuery}
+                        onChange={handleSearchChange}
                     />
-                </TableContainer>
-            </Collapse>
-
-            {/* Always Visible Chart */}
-            <Paper sx={{ padding: 3, marginTop: 3 }} elevation={3}>
-                <Typography variant="h6" gutterBottom align="center">
-                    Transaction Categories
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                    <BarChart
-                        data={categoryData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 50 }} // Adjust bottom margin for long category names
-                    >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} /> {/* Rotates category names to prevent overlap */}
-                        <YAxis />
-                        <Tooltip formatter={(value, _, props) => [`₹${value}`, `Dates: ${props?.payload?.dates || "N/A"}`]} />
-
-                        <Legend />
-                        <Bar dataKey="value" fill="#8884d8" barSize={50}>
-                            {categoryData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </Paper>
+                </Box>
+                {/* Date Range Filters */}
+                <Box sx={{ padding: 2, display: "flex", gap: 2 }}>
+                    <TextField
+                        label="Start Date"
+                        type="date"
+                        InputLabelProps={{ shrink: true }}
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        fullWidth
+                    />
+                    <TextField
+                        label="End Date"
+                        type="date"
+                        InputLabelProps={{ shrink: true }}
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        fullWidth
+                    />
+                </Box>
+                <Table>
+                    <TableHead>
+                        <TableRow sx={{ backgroundColor: "#1976d2" }}>
+                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Created At</TableCell>
+                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
+                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Category</TableCell>
+                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Amount</TableCell>
+                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Actions</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {paginatedTransactions.map((transaction) => (
+                            <TableRow
+                                key={transaction.id}
+                                sx={{
+                                    transition: "all 0.3s ease",
+                                    cursor: "pointer",
+                                    "&:hover": {
+                                        backgroundColor: "#f0f0f0",
+                                        boxShadow: "0px 4px 12px rgba(0,0,0,0.1)"
+                                    }
+                                }}
+                            >
+                                <TableCell>{formatDateTime(transaction.created_at)}</TableCell>
+                                <TableCell>{formatDateTime(transaction.transaction_date)}</TableCell>
+                                <TableCell>{transaction.category?.name || "N/A"}</TableCell>
+                                <TableCell>₹{transaction.amount}</TableCell>
+                                <TableCell>
+                                    <IconButton onClick={() => handleDelete(transaction.id)} color="error">
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {paginatedTransactions.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={5} align="center">
+                                    No transactions found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={filteredTransactions.length} // Use filtered transactions count
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+            </TableContainer>
 
             <Snackbar
                 open={snackbar.open}
