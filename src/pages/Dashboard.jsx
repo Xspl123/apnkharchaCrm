@@ -59,8 +59,6 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { list: categories = [] } = useSelector((state) => state.category);
-  const { list: users = [] } = useSelector((state) => state.auth);
-  const { list: accounts = [] } = useSelector((state) => state.accounts);
   const { transactions = [] } = useSelector((state) => state.transactions);
   const loggedInUser = useSelector((state) => state.auth.user);
 
@@ -69,6 +67,7 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
 
   useEffect(() => {
     dispatch(fetchTransactions());
@@ -81,24 +80,12 @@ const Dashboard = () => {
 
   const filteredTransactions = userTransactions.filter((t) => {
     const date = new Date(t.transaction_date);
-    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+    const isSameMonth = date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+    const isSameDay = selectedDay ? date.getDate() === selectedDay : true;
+
+    return isSameMonth && isSameDay;
   });
 
-  const totalAmountSpent = filteredTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-  const categoryData = categories
-    .map((category, index) => {
-      const totalAmount = filteredTransactions
-        .filter((t) => t.category_id === category.id)
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-      return {
-        name: category.name,
-        value: totalAmount,
-        color: generateColor(index),
-      };
-    })
-    .filter((data) => data.value > 0);
 
   const monthCategoryData = categories
     .map((category) => {
@@ -174,6 +161,30 @@ const Dashboard = () => {
     };
   });
 
+  // Calculate yearly comparison data
+  const yearlyComparisonData = [...Array(5)].map((_, i) => {
+    const year = new Date().getFullYear() - i;
+
+    const yearTransactions = userTransactions.filter((t) => {
+      const date = new Date(t.transaction_date);
+      return date.getFullYear() === year;
+    });
+
+    const totalExpense = yearTransactions
+      .filter((t) => t.category?.type?.toLowerCase() === "expense")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    const totalIncome = yearTransactions
+      .filter((t) => t.category?.type?.toLowerCase() === "income")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    return {
+      name: year.toString(),
+      Expense: totalExpense,
+      Income: totalIncome,
+    };
+  });
+
   const exportToCSV = () => {
     const csvContent = [
       ["Date", "Description", "Amount", "Type", "Category"],
@@ -235,7 +246,15 @@ const Dashboard = () => {
       return { monthYear, ...highestCategory };
     });
 
-    return highestExpenseCategories;
+    // Filter to include only the current or previous month
+    const currentDate = new Date();
+    const currentMonthYear = `${currentDate.getMonth()}-${currentDate.getFullYear()}`;
+    const previousMonthDate = new Date(currentDate.setMonth(currentDate.getMonth() - 1));
+    const previousMonthYear = `${previousMonthDate.getMonth()}-${previousMonthDate.getFullYear()}`;
+
+    return highestExpenseCategories.filter(
+      (item) => item.monthYear === currentMonthYear || item.monthYear === previousMonthYear
+    );
   };
 
   const highestExpenseCategories = calculateHighestExpenseCategory();
@@ -279,11 +298,18 @@ const Dashboard = () => {
         </TextField>
 
         <TextField
-          label="Search by Description"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          select
+          label="Select Day"
+          value={selectedDay}
+          onChange={(e) => setSelectedDay(parseInt(e.target.value))}
           size="small"
-        />
+        >
+          {[...Array(31)].map((_, i) => (
+            <MenuItem key={i + 1} value={i + 1}>
+              {i + 1}
+            </MenuItem>
+          ))}
+        </TextField>
 
         <button
           onClick={exportToCSV}
@@ -385,15 +411,19 @@ const Dashboard = () => {
 
         <Grid item xs={12} md={6}>
           <Paper elevation={3} style={{ padding: 16, height: 350 }}>
-            <Typography variant="h6" align="center">Category-wise Expense</Typography>
+            <Typography variant="h6" align="center">Category-wise Expense vs Income</Typography>
             <ResponsiveContainer width="100%" height="90%">
-              <BarChart data={categoryData}>
+              <BarChart data={monthCategoryData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip 
+                  formatter={(value, name) => [`₹${value}`, name]} 
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }} 
+                />
                 <Legend />
-                <Bar dataKey="value" fill="#8884d8" />
+                <Bar dataKey="Expense" fill="#f44336" /> {/* Red for Expense */}
+                <Bar dataKey="Income" fill="#4caf50" /> {/* Green for Income */}
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -450,6 +480,23 @@ const Dashboard = () => {
           </Paper>
         </Grid>
 
+        <Grid item xs={12} md={6}>
+          <Paper elevation={3} style={{ padding: 16, height: 350 }}>
+            <Typography variant="h6" align="center">Yearly Comparison of Expense vs Income</Typography>
+            <ResponsiveContainer width="100%" height="90%">
+              <BarChart data={yearlyComparisonData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Expense" fill="#f44336" />
+                <Bar dataKey="Income" fill="#4caf50" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
+
         <Grid item xs={12}>
           <Paper elevation={3} style={{ padding: 16, marginBottom: 16 }}>
             <Typography variant="h6" align="center" gutterBottom>
@@ -481,6 +528,15 @@ const Dashboard = () => {
         <Grid item xs={12}>
           <Paper elevation={3} style={{ padding: 16 }}>
             <Typography variant="h6" align="center" gutterBottom>Transactions</Typography>
+            <Box mb={2} display="flex" justifyContent="flex-end">
+              <TextField
+                label="Search by Description"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                size="small"
+                style={{ width: "300px" }}
+              />
+            </Box>
             <TableContainer
               style={{
                 maxHeight: 400,
