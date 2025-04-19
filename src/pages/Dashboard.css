@@ -1,0 +1,30 @@
+.dashboard-button {
+  padding: 8px 16px;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.export-button {
+  background-color: #03a9f4;
+}
+
+.add-transaction-button {
+  background-color: #4caf50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-category-button {
+  background-color: #ffc107;
+}
+
+.voice-query-button {
+  background-color: #ff5722;
+}
+
+.reset-results-button {
+  background-color: #e91e63;
+}

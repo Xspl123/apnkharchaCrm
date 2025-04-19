@@ -498,6 +498,7 @@ const Transactions = () => {
                             <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
                             <TableCell sx={{ fontWeight: "bold", color: "white" }}>Category</TableCell>
                             <TableCell sx={{ fontWeight: "bold", color: "white" }}>Amount</TableCell>
+                            <TableCell sx={{ fontWeight: "bold", color: "white" }}>Description</TableCell>
                             <TableCell sx={{ fontWeight: "bold", color: "white" }}>Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -518,6 +519,7 @@ const Transactions = () => {
                                 <TableCell>{formatDateTime(transaction.transaction_date)}</TableCell>
                                 <TableCell>{transaction.category?.name || "N/A"}</TableCell>
                                 <TableCell>₹{transaction.amount}</TableCell>
+                                <TableCell>{transaction.description || "N/A"}</TableCell>
                                 <TableCell>
                                     <IconButton onClick={() => handleDelete(transaction.id)} color="error">
                                         <DeleteIcon />

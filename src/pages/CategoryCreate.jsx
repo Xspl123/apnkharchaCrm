@@ -7,7 +7,7 @@ import {
     TextField, Button, Grid, MenuItem, Select, Box, FormControl, Snackbar,
     IconButton
 } from "@mui/material";
-import { Edit, Delete } from "@mui/icons-material";
+import { Edit, Delete, Mic } from "@mui/icons-material";
 
 const CategoryPage = () => {
     const dispatch = useDispatch();
@@ -80,6 +80,61 @@ const CategoryPage = () => {
         }
     };
 
+    const handleSpeechToText = () => {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = (event) => {
+            const speechResult = event.results[0][0].transcript;
+            setCategoryName(speechResult);
+            setSnackbarMessage("Speech recognized successfully!");
+            setSnackbarSeverity("success");
+            setOpenSnackbar(true);
+        };
+
+        recognition.onerror = () => {
+            setSnackbarMessage("Speech recognition failed. Please try again.");
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
+        };
+
+        recognition.start();
+    };
+
+    const handleSpeechToSelectType = () => {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = (event) => {
+            const speechResult = event.results[0][0].transcript.toLowerCase();
+            if (speechResult.includes("income")) {
+                setCategoryType("Income");
+                setSnackbarMessage("Category type set to Income!");
+                setSnackbarSeverity("success");
+            } else if (speechResult.includes("expense")) {
+                setCategoryType("Expense");
+                setSnackbarMessage("Category type set to Expense!");
+                setSnackbarSeverity("success");
+            } else {
+                setSnackbarMessage("Unrecognized category type. Please say 'Income' or 'Expense'.");
+                setSnackbarSeverity("error");
+            }
+            setOpenSnackbar(true);
+        };
+
+        recognition.onerror = () => {
+            setSnackbarMessage("Speech recognition failed. Please try again.");
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
+        };
+
+        recognition.start();
+    };
+
     return (
         <Container>
             <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: "bold", color: "#1976d2" }}>
@@ -108,14 +163,30 @@ const CategoryPage = () => {
                         </Typography>
 
                         <form onSubmit={handleAddOrUpdateCategory}>
-                            <TextField fullWidth label="Category Name" variant="outlined" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} sx={{ mb: 2 }} />
+                            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Category Name"
+                                    variant="outlined"
+                                    value={categoryName}
+                                    onChange={(e) => setCategoryName(e.target.value)}
+                                />
+                                <IconButton color="primary" onClick={handleSpeechToText} sx={{ ml: 1 }}>
+                                    <Mic />
+                                </IconButton>
+                            </Box>
 
-                            <FormControl fullWidth sx={{ mb: 2 }}>
-                                <Select value={categoryType} onChange={(e) => setCategoryType(e.target.value)}>
-                                    <MenuItem value="Expense">Expense</MenuItem>
-                                    <MenuItem value="Income">Income</MenuItem>
-                                </Select>
-                            </FormControl>
+                            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                <FormControl fullWidth>
+                                    <Select value={categoryType} onChange={(e) => setCategoryType(e.target.value)}>
+                                        <MenuItem value="Expense">Expense</MenuItem>
+                                        <MenuItem value="Income">Income</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <IconButton color="primary" onClick={handleSpeechToSelectType} sx={{ ml: 1 }}>
+                                    <Mic />
+                                </IconButton>
+                            </Box>
 
                             <Button variant="contained" color="primary" type="submit" fullWidth sx={{ py: 1.5, fontSize: "16px" }}>
                                 {editId ? "Update Category" : "Add Category"}
