@@ -3,6 +3,7 @@ import { CssBaseline } from "@mui/material";
 import AppRoutes from "./Route";
 
 function App() {
+	console.log("🚀 CI/CD Test: Deployment triggered");
     return (
         <Router>
             <CssBaseline />
