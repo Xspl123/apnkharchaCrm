@@ -1,7 +1,11 @@
 import axios from "axios";
 
 const axiosClient = axios.create({
+<<<<<<< HEAD
     baseURL: "http://localhost/api/",
+=======
+    baseURL: "https://apnakharcha.in/ExpTlaravel-main/public/api/",
+>>>>>>> f81c650 (Initial commit)
     headers: {
         "Content-Type": "application/json",
     },

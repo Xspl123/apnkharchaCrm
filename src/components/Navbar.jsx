@@ -7,7 +7,11 @@ import axiosClient from "../api/axiosClient";
 
 import { 
     AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Avatar, 
+<<<<<<< HEAD
     ListItemIcon, List, ListItem, Collapse 
+=======
+    ListItemIcon, List, ListItem, Collapse, useMediaQuery 
+>>>>>>> f81c650 (Initial commit)
 } from "@mui/material";
 import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess } from "@mui/icons-material";
 
@@ -43,6 +47,13 @@ const Navbar = ({ toggleSidebar, themeColor, setThemeColor }) => {
         try {
             await axiosClient.post("/logout");
 
+<<<<<<< HEAD
+=======
+            // Remove token and session
+            localStorage.removeItem("token");
+            localStorage.removeItem("session");
+
+>>>>>>> f81c650 (Initial commit)
             dispatch(logout());
             navigate("/login");
         } catch (error) {
@@ -57,6 +68,7 @@ const Navbar = ({ toggleSidebar, themeColor, setThemeColor }) => {
         handleProfileMenuClose();
     }, [setThemeColor, handleProfileMenuClose]);
 
+<<<<<<< HEAD
     return (
         <AppBar position="static" sx={{ backgroundColor: themeColor, color: "#fff" }}>
             <Toolbar>
@@ -64,6 +76,24 @@ const Navbar = ({ toggleSidebar, themeColor, setThemeColor }) => {
                     <MenuIcon />
                 </IconButton>
 
+=======
+    const isMobile = useMediaQuery("(max-width:600px)"); // ✅ Detect mobile devices
+
+    return (
+        <AppBar position="static" sx={{ backgroundColor: themeColor, color: "#fff" }}>
+            <Toolbar>
+                {isMobile && (
+                    <IconButton
+                        edge="start"
+                        color="inherit"
+                        aria-label="menu"
+                        onClick={toggleSidebar} // ✅ Toggle sidebar on click
+                        sx={{ mr: 2 }}
+                    >
+                        <MenuIcon />
+                    </IconButton>
+                )}
+>>>>>>> f81c650 (Initial commit)
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                     Admin Dashboard
                 </Typography>

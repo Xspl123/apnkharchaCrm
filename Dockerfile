@@ -15,4 +15,8 @@ COPY . .
 EXPOSE 5173
 
 # Start Vite development server
+<<<<<<< HEAD
 CMD ["npm", "run", "dev", "--", "--host"]
+=======
+CMD ["npm", "run", "dev"]
+>>>>>>> f81c650 (Initial commit)

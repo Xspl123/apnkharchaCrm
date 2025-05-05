@@ -342,11 +342,14 @@ const Transactions = () => {
                         {showForm ? "Cancel" : "Add Transaction"}
                     </Button>
                 </Grid>
+<<<<<<< HEAD
                 <Grid item xs={6} sm="auto">
                     <Button variant="contained" color="secondary" fullWidth onClick={exportTransactions}>
                         Export Transactions
                     </Button>
                 </Grid>
+=======
+>>>>>>> f81c650 (Initial commit)
             </Grid>
 
             {/* Account Details in Grid */}
@@ -463,6 +466,7 @@ const Transactions = () => {
             {/* Table is always displayed */}
             <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 3, mt: 2, overflow: "hidden" }}>
                 {/* Search Input Inside Table */}
+<<<<<<< HEAD
                 <Box sx={{ padding: 2 }}>
                     <TextField
                         label="Search Transactions"
@@ -489,6 +493,16 @@ const Transactions = () => {
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                         fullWidth
+=======
+                <Box sx={{ padding: 2, display: "flex", justifyContent: "flex-end" }}>
+                    <TextField
+                        label="Search"
+                        variant="outlined"
+                        size="small"
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        sx={{ width: "300px" }}
+>>>>>>> f81c650 (Initial commit)
                     />
                 </Box>
                 <Table>

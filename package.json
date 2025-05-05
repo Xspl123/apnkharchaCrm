@@ -10,6 +10,12 @@
     "start": "vite --host"
   },
   "dependencies": {
+<<<<<<< HEAD
+=======
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+>>>>>>> f81c650 (Initial commit)
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.5",
@@ -22,10 +28,17 @@
     "file-saver": "^2.0.5",
     "framer-motion": "^12.4.7",
     "prop-types": "^15.8.1",
+<<<<<<< HEAD
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
+=======
+    "react": "^18.3.1",
+    "react-bootstrap": "^2.10.9",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^18.3.1",
+>>>>>>> f81c650 (Initial commit)
     "react-infinite-scroll-component": "^6.1.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.2.0",

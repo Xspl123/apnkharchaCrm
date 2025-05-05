@@ -37,6 +37,10 @@ const CategoryPage = () => {
 
         try {
             if (editId) {
+<<<<<<< HEAD
+=======
+                // Ensure both name and type are sent in the update payload
+>>>>>>> f81c650 (Initial commit)
                 await dispatch(updateCategoryAPI({ id: editId, name: categoryName, type: categoryType })).unwrap();
                 setSnackbarMessage("Category updated successfully!");
             } else {
@@ -47,9 +51,15 @@ const CategoryPage = () => {
             setSnackbarSeverity("success");
             setCategoryName("");
             setCategoryType("Expense");
+<<<<<<< HEAD
             setEditId(null);
             setShowForm(false);
             dispatch(getCategoryAPI());
+=======
+            setEditId(null); // Reset editId after successful update
+            setShowForm(false);
+            dispatch(getCategoryAPI()); // Refresh the category list
+>>>>>>> f81c650 (Initial commit)
         } catch (error) {
             setSnackbarMessage(error?.message || "Failed to process category!");
             setSnackbarSeverity("error");
@@ -59,9 +69,16 @@ const CategoryPage = () => {
     };
 
     const handleEdit = (category) => {
+<<<<<<< HEAD
         setCategoryName(category.name);
         setCategoryType(category.type);
         setEditId(category.id);
+=======
+        // Ensure editId is set correctly when editing
+        setCategoryName(category.name);
+        setCategoryType(category.type);
+        setEditId(category.id); // Set the editId to the selected category's ID
+>>>>>>> f81c650 (Initial commit)
         setShowForm(true);
     };
 
@@ -141,6 +158,7 @@ const CategoryPage = () => {
                 Categories
             </Typography>
 
+<<<<<<< HEAD
             <Button variant="contained" color="primary" onClick={() => setShowForm(!showForm)} sx={{ mb: 2 }}>
                 {showForm ? "Cancel" : "Add Category"}
             </Button>
@@ -193,6 +211,76 @@ const CategoryPage = () => {
                             </Button>
                         </form>
                     </Box>
+=======
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => setShowForm(!showForm)}
+                        fullWidth
+                        sx={{ mb: 2 }}
+                    >
+                        {showForm ? "Cancel" : "Add Category"}
+                    </Button>
+                </Grid>
+            </Grid>
+
+            {showForm && (
+                <Grid container justifyContent="center">
+                    <Grid item xs={12} sm={8} md={6}>
+                        <Box
+                            p={4}
+                            sx={{
+                                border: "1px solid #ddd",
+                                borderRadius: "8px",
+                                backgroundColor: "#fff",
+                                boxShadow: 2,
+                            }}
+                        >
+                            <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold", textAlign: "center" }}>
+                                {editId ? "Edit Category" : "Add New Category"}
+                            </Typography>
+
+                            <form onSubmit={handleAddOrUpdateCategory}>
+                                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="Category Name"
+                                        variant="outlined"
+                                        value={categoryName}
+                                        onChange={(e) => setCategoryName(e.target.value)}
+                                    />
+                                    <IconButton color="primary" onClick={handleSpeechToText} sx={{ ml: 1 }}>
+                                        <Mic />
+                                    </IconButton>
+                                </Box>
+
+                                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                    <FormControl fullWidth>
+                                        <Select value={categoryType} onChange={(e) => setCategoryType(e.target.value)}>
+                                            <MenuItem value="Expense">Expense</MenuItem>
+                                            <MenuItem value="Income">Income</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <IconButton color="primary" onClick={handleSpeechToSelectType} sx={{ ml: 1 }}>
+                                        <Mic />
+                                    </IconButton>
+                                </Box>
+
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    type="submit"
+                                    fullWidth
+                                    sx={{ py: 1.5, fontSize: "16px" }}
+                                >
+                                    {editId ? "Update Category" : "Add Category"}
+                                </Button>
+                            </form>
+                        </Box>
+                    </Grid>
+>>>>>>> f81c650 (Initial commit)
                 </Grid>
             )}
 
@@ -207,6 +295,7 @@ const CategoryPage = () => {
             ) : categories?.length === 0 ? (
                 <Alert severity="info">No categories found.</Alert>
             ) : (
+<<<<<<< HEAD
                 <>
                     <TableContainer component={Paper}>
                         <Table>
@@ -251,6 +340,63 @@ const CategoryPage = () => {
             )}
 
             <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
+=======
+                <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                        <TableContainer component={Paper}>
+                            <Table>
+                                <TableHead>
+                                    <TableRow sx={{ backgroundColor: "#1976d2", color: "white" }}>
+                                        <TableCell><strong>ID</strong></TableCell>
+                                        <TableCell><strong>Category Name</strong></TableCell>
+                                        <TableCell><strong>Type</strong></TableCell>
+                                        <TableCell><strong>Actions</strong></TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {categories.slice(0, visibleCount).map((item, index) => (
+                                        <TableRow key={item?.id || index}>
+                                            <TableCell>{item?.id ?? "N/A"}</TableCell>
+                                            <TableCell>{item?.name ?? "Unnamed"}</TableCell>
+                                            <TableCell>{item?.type ?? "Unknown"}</TableCell>
+                                            <TableCell>
+                                                <IconButton color="primary" onClick={() => handleEdit(item)}>
+                                                    <Edit />
+                                                </IconButton>
+                                                <IconButton color="error" onClick={() => handleDelete(item?.id)}>
+                                                    <Delete />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Grid>
+
+                    {visibleCount < categories.length && (
+                        <Grid item xs={12}>
+                            <Button
+                                variant="contained"
+                                color="secondary"
+                                onClick={() => setVisibleCount(visibleCount + 10)}
+                                fullWidth
+                                sx={{ mt: 2 }}
+                            >
+                                Load More
+                            </Button>
+                        </Grid>
+                    )}
+                </Grid>
+            )}
+
+            <Snackbar
+                open={openSnackbar}
+                autoHideDuration={3000}
+                onClose={() => setOpenSnackbar(false)}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+>>>>>>> f81c650 (Initial commit)
                 <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} variant="filled">
                     {snackbarMessage}
                 </Alert>
@@ -259,4 +405,8 @@ const CategoryPage = () => {
     );
 };
 
+<<<<<<< HEAD
 export default CategoryPage;
+=======
+export default CategoryPage;
+>>>>>>> f81c650 (Initial commit)

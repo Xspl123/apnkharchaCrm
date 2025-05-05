@@ -30,7 +30,13 @@ export const loginUser = createAsyncThunk("auth/loginUser", async (userData, thu
         const response = await axiosClient.post("/login", userData);
         return response.data;
     } catch (error) {
+<<<<<<< HEAD
         return thunkAPI.rejectWithValue(error.response?.data || "Login failed");
+=======
+        const errorMessage = error.response?.data?.message || "Login failed";
+        const validationErrors = error.response?.data?.errors || null;
+        return thunkAPI.rejectWithValue({ message: errorMessage, errors: validationErrors });
+>>>>>>> f81c650 (Initial commit)
     }
 });
 
@@ -40,7 +46,13 @@ export const registerUser = createAsyncThunk("auth/registerUser", async (userDat
         const response = await axiosClient.post("/register", userData);
         return response.data;
     } catch (error) {
+<<<<<<< HEAD
         return thunkAPI.rejectWithValue(error.response?.data || "Registration failed");
+=======
+        const errorMessage = error.response?.data?.message || "Registration failed";
+        const validationErrors = error.response?.data?.errors || null;
+        return thunkAPI.rejectWithValue({ message: errorMessage, errors: validationErrors });
+>>>>>>> f81c650 (Initial commit)
     }
 });
 
@@ -77,7 +89,11 @@ const authSlice = createSlice({
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.loading = false;
+<<<<<<< HEAD
                 state.error = action.payload;
+=======
+                state.error = action.payload?.message || "An error occurred"; // ✅ Properly handle error message
+>>>>>>> f81c650 (Initial commit)
             })
             // ✅ Register
             .addCase(registerUser.pending, (state) => {
@@ -93,7 +109,14 @@ const authSlice = createSlice({
             })
             .addCase(registerUser.rejected, (state, action) => {
                 state.loading = false;
+<<<<<<< HEAD
                 state.error = action.payload;
+=======
+                state.error = action.payload?.message || "An error occurred";
+                if (action.payload?.errors) {
+                    state.validationErrors = action.payload.errors; // Store validation errors if present
+                }
+>>>>>>> f81c650 (Initial commit)
             })
             // ✅ Fetch Users List
             .addCase(getUserAPI.pending, (state) => {
