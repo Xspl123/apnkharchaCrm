@@ -1,0 +1,155 @@
+.profit-loss-page {
+  padding: 24px;
+  background: #f8fafc;
+}
+
+.profit-loss-page--mobile {
+  padding: 12px;
+}
+
+.profit-loss-page__clear {
+  height: 40px;
+}
+
+.profit-loss-page__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.profit-loss-page__summary-card {
+  min-height: 104px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.profit-loss-page__summary-card .MuiTypography-caption-root {
+  color: #475569;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profit-loss-page__summary-card .MuiTypography-h5-root {
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 1.35rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.profit-loss-page__summary-card--income {
+  border-color: rgba(4, 120, 87, 0.28);
+  background: #ecfdf5;
+}
+
+.profit-loss-page__summary-card--income .MuiTypography-h5-root {
+  color: #047857;
+}
+
+.profit-loss-page__summary-card--nii {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: #eff6ff;
+}
+
+.profit-loss-page__summary-card--nii .MuiTypography-h5-root {
+  color: #1d4ed8;
+}
+
+.profit-loss-page__summary-card--operating {
+  border-color: rgba(15, 118, 110, 0.28);
+  background: #f0fdfa;
+}
+
+.profit-loss-page__summary-card--operating .MuiTypography-h5-root {
+  color: #0f766e;
+}
+
+.profit-loss-page__summary-card--profit {
+  border-color: rgba(22, 163, 74, 0.28);
+  background: #f0fdf4;
+}
+
+.profit-loss-page__summary-card--profit .MuiTypography-h5-root {
+  color: #15803d;
+}
+
+.profit-loss-page__summary-card--loss {
+  border-color: rgba(220, 38, 38, 0.3);
+  background: #fef2f2;
+}
+
+.profit-loss-page__summary-card--loss .MuiTypography-h5-root {
+  color: #dc2626;
+}
+
+.profit-loss-page__metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.profit-loss-page__metric-strip > div {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.profit-loss-page__metric-strip .MuiTypography-caption-root {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.profit-loss-page__metric-strip strong {
+  color: #0f172a;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.profit-loss-page__opening-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.profit-loss-page__value--positive {
+  color: #15803d;
+  font-weight: 800;
+}
+
+.profit-loss-page__value--negative {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .profit-loss-page__summary-grid,
+  .profit-loss-page__metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .profit-loss-page__summary-grid,
+  .profit-loss-page__metric-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .profit-loss-page__opening-note {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -1,29 +1,28 @@
-import PropTypes from "prop-types";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
+import "./Footer.css";
 
-const Footer = ({ themeColor }) => {
+const Footer = () => {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
     return (
         <Box
             component="footer"
-            sx={{
-                width: "100%",
-                position: "fixed",
-                bottom: 0,
-                left: 0,
-                backgroundColor: themeColor,
-                color: "#fff",
-                textAlign: "center",
-                padding: "10px 0",
+            className="app-footer"
+            style={{
+                "--footer-left": isMobile ? "0" : "auto",
+                "--footer-border": theme.palette.divider,
+                "--footer-bg":
+                    theme.palette.mode === "dark"
+                        ? "rgba(15, 23, 42, 0.88)"
+                        : "rgba(255, 255, 255, 0.84)",
             }}
         >
-            <Typography variant="body2">© 2025 Expense Tracker. All Rights Reserved.</Typography>
+            <Typography variant="body2" color="text.secondary">
+                © 2025 Expense Tracker. All Rights Reserved.
+            </Typography>
         </Box>
     );
-};
-
-// ✅ Add PropTypes for `themeColor`
-Footer.propTypes = {
-    themeColor: PropTypes.string.isRequired,
 };
 
 export default Footer;

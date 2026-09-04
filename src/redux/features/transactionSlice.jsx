@@ -1,17 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosClient from '../../api/axiosClient';
 
-// Helper function to retrieve the token from localStorage
-const getToken = () => localStorage.getItem('token');
-
 // Fetch Transactions with Pagination
 export const fetchTransactions = createAsyncThunk(
   'transactions/fetchTransactions',
   async ({ page = 1, perPage = 10 } = {}, thunkAPI) => {
     try {
-      const token = getToken();
       const response = await axiosClient.get('/transactions', {
-        headers: { Authorization: `Bearer ${token}` },
         params: { page, per_page: perPage },
       });
       return response.data; // Ensure the API response includes pagination details
@@ -28,9 +23,7 @@ export const fetchSearchedTransactions = createAsyncThunk(
   'transactions/fetchSearchedTransactions',
   async ({ searchParams, page = 1, perPage = 10 } = {}, thunkAPI) => {
     try {
-      const token = getToken();
       const response = await axiosClient.get('/search', {
-        headers: { Authorization: `Bearer ${token}` },
         params: { ...searchParams, page, per_page: perPage },
       });
       return response.data; // Ensure the API response includes pagination details
@@ -47,14 +40,7 @@ export const createTransaction = createAsyncThunk(
   'transactions/createTransaction',
   async (transactionData, thunkAPI) => {
     try {
-      const token = getToken();
-      const response = await axiosClient.post(
-        '/transactions/create',
-        transactionData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await axiosClient.post('/transactions/create', transactionData);
       return response.data.transaction;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -64,15 +50,30 @@ export const createTransaction = createAsyncThunk(
   }
 );
 
+// ✅ Update Account
+export const updateAccountAPI = createAsyncThunk(
+    "accounts/update",
+    async ({ id, account_name, account_balance }, { rejectWithValue }) => {
+        try {
+            await axiosClient.put(`/accounts/${id}`, 
+                { account_name, account_balance }
+            );
+            return { id, account_name, account_balance };
+        } catch (error) {
+            const errorMessages = error.response?.data?.errors
+                ? Object.values(error.response.data.errors).flat()
+                : [error.response?.data?.error || "Something went wrong!"];
+            return rejectWithValue(errorMessages);
+        }
+    }
+);
+
 // Delete Transaction
 export const deleteTransactionApi = createAsyncThunk(
   'transactions/deleteTransaction',
   async (id, thunkAPI) => {
     try {
-      const token = getToken();
-      await axiosClient.delete(`/transactions/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axiosClient.delete(`/transactions/${id}`);
       return id; // Returning deleted transaction ID
     } catch (error) {
       return thunkAPI.rejectWithValue(

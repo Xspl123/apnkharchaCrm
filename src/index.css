@@ -1,48 +1,20 @@
-/* Global Styling */
-body, html {
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body,
+html {
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
+  font-family: "Inter", "Segoe UI", sans-serif;
 }
 
-/* Layout */
-.app {
-  display: flex;
+body {
+  overscroll-behavior-y: none;
 }
 
-/* Sidebar */
-.sidebar {
-  width: 250px;
-  background: #2c3e50;
-  color: white;
-  height: 100vh;
-  padding: 20px;
-}
-
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-}
-
-.sidebar ul li {
-  margin: 15px 0;
-}
-
-.sidebar ul li a {
-  color: white;
-  text-decoration: none;
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  padding: 20px;
-}
-
-/* Navbar */
-.navbar {
-  background: #3498db;
-  color: white;
-  padding: 10px;
-  margin-bottom: 20px;
+html {
+  -webkit-text-size-adjust: 100%;
 }

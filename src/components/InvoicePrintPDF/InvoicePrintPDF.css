@@ -1,0 +1,503 @@
+/* ==================== src/components/InvoicePrintPDF/InvoicePrintPDF.css ==================== */
+
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: white;
+    padding: 0;
+    margin: 0;
+    min-height: 100vh;
+}
+
+/* Print Container - SUPER COMPACT */
+.print-container {
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+    background: white;
+    padding: 8px;  /* Minimal padding */
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: none;
+}
+
+/* ===== HEADER WITH LOGO - EXTRA COMPACT ===== */
+.header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;  /* Minimal margin */
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 6px;  /* Minimal gap */
+}
+
+.logo-box {
+    width: 45px;  /* Chhota logo */
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 3px;
+    background: white;
+}
+
+.logo-box img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.logo-fallback {
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 6px;
+    color: white;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.company-info h1 {
+    font-size: 16px;  /* Chhota font */
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 2px;
+    line-height: 1.2;
+}
+
+.company-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;  /* Minimal gap */
+    margin-top: 2px;
+}
+
+.detail-chip {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #f8fafc;
+    padding: 2px 6px;  /* Minimal padding */
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    font-size: 8px;  /* Bahut chhota font */
+    color: #334155;
+    line-height: 1.2;
+}
+
+/* Invoice Badge */
+.invoice-badge {
+    text-align: right;
+}
+
+.invoice-badge h2 {
+    font-size: 22px;  /* Chhota font */
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 3px;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.invoice-meta {
+    background: #f8fafc;
+    padding: 4px 8px;  /* Minimal padding */
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    min-width: 180px;  /* Chhoti width */
+}
+
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+    font-size: 9px;  /* Chhota font */
+    line-height: 1.2;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;  /* Minimal padding */
+    font-size: 9px;  /* Chhota font */
+    font-weight: 700;
+    border-radius: 20px;
+    margin-top: 3px;
+    line-height: 1.2;
+}
+
+/* ===== BILL TO SECTION - COMPACT ===== */
+.bill-to {
+    margin: 5px 0;  /* Minimal margin */
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 3px;
+}
+
+.accent {
+    width: 3px;
+    height: 16px;
+    background: #667eea;
+    border-radius: 2px;
+}
+
+.section-title span {
+    font-size: 11px;  /* Chhota font */
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+}
+
+.client-card {
+    background: #fafbfc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px;  /* Minimal padding */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-left: 7px;
+}
+
+.client-name {
+    font-size: 12px;  /* Chhota font */
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 3px;
+    line-height: 1.2;
+}
+
+.info-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 2px;
+    font-size: 9px;  /* Chhota font */
+    line-height: 1.2;
+}
+
+/* ===== TABLE STYLES - SUPER COMPACT ===== */
+.table-container {
+    margin: 5px 0;  /* Minimal margin */
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: #f8fafc;
+    font-weight: 700;
+    font-size: 8px;  /* Bahut chhota font */
+    color: #0f172a;
+    padding: 4px 3px;  /* Minimal padding */
+    text-align: left;
+    border-bottom: 1px solid #667eea;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+td {
+    padding: 3px 3px;  /* Minimal padding */
+    font-size: 8px;  /* Bahut chhota font */
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    line-height: 1.2;
+}
+
+.item-name {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 8px;
+    line-height: 1.2;
+}
+
+.item-desc {
+    font-size: 7px;  /* Sabse chhota font */
+    color: #64748b;
+    line-height: 1.1;
+}
+
+/* ===== TOTALS SECTION - COMPACT ===== */
+.totals {
+    display: flex;
+    justify-content: flex-end;
+    margin: 3px 0;  /* Minimal margin */
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.totals-box {
+    width: 220px;  /* Chhoti width */
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.total-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 6px;  /* Minimal padding */
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 9px;  /* Chhota font */
+    line-height: 1.2;
+}
+
+.total-item.grand {
+    background: #f1f5f9;
+    font-weight: 800;
+    font-size: 10px;
+    padding: 4px 6px;
+}
+
+/* ===== BANK DETAILS - COMPACT ===== */
+.bank-section {
+    margin: 5px 0;  /* Minimal margin */
+    padding: 6px;  /* Minimal padding */
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    position: relative;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.bank-accent {
+    width: 3px;
+}
+
+.bank-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 10px;  /* Chhota font */
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    padding-left: 8px;
+    line-height: 1.2;
+}
+
+.bank-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;  /* Minimal gap */
+    padding-left: 8px;
+}
+
+.bank-item .label {
+    font-size: 7px;  /* Bahut chhota font */
+    color: #64748b;
+    margin-bottom: 1px;
+    line-height: 1.1;
+}
+
+.bank-item .value {
+    font-size: 8px;  /* Chhota font */
+    line-height: 1.2;
+}
+
+/* ===== NOTES SECTION - COMPACT ===== */
+.notes {
+    margin: 5px 0;  /* Minimal margin */
+    padding: 5px;  /* Minimal padding */
+    background: #f8fafc;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.notes-header span:last-child {
+    font-size: 9px;
+}
+
+.notes-content {
+    font-size: 8px;
+    padding-left: 12px;
+    line-height: 1.2;
+}
+
+/* ===== SIGNATURE SECTION - COMPACT ===== */
+.signature {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0 3px;  /* Minimal margin */
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.signature-box {
+    border-top: 1px solid #94a3b8;
+    padding-top: 3px;
+    min-width: 130px;  /* Chhoti width */
+}
+
+.signature-title {
+    font-size: 8px;  /* Chhota font */
+    line-height: 1.2;
+}
+
+.signature-company {
+    font-size: 9px;
+    margin-top: 2px;
+    line-height: 1.2;
+}
+
+.signature-sub {
+    font-size: 6px;  /* Sabse chhota */
+    line-height: 1.1;
+}
+
+/* ===== FOOTER - ULTIMATE FIX ===== */
+.footer {
+    margin-top: 5px;
+    padding-top: 3px;
+    border-top: 1px dashed #cbd5e1;
+    text-align: center;
+    
+    /* CRITICAL - Force on same page */
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    
+    /* Position fixes */
+    position: relative;
+    background: white;
+    width: 100%;
+    clear: both;
+    float: none;
+    
+    /* Keep together */
+    orphans: 10;
+    widows: 10;
+    
+    /* Compact spacing */
+    line-height: 1.1;
+}
+
+.thankyou {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 10px;  /* Chhota font */
+    margin-bottom: 1px;
+    page-break-inside: avoid;
+    line-height: 1.2;
+}
+
+.footer-text {
+    color: #64748b;
+    font-size: 7px;  /* Bahut chhota */
+    margin-bottom: 1px;
+    page-break-inside: avoid;
+    line-height: 1.1;
+}
+
+.footer-email {
+    color: #667eea;
+    font-weight: 600;
+    font-size: 7px;
+    margin-bottom: 1px;
+    page-break-inside: avoid;
+    line-height: 1.1;
+}
+
+.footer-phone {
+    color: #64748b;
+    font-size: 7px;
+    page-break-inside: avoid;
+    line-height: 1.1;
+}
+
+.footer-watermark {
+    color: #cbd5e1;
+    font-size: 6px;  /* Sabse chhota */
+    font-weight: 700;
+    margin-top: 2px;
+    page-break-inside: avoid;
+    line-height: 1.1;
+}
+
+/* ===== PRINT OPTIMIZATION - ULTIMATE ===== */
+@media print {
+    body {
+        padding: 0;
+        margin: 0;
+        background: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .print-container {
+        padding: 4px;  /* Minimum padding */
+        border: none;
+        box-shadow: none;
+        max-height: 100%;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    
+    /* FORCE EVERY ELEMENT TO STAY TOGETHER */
+    .header, .bill-to, .table-container, 
+    .totals, .bank-section, .notes, 
+    .signature, .footer {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-before: avoid !important;
+        page-break-after: avoid !important;
+        display: block;
+    }
+    
+    /* REMOVE ALL MARGINS THAT CAUSE PAGINATION */
+    .header { margin-bottom: 2px !important; }
+    .bill-to { margin: 2px 0 !important; }
+    .table-container { margin: 2px 0 !important; }
+    .totals { margin: 2px 0 !important; }
+    .bank-section { margin: 2px 0 !important; padding: 3px !important; }
+    .notes { margin: 2px 0 !important; padding: 3px !important; }
+    .signature { margin: 3px 0 1px !important; }
+    .footer { margin-top: 2px !important; padding-top: 2px !important; }
+    
+    /* MINIMUM FONTS */
+    body { font-size: 7px; }
+    th { font-size: 6px; padding: 2px 2px; }
+    td { font-size: 6px; padding: 1px 2px; }
+    .item-name { font-size: 6px; }
+    .detail-chip { font-size: 5px; padding: 1px 3px; }
+    .meta-row { font-size: 6px; }
+    .total-item { font-size: 6px; padding: 1px 3px; }
+    .thankyou { font-size: 8px; }
+    .footer-text, .footer-email, .footer-phone { font-size: 5px; }
+    .footer-watermark { font-size: 4px; }
+    
+    /* HIDE BORDERS TO SAVE SPACE */
+    .print-container, .client-card, .table-container, 
+    .totals-box, .bank-section, .notes {
+        border: none;
+    }
+}

@@ -1,0 +1,79 @@
+.company-page {
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+.company-page__title {
+  margin-bottom: 24px;
+  color: #1976d2;
+  font-weight: 700;
+}
+
+.company-page__actions {
+  margin-bottom: 24px;
+}
+
+.company-page__form-card {
+  margin-bottom: 24px;
+}
+
+.company-page__logo-upload {
+  text-align: center;
+}
+
+.company-page__logo-input {
+  display: none;
+}
+
+.company-page__logo-avatar {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+  cursor: pointer;
+  border: 2px dashed #1976d2;
+}
+
+.company-page__logo-icon {
+  font-size: 40px;
+}
+
+.company-page__logo-caption {
+  display: block;
+  margin-top: 8px;
+}
+
+.company-page__section-title {
+  margin-top: 16px;
+  font-weight: 600;
+}
+
+.company-page__card {
+  height: 100%;
+}
+
+.company-page__card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.company-page__card-avatar {
+  width: 60px;
+  height: 60px;
+  margin-right: 16px;
+}
+
+.company-page__card-email {
+  color: #64748b;
+}
+
+.company-page__card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.company-page__empty {
+  color: #64748b;
+  text-align: center;
+}

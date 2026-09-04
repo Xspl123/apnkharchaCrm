@@ -1,17 +1,16 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/apiConfig";
+import { notifySessionExpired } from "./authSession";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 const axiosClient = axios.create({
-<<<<<<< HEAD
-    baseURL: "http://localhost/api/",
-=======
-    baseURL: "https://apnakharcha.in/ExpTlaravel-main/public/api/",
->>>>>>> f81c650 (Initial commit)
+    baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
     },
 });
 
-// Request Interceptor (For adding auth token if needed)
 axiosClient.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -20,11 +19,22 @@ axiosClient.interceptors.request.use((config) => {
     return config;
 });
 
-// Response Interceptor (For handling errors globally)
 axiosClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        console.error("API Error:", error.response?.data || error.message);
+        error.normalizedMessage = getErrorMessage(error);
+        const status = error.response?.status;
+        const requestUrl = error.config?.url || "";
+
+        if (
+            status === 401 &&
+            !requestUrl.includes("/login") &&
+            !requestUrl.includes("/register") &&
+            !requestUrl.includes("/verify-otp")
+        ) {
+            notifySessionExpired();
+        }
+
         return Promise.reject(error);
     }
 );

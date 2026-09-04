@@ -1,59 +1,31 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { getErrorMessage } from "../../utils/getErrorMessage";
 import axiosClient from "../../api/axiosClient";
-
-// Helper function to retrieve the token from localStorage
-const getToken = () => localStorage.getItem("token");
 
 // Fetch Budgets API
 export const getBudgetAPI = createAsyncThunk(
     "budgets/fetch",
     async (_, { rejectWithValue }) => {
       try {
-        const token = getToken();
-        const response = await axiosClient.get("/budgets", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axiosClient.get("/budgets");
         return response.data.data; // पूरी प्रतिक्रिया लौटाएं
       } catch (error) {
-        return rejectWithValue(error.response?.data || error.message);
+        return rejectWithValue(getErrorMessage(error));
       }
     }
   );
   
-
-
-// Create or Update Budget API
-// export const createBudgetAPI = createAsyncThunk(
-//     "budgets/create",
-//     async (budgetData, { rejectWithValue }) => {
-//         try {
-//             const token = getToken();
-//             const response = await axiosClient.post("/budgets-create", budgetData, {
-//                 headers: { Authorization: `Bearer ${token}` },
-//             });
-//             console.log("Create Budget API Response:", response.data.data);
-//             return response.data.data; 
-//         } catch (error) {
-//             return rejectWithValue(error.response?.data || error.message);
-//         }
-//     }
-// );
-
 export const createBudgetAPI = createAsyncThunk(
   "budget/update",
   async ({ category_id, budget_amount }, { rejectWithValue }) => {
     try {
-      const token = getToken();
       const response = await axiosClient.put(
         `/budgets/${category_id}`,  // API URL me category_id bhej rahe hain
-        { budget_amount },          // Sirf budget_amount update hoga
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { budget_amount }          // Sirf budget_amount update hoga
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      return rejectWithValue(getErrorMessage(error));
     }
   }
 );

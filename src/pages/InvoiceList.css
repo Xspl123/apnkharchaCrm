@@ -1,0 +1,489 @@
+.invoice-page__loader {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 9999;
+}
+
+.invoice-page__shell {
+  padding-top: 32px;
+  padding-bottom: 32px;
+}
+
+.invoice-page__hero {
+  margin-bottom: 20px;
+  padding: 16px;
+  color: #ffffff;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.invoice-page__hero-title {
+  margin-bottom: 2px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.invoice-page__hero-copy {
+  font-size: 0.85rem;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.invoice-page__hero-avatar {
+  width: 50px;
+  height: 50px;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.invoice-page__hero-icon {
+  font-size: 28px;
+}
+
+.invoice-page__stats {
+  margin-bottom: 20px;
+}
+
+.invoice-page__stat-card {
+  border-radius: 12px;
+}
+
+.invoice-page__stat-content {
+  padding: 16px;
+}
+
+.invoice-page__stat-label {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.invoice-page__action-bar {
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: 16px;
+  background-color: #ffffff;
+}
+
+.invoice-page__create-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.invoice-page__form-shell {
+  margin-bottom: 32px;
+  overflow: visible;
+}
+
+.invoice-page__form-content {
+  padding: 32px;
+}
+
+.invoice-page__form-header {
+  margin-bottom: 24px;
+}
+
+.invoice-page__form-avatar {
+  width: 48px;
+  height: 48px;
+  background-color: #667eea;
+}
+
+.invoice-page__form-title {
+  font-weight: 700;
+}
+
+.invoice-page__form-divider {
+  margin-bottom: 32px;
+}
+
+.invoice-page__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.invoice-page__section-icon {
+  color: #667eea;
+}
+
+.invoice-page__select-control {
+  border-radius: 12px;
+  height: 56px;
+}
+
+.invoice-page__field-rounded {
+  border-radius: 12px;
+}
+
+.invoice-page__helper-text {
+  display: block;
+  margin-top: 8px;
+}
+
+.invoice-page__section-divider {
+  margin: 16px 0;
+}
+
+.invoice-page__section-chip {
+  padding: 0 16px;
+}
+
+.invoice-page__gst-box {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1.5px solid rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  background-color: rgba(102, 126, 234, 0.02);
+}
+
+.invoice-page__gst-header {
+  margin-bottom: 24px;
+}
+
+.invoice-page__gst-avatar {
+  width: 36px;
+  height: 36px;
+  background-color: #667eea;
+}
+
+.invoice-page__gst-avatar-icon {
+  font-size: 18px;
+}
+
+.invoice-page__gst-chip {
+  border-radius: 8px;
+}
+
+.invoice-page__gst-label {
+  display: block;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.invoice-page__item-card {
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.invoice-page__item-card--striped {
+  background-color: #fafbfc;
+}
+
+.invoice-page__item-card--linked {
+  border: 1.5px solid rgba(17, 153, 142, 0.25);
+  background-color: rgba(17, 153, 142, 0.03);
+}
+
+.invoice-page__item-header {
+  margin-bottom: 16px;
+}
+
+.invoice-page__item-badge {
+  margin-right: 8px;
+}
+
+.invoice-page__item-title {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.invoice-page__inventory-chip {
+  height: 24px;
+  color: #11998e;
+  font-size: 11px;
+  font-weight: 700;
+  background-color: rgba(17, 153, 142, 0.1);
+}
+
+.invoice-page__remove-item {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.invoice-page__remove-item:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+.invoice-page__stock-alert {
+  margin-bottom: 16px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-radius: 10px;
+}
+
+.invoice-page__product-option {
+  width: 100%;
+  padding: 4px 0;
+}
+
+.invoice-page__option-stock-chip {
+  height: 18px;
+  font-size: 10px;
+}
+
+.invoice-page__option-code-chip {
+  height: 16px;
+  font-size: 9px;
+}
+
+.invoice-page__option-code-chip--hsn {
+  color: #2e7d32;
+  background-color: #e8f5e9;
+}
+
+.invoice-page__option-code-chip--price {
+  color: #1976d2;
+  font-weight: 700;
+  background-color: #e3f2fd;
+}
+
+.invoice-page__option-code-chip--gst {
+  color: #c62828;
+  background-color: #fce4ec;
+}
+
+.invoice-page__field-rounded-sm .MuiOutlinedInput-root {
+  border-radius: 10px;
+}
+
+.invoice-page__field-rounded-sm.invoice-page__field-linked .MuiOutlinedInput-root {
+  background-color: rgba(17, 153, 142, 0.04);
+}
+
+.invoice-page__field-amount .MuiInputBase-input {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.invoice-page__field-tax .MuiInputBase-input {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.invoice-page__add-item {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-width: 2px;
+  border-style: dashed;
+  border-radius: 12px;
+}
+
+.invoice-page__add-item:hover {
+  border-width: 2px;
+}
+
+.invoice-page__totals-card {
+  padding: 24px;
+  color: #ffffff;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.invoice-page__totals-label {
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.invoice-page__notes {
+  border-radius: 12px;
+}
+
+.invoice-page__actions-divider {
+  margin: 16px 0;
+}
+
+.invoice-page__cancel-action {
+  padding: 12px 32px;
+  border-width: 2px;
+  border-radius: 12px;
+}
+
+.invoice-page__cancel-action:hover {
+  border-width: 2px;
+}
+
+.invoice-page__submit-action {
+  padding: 12px 48px;
+}
+
+.invoice-page__table-content {
+  padding: 0;
+}
+
+.invoice-page__table-header {
+  padding: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.invoice-page__table-avatar {
+  background-color: #667eea;
+}
+
+.invoice-page__table-title {
+  font-weight: 700;
+}
+
+.invoice-page__page-chip {
+  border-radius: 16px;
+}
+
+.invoice-page__head-row {
+  background-color: #f8fafc;
+}
+
+.invoice-page__invoice-number {
+  color: #667eea;
+  font-weight: 700;
+}
+
+.invoice-page__client-name {
+  font-weight: 600;
+}
+
+.invoice-page__amount {
+  font-weight: 600;
+}
+
+.invoice-page__paid {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.invoice-page__status-chip-table {
+  min-width: 90px;
+  border-radius: 16px;
+  font-weight: 600;
+}
+
+.invoice-page__action-view {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.invoice-page__action-view:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+.invoice-page__action-edit {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.invoice-page__action-edit:hover {
+  background-color: rgba(102, 126, 234, 0.2);
+}
+
+.invoice-page__action-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.invoice-page__action-danger:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+.invoice-page__empty-cell {
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.invoice-page__empty-avatar {
+  width: 80px;
+  height: 80px;
+  background-color: #f1f5f9;
+}
+
+.invoice-page__empty-icon {
+  color: #94a3b8;
+  font-size: 48px;
+}
+
+.invoice-page__empty-cta {
+  margin-top: 16px;
+  border-radius: 12px;
+}
+
+.invoice-page__pagination {
+  border-top: 1px solid #e2e8f0;
+}
+
+.invoice-page__pagination .MuiTablePagination-toolbar {
+  padding: 16px;
+}
+
+.invoice-page__delete-paper {
+  max-width: 400px;
+  padding: 16px;
+  border-radius: 24px;
+}
+
+.invoice-page__delete-title {
+  padding-bottom: 8px;
+  text-align: center;
+}
+
+.invoice-page__delete-avatar {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+.invoice-page__delete-icon {
+  font-size: 48px;
+}
+
+.invoice-page__delete-heading {
+  font-weight: 700;
+}
+
+.invoice-page__delete-content {
+  text-align: center;
+}
+
+.invoice-page__delete-copy {
+  margin-bottom: 8px;
+}
+
+.invoice-page__delete-number {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.invoice-page__delete-note {
+  margin-top: 16px;
+}
+
+.invoice-page__delete-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.invoice-page__delete-cancel {
+  padding: 12px 32px;
+  border-width: 2px;
+  border-radius: 12px;
+}
+
+.invoice-page__delete-cancel:hover {
+  border-width: 2px;
+}
+
+.invoice-page__delete-confirm {
+  padding: 12px 32px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.invoice-page__snackbar-alert {
+  font-weight: 500;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}

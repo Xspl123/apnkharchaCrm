@@ -1,0 +1,66 @@
+.app-navbar {
+  color: #0f172a;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.app-navbar .MuiToolbar-root {
+  min-height: 64px;
+  gap: 12px;
+}
+
+.app-navbar__menu-button {
+  margin-right: 4px;
+  color: #334155;
+}
+
+.app-navbar__brand-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.app-navbar__brand-title {
+  color: #0f172a;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.app-navbar__brand-subtitle {
+  display: block;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.app-navbar__spacer {
+  flex-grow: 1;
+}
+
+.app-navbar__avatar-button {
+  padding: 2px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.app-navbar__avatar-button:hover {
+  background-color: #f8fafc;
+}
+
+.app-navbar__snackbar {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .app-navbar .MuiToolbar-root {
+    min-height: 58px;
+  }
+
+  .app-navbar__brand-title {
+    font-size: 0.92rem;
+  }
+
+  .app-navbar__brand-subtitle {
+    font-size: 0.68rem;
+  }
+}

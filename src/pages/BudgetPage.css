@@ -1,0 +1,42 @@
+.budget-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.budget-page__table-shell {
+  padding: 16px;
+}
+
+.budget-page__trigger {
+  margin-bottom: 16px;
+}
+
+.budget-page__title {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.budget-page__loader {
+  display: block;
+  margin: 32px auto 0;
+}
+
+.budget-page__error,
+.budget-page__empty {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.budget-page__table-head {
+  background-color: #1976d2;
+}
+
+.budget-page__head-cell {
+  color: #000000;
+  font-weight: 700;
+}
+
+.budget-page__snackbar {
+  width: 100%;
+}

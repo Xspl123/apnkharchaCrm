@@ -1,21 +1,16 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { getErrorMessage } from "../../utils/getErrorMessage";
 import axiosClient from "../../api/axiosClient";
-
-// ✅ Get token from localStorage
-const getToken = () => localStorage.getItem("token");
 
 // ✅ Create Category
 export const createCategoryAPI = createAsyncThunk(
     "categories/create",
     async (categoryData, { rejectWithValue }) => {
         try {
-            const token = getToken();
-            const response = await axiosClient.post("/categories/create", categoryData, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await axiosClient.post("/categories/create", categoryData);
             return response.data;
         } catch (error) {
-            return rejectWithValue(error.response?.data || error.message);
+            return rejectWithValue(getErrorMessage(error));
         }
     }
 );
@@ -25,15 +20,10 @@ export const getCategoryAPI = createAsyncThunk(
     "categories/fetch",
     async (_, { rejectWithValue }) => {
         try {
-            const token = getToken();
-            const response = await axiosClient.get("/categories", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            console.log("API Response testing:", response.data.data); // ✅ Debugging ke liye console log
+            const response = await axiosClient.get("/categories");
             return response.data;
         } catch (error) {
-            console.error("API Fetch Error:", error);
-            return rejectWithValue(error.response?.data || error.message);
+            return rejectWithValue(getErrorMessage(error));
         }
     }
 );
@@ -43,13 +33,10 @@ export const updateCategoryAPI = createAsyncThunk(
     "categories/update",
     async ({ id, name, type }, { rejectWithValue }) => {
         try {
-            const token = getToken();
-            const response = await axiosClient.put(`/categories/${id}`, { name, type }, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await axiosClient.put(`/categories/${id}`, { name, type });
             return response.data;
         } catch (error) {
-            return rejectWithValue(error.response?.data || error.message);
+            return rejectWithValue(getErrorMessage(error));
         }
     }
 );
@@ -59,13 +46,10 @@ export const deleteCategoryAPI = createAsyncThunk(
     "categories/delete",
     async (id, { rejectWithValue }) => {
         try {
-            const token = getToken();
-            await axiosClient.delete(`/categories/${id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            await axiosClient.delete(`/categories/${id}`);
             return id;
         } catch (error) {
-            return rejectWithValue(error.response?.data || error.message);
+            return rejectWithValue(getErrorMessage(error));
         }
     }
 );
@@ -87,7 +71,6 @@ const categorySlice = createSlice({
                 state.error = null;
             })
             .addCase(getCategoryAPI.fulfilled, (state, action) => {
-                console.log("Fetched Categories:", action.payload?.data); // ✅ Debugging ke liye log
                 state.loading = false;
                 state.list = action.payload.data; // ✅ Yaha `list` me categories assign karni thi
                 state.pagination = {

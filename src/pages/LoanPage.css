@@ -1,0 +1,185 @@
+.loan-page__table-shell {
+  padding: 16px;
+}
+
+.loan-page__title {
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.loan-page__loader {
+  display: block;
+  margin: 32px auto 0;
+}
+
+.loan-page__error,
+.loan-page__empty {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.loan-page__table-head {
+  background-color: #1976d2;
+}
+
+.loan-page__head-cell {
+  color: #000000;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.loan-page__row--pending {
+  background-color: #fff3e0;
+}
+
+.loan-page__row--pending:hover {
+  background-color: #ffe0b2;
+}
+
+.loan-page__row--cleared:hover {
+  background-color: #f5f5f5;
+}
+
+.loan-page__borrower--pending {
+  font-weight: 700;
+}
+
+.loan-page__balance {
+  font-weight: 700;
+}
+
+.loan-page__balance--positive {
+  color: #d32f2f;
+}
+
+.loan-page__balance--cleared {
+  color: #2e7d32;
+}
+
+.loan-page__status-chip {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.loan-page__status-chip--pending {
+  background-color: #ff9800;
+}
+
+.loan-page__status-chip--cleared {
+  background-color: #4caf50;
+}
+
+.loan-page__summary {
+  margin: 16px 0;
+  padding: 16px;
+  background-color: #f5f5f5;
+}
+
+.loan-page__summary-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.loan-page__summary-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loan-page__summary-line + .loan-page__summary-line {
+  margin-top: 8px;
+}
+
+.loan-page__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.loan-page__dot--pending {
+  background-color: #ff9800;
+}
+
+.loan-page__dot--cleared {
+  background-color: #4caf50;
+}
+
+.loan-page__summary-amount--pending {
+  color: #d32f2f;
+}
+
+.loan-page__summary-amount--cleared {
+  color: #2e7d32;
+}
+
+.loan-page__summary-total {
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-align: center;
+  color: #ffffff;
+  background-color: #1976d2;
+}
+
+.loan-page__summary-total-value {
+  font-weight: 700;
+}
+
+.loan-page__history-title {
+  margin: 32px 0 16px;
+  font-weight: 700;
+}
+
+.loan-page__accordion {
+  margin-bottom: 16px;
+}
+
+.loan-page__accordion--pending {
+  border: 2px solid #ff9800;
+}
+
+.loan-page__accordion-summary--pending {
+  background-color: #fff3e0;
+}
+
+.loan-page__accordion-summary--cleared {
+  background-color: #f5f5f5;
+}
+
+.loan-page__accordion-title {
+  font-weight: 700;
+}
+
+.loan-page__outstanding {
+  margin-left: 8px;
+  color: #d32f2f;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.loan-page__timeline-dot--borrow {
+  background-color: #f44336;
+}
+
+.loan-page__timeline-dot--return {
+  background-color: #4caf50;
+}
+
+@media (max-width: 768px) {
+  .loan-page__summary-layout {
+    align-items: stretch;
+  }
+
+  .loan-page__summary-total {
+    width: 100%;
+  }
+}

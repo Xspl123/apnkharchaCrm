@@ -3,11 +3,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { getBudgetAPI, createBudgetAPI } from "../redux/features/budgetSlice";
 import { getCategoryAPI } from "../redux/features/categorySlice";
 import {
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-    CircularProgress, Typography, Button, Dialog, DialogTitle, DialogContent,
+    Button, Dialog, DialogTitle, DialogContent,
     DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
     Snackbar, Alert
 } from "@mui/material";
+import { DataTable, PageHeader } from "../components/common";
+import "./BudgetPage.css";
 
 function BudgetPage() {
     const dispatch = useDispatch();
@@ -15,14 +16,10 @@ function BudgetPage() {
     // Fetch budget, categories, and user
     const { budgets, loading, error } = useSelector((state) => state.budget);
     const { list: categories } = useSelector((state) => state.category);
-    console.log("Categories: ---", categories);
-    console.log("budgets: ---", budgets);
     const loggedInUser = useSelector((state) => state.auth?.user);
 
-    const [open, setOpen] = useState(false); // State for modal
+    const [open, setOpen] = useState(false); // Modal state
     const [formData, setFormData] = useState({ category: "", budget_amount: "" });
-
-    // Snackbar states for success and error messages
     const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
     useEffect(() => {
@@ -33,7 +30,7 @@ function BudgetPage() {
     const handleOpen = () => setOpen(true);
     const handleClose = () => {
         setOpen(false);
-        setFormData({ category: "", budget_amount: "" }); // Reset form
+        setFormData({ category: "", budget_amount: "" });
     };
 
     const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false });
@@ -46,7 +43,6 @@ function BudgetPage() {
         e.preventDefault();
         if (!formData.category || !formData.budget_amount) return;
 
-        // Create or update budget
         dispatch(createBudgetAPI({
             user_id: loggedInUser?.id,
             category_id: formData.category,
@@ -55,103 +51,104 @@ function BudgetPage() {
         .then((res) => {
             if (res.payload && res.payload.success) {
                 setSnackbar({ open: true, message: "Budget updated successfully!", severity: "success" });
-                dispatch(getBudgetAPI()); // Refresh budget list
+                dispatch(getBudgetAPI());
             } else {
                 setSnackbar({ open: true, message: res.payload?.message || "Failed to update budget", severity: "error" });
             }
-            handleClose(); // Close modal
+            handleClose();
         });
     };
-    
+
     return (
-        <>
-            <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 3, p: 2 }}>
-                {/* Open Form Button */}
-                <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleOpen}>
-                    Set Budget Amount
-                </Button>
+        <div className="budget-page">
+            <PageHeader
+                title="Budget Records"
+                subtitle={error ? `Error: ${error}` : "Set monthly limits for expense categories."}
+                actions={[
+                    {
+                        label: "Set Budget Amount",
+                        onClick: handleOpen,
+                    },
+                ]}
+            />
 
-                <Typography variant="h5" sx={{ textAlign: "center", mb: 2 }}>
-                    Budget Records
-                </Typography>
+            <DataTable
+                loading={loading}
+                emptyMessage="No budget records found."
+                rows={budgets || []}
+                columns={[
+                    {
+                        field: "category.name",
+                        headerName: "Category",
+                        fallback: "N/A",
+                    },
+                    {
+                        field: "total_amount",
+                        headerName: "Total Amount (₹)",
+                        render: (value) => `₹${value}`,
+                    },
+                    {
+                        field: "budget_amount",
+                        headerName: "Budget Amount (₹)",
+                        render: (value) => `₹${value}`,
+                    },
+                    { field: "month", headerName: "Month" },
+                ]}
+                sx={{ mb: 3 }}
+            />
 
-                {/* Table */}
-                {loading ? (
-                    <CircularProgress sx={{ display: "block", margin: "auto", mt: 4 }} />
-                ) : error ? (
-                    <Typography color="error" sx={{ textAlign: "center", mt: 2 }}>Error: {error}</Typography>
-                ) : budgets && budgets.length > 0 ? (
-                    <Table>
-                        <TableHead>
-                            <TableRow sx={{ backgroundColor: "#1976d2" }}>
-                                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Category</TableCell>
-                                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Total Amount (₹)</TableCell>
-                                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Budget Amount (₹)</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {budgets?.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell>{item.category?.name || "N/A"}</TableCell>
-                                    <TableCell>₹{item.total_amount}</TableCell>
-                                    <TableCell>₹{item.budget_amount}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <Typography sx={{ textAlign: "center", mt: 2 }}>No budget records found.</Typography>
-                )}
-
-                {/* Dialog (Modal) for Budget Amount */}
-                <Dialog open={open} onClose={handleClose} fullWidth>
-                    <DialogTitle>Set Budget Amount</DialogTitle>
-                    <DialogContent>
-                        {/* Category Dropdown */}
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Select Category</InputLabel>
-                            <Select
-                                name="category"
-                                value={formData.category}
-                                onChange={handleChange}
-                            >
-                                {categories?.map((cat) => (
-                                    <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-
-                        {/* Budget Amount Input */}
-                        <TextField
-                            fullWidth
-                            label="Budget Amount (₹)"
-                            name="budget_amount"
-                            type="number"
-                            value={formData.budget_amount}
+            {/* Dialog for Adding/Editing Budget */}
+            <Dialog open={open} onClose={handleClose} fullWidth>
+                <DialogTitle>Set Budget Amount</DialogTitle>
+                <DialogContent>
+                    {/* Category Dropdown (Only Expense Categories) */}
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel>Select Category</InputLabel>
+                        <Select
+                            name="category"
+                            value={formData.category}
                             onChange={handleChange}
-                            margin="normal"
-                        />
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleClose} color="secondary">Cancel</Button>
-                        <Button onClick={handleSubmit} variant="contained" color="primary">Save</Button>
-                    </DialogActions>
-                </Dialog>
-            </TableContainer>
+                        >
+                            {categories
+                                ?.filter(cat => cat.type?.toLowerCase() === "expense")
+                                .map(cat => (
+                                    <MenuItem key={cat.id} value={cat.id}>
+                                        {cat.name}
+                                    </MenuItem>
+                                ))}
+                        </Select>
+                    </FormControl>
 
-            {/* ✅ Snackbar for Success & Error Messages */}
+                    {/* Budget Amount Input */}
+                    <TextField
+                        fullWidth
+                        label="Budget Amount (₹)"
+                        name="budget_amount"
+                        type="number"
+                        value={formData.budget_amount}
+                        onChange={handleChange}
+                        margin="normal"
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleClose} color="secondary">Cancel</Button>
+                    <Button onClick={handleSubmit} variant="contained" color="primary">Save</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Snackbar */}
             <Snackbar
                 open={snackbar.open}
                 autoHideDuration={3000}
                 onClose={handleSnackbarClose}
                 anchorOrigin={{ vertical: "top", horizontal: "right" }}
             >
-                <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+                <Alert onClose={handleSnackbarClose} severity={snackbar.severity} className="budget-page__snackbar">
                     {snackbar.message}
                 </Alert>
             </Snackbar>
-        </>
-    );
+        </div>
+    ); 
 }
 
 export default BudgetPage;

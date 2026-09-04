@@ -1,0 +1,18 @@
+.app-footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: var(--footer-left, auto);
+  z-index: 1200;
+  padding: 9.6px 16px;
+  text-align: center;
+  border-top: 1px solid var(--footer-border, rgba(148, 163, 184, 0.24));
+  background-color: var(--footer-bg, rgba(255, 255, 255, 0.84));
+  backdrop-filter: blur(16px);
+}
+
+@media (max-width: 900px) {
+  .app-footer {
+    left: 0;
+  }
+}

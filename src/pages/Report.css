@@ -1,0 +1,53 @@
+.report-page {
+  padding: 24px;
+}
+
+.report-page--mobile {
+  padding: 8px;
+}
+
+.report-page__title {
+  color: #1976d2;
+  font-weight: 700;
+}
+
+.report-page__panel {
+  margin-bottom: 24px;
+  padding: 24px;
+}
+
+.report-page__panel--mobile {
+  width: 100%;
+  padding: 16px;
+}
+
+.report-page__button {
+  padding: 8px 16px;
+}
+
+.report-page__section-title {
+  margin-top: 16px;
+}
+
+.report-page__summary {
+  margin-bottom: 16px;
+}
+
+.report-page__table-wrap {
+  margin-top: 16px;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.report-page__table-wrap--mobile {
+  width: 100%;
+  max-height: 300px;
+}
+
+.report-page__head-cell {
+  font-weight: 700;
+}
+
+.report-page__snackbar {
+  width: 100%;
+}

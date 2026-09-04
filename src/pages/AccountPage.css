@@ -1,0 +1,142 @@
+.account-page__field {
+  margin-bottom: 16px;
+}
+
+.account-page__submit {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  font-size: 16px;
+}
+
+.account-page__overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.account-page__overview-card {
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+}
+
+.account-page__overview-card .MuiTypography-caption-root {
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.account-page__overview-card .MuiTypography-h5-root {
+  margin-top: 6px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.account-page__overview-card--credit {
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.account-page__overview-card--debit {
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.account-page__overview-card--balance {
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.account-page__section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.account-page__section-header--ledger {
+  margin-top: 18px;
+}
+
+.account-page__section-header h6 {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.account-page__section-header p {
+  color: #64748b;
+}
+
+.account-page__table-shell {
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+
+.account-page__table-head {
+  background-color: #f8fafc;
+}
+
+.account-page__head-cell {
+  color: #334155;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.account-page__table-shell td {
+  white-space: nowrap;
+}
+
+.account-page__table-shell tbody tr:nth-of-type(even) {
+  background: #fbfdff;
+}
+
+.account-page__table-shell tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.account-page__value--credit {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.account-page__value--debit {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.account-page__value--positive {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.account-page__value--negative {
+  color: #b91c1c;
+  font-weight: 800;
+}
+
+.page-section-title {
+  margin-top: 28px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .account-page__overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-page__section-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+.account-page__opening-row td {
+  background: #eef2ff;
+  color: #1e3a8a;
+  font-weight: 800;
+}
+
+.account-page__opening-row:hover td {
+  background: #e0e7ff;
+}

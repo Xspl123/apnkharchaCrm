@@ -1,81 +1,56 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getCategoryAPI } from "../redux/features/categorySlice";
-import { getAccountAPI } from "../redux/features/accountSlice";
-import { getUserAPI } from "../redux/features/authSlice";
-import { fetchTransactions } from "../redux/features/transactionSlice";
-import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
+import { Box } from "@mui/material";
+import { saveAs } from "file-saver";
+import { getPeriodBalanceSummary } from "../utils/ledgerBalances";
+import { getCreditCardAvailableLimit, getCreditCardOutstanding, isCreditCardAccount, withDerivedCreditCardBalances } from "../utils/creditCardAccounts";
+
+import OrgSetupBanner from "../components/OrgSetupBanner";
+import useSpeechToText from "../hooks/useSpeechToText";
+import { getUserAPI } from "../features/auth/state/authSlice";
+import { getAccountAPI } from "../redux/features/accountSlice";
+import { getCategoryAPI } from "../redux/features/categorySlice";
+import { fetchLoans } from "../redux/features/loanSlice";
+import { fetchTransactions } from "../redux/features/transactionSlice";
+import AiSummaryPanel from "./dashboard/AiSummaryPanel";
+import AnalyticsSection from "./dashboard/AnalyticsSection";
+import CashFlowTimeline from "./dashboard/CashFlowTimeline";
+import CategoryDetailsDialog from "./dashboard/CategoryDetailsDialog";
+import DashboardHero from "./dashboard/DashboardHero";
+import DashboardSetupState from "./dashboard/DashboardSetupState";
+import InsightsSection from "./dashboard/InsightsSection";
+import RecentActivityFeed from "./dashboard/RecentActivityFeed";
+import SmartInsightsPanel from "./dashboard/SmartInsightsPanel";
+import KpiSection from "./dashboard/KpiSection";
+import MonthlySummaryTable from "./dashboard/MonthlySummaryTable";
+import TransactionsTable from "./dashboard/TransactionsTable";
+import VoiceQueryResults from "./dashboard/VoiceQueryResults";
 import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  TextField,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
-import TablePagination from "@mui/material/TablePagination";
+  findCategoryFromVoiceQuery,
+  fmtAmt,
+  formatDateInput,
+  generateColor,
+  getCategoryForTransaction,
+  getMonthFromVoiceQuery,
+  getTransactionDateValue,
+  getYearFromVoiceQuery,
+  monthAliases,
+  months,
+  normalizeVoiceText,
+  parseTransactionDate,
+  summarizeProfitLoss,
+} from "./dashboard/dashboardUtils";
+import "./Dashboard.css";
 
-<<<<<<< HEAD
-import { Add, SmartToy } from "@mui/icons-material"; // Import the Add and SmartToy icons
-import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import "./Dashboard.css"; // Import the CSS file
-import Charts from "../components/Charts"; // Import the new Charts component
-=======
-import { Add, SmartToy, FileDownload, BarChart, ListAlt, PieChart, CompareArrows } from "@mui/icons-material"; // Add FileDownload icon
-import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import "./Dashboard.css"; // Import the CSS file
-import Charts from "../components/Charts"; // Import the new Charts component
-import { a } from "framer-motion/client";
-import { DndContext, closestCenter } from "@dnd-kit/core";
-import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import SortableItem from "../components/SortableItem"; // Ensure the correct path to SortableItem
->>>>>>> f81c650 (Initial commit)
-
-const generateColor = (index) => {
-  const colors = ["#FF5722", "#03A9F4", "#4CAF50", "#E91E63", "#FFC107", "#9C27B0"];
-  return colors[index % colors.length];
-};
-
-const months = [
-  { name: "January", value: 0 },
-  { name: "February", value: 1 },
-  { name: "March", value: 2 },
-  { name: "April", value: 3 },
-  { name: "May", value: 4 },
-  { name: "June", value: 5 },
-  { name: "July", value: 6 },
-  { name: "August", value: 7 },
-  { name: "September", value: 8 },
-  { name: "October", value: 9 },
-  { name: "November", value: 10 },
-  { name: "December", value: 11 },
-];
-
-const Dashboard = () => {
+export default function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { list: categories = [] } = useSelector((state) => state.category);
-  const { transactions = [] } = useSelector((state) => state.transactions);
-<<<<<<< HEAD
-  const loggedInUser = useSelector((state) => state.auth.user);
+  const { list: categories = [], loading: categoriesLoading = false } = useSelector((s) => s.category);
+  const { list: accounts = [], loading: accountsLoading = false } = useSelector((s) => s.accounts);
+  const { transactions = [], loading: transactionsLoading = false } = useSelector((s) => s.transactions);
+  const loggedInUser = useSelector((s) => s.auth.user);
 
-=======
-  const { list: accounts } = useSelector((state) => state.accounts);
-
-  const loggedInUser = useSelector((state) => state.auth.user);
->>>>>>> f81c650 (Initial commit)
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [search, setSearch] = useState("");
@@ -83,1136 +58,774 @@ const Dashboard = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState("all");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [popupMonth, setPopupMonth] = useState(new Date().getMonth());
   const [popupYear, setPopupYear] = useState(new Date().getFullYear());
-  const { transcript, resetTranscript } = useSpeechRecognition();
-  const [isListening, setIsListening] = useState(false);
   const [voiceQueryResults, setVoiceQueryResults] = useState([]);
   const [showVoiceResults, setShowVoiceResults] = useState(false);
-<<<<<<< HEAD
-=======
-  const [widgets, setWidgets] = useState([
-    { id: "summary", label: "Summary" },
-    { id: "charts", label: "Charts" },
-    { id: "transactions", label: "Transactions" },
-    { id: "monthlyComparison", label: "Month-wise Income and Expenses" },
-  ]);
->>>>>>> f81c650 (Initial commit)
+  const [voiceError, setVoiceError] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const { isListening, startListening, supported } = useSpeechToText();
 
   useEffect(() => {
-    dispatch(fetchTransactions());
+    dispatch(fetchTransactions({ page: 1, perPage: 1000 }));
     dispatch(getCategoryAPI());
     dispatch(getUserAPI());
     dispatch(getAccountAPI());
+    dispatch(fetchLoans());
   }, [dispatch]);
 
-<<<<<<< HEAD
-=======
-
-  console.log("Ajay", accounts);
-
-  const TotalAccountBalance = accounts
-    .filter((account) => account.user_id === loggedInUser?.id)
-    .reduce((sum, account) => sum + parseFloat(account.account_balance), 0);
-  console.log("TotalAccountBalance", TotalAccountBalance);
->>>>>>> f81c650 (Initial commit)
-  const userTransactions = transactions.filter((t) => t.user_id === loggedInUser?.id);
-
-  const filteredTransactions = userTransactions.filter((t) => {
-    const date = new Date(t.transaction_date);
-    const isSameMonth = date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
-    return isSameMonth;
-  });
-
-  const monthCategoryData = categories.map((category) => {
-    const totalExpense = filteredTransactions
-      .filter((t) => t.category_id === category.id && t.category?.type?.toLowerCase() === "expense")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalIncome = filteredTransactions
-      .filter((t) => t.category_id === category.id && t.category?.type?.toLowerCase() === "income")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    return {
-      name: category.name,
-      Expense: totalExpense || 0, // Ensure zero if no expense
-      Income: totalIncome || 0,  // Ensure zero if no income
-    };
-  }); // Remove the filter to include all categories
-
-  const dayWiseData = filteredTransactions.reduce((acc, t) => {
-    const day = new Date(t.transaction_date).toISOString().split("T")[0];
-    const type = t.category?.type?.toLowerCase();
-    const amount = parseFloat(t.amount);
-    const categoryName = t.category?.name || "Uncategorized";
-
-    if (!acc[day]) acc[day] = { date: day, Income: 0, Expense: 0, categories: {} };
-    if (!acc[day].categories[categoryName]) acc[day].categories[categoryName] = { Income: 0, Expense: 0 };
-
-    if (type === "income") {
-      acc[day].Income += amount;
-      acc[day].categories[categoryName].Income += amount;
-    } else if (type === "expense") {
-      acc[day].Expense += amount;
-      acc[day].categories[categoryName].Expense += amount;
-    }
-
-    return acc;
-  }, {});
-
-  const dayWiseChartData = Object.values(dayWiseData).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  const filteredTableData = filteredTransactions.filter((t) => {
-    return t.description?.toLowerCase().includes(search.toLowerCase());
-  });
-
-  const paginatedTableData = filteredTableData.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
+  const userTransactions = useMemo(
+    () => transactions.filter((t) => t.user_id === loggedInUser?.id),
+    [loggedInUser?.id, transactions]
   );
 
-  const pieChartData = categories
-    .map((category, index) => {
-      const totalExpense = filteredTransactions
-        .filter((t) => t.category_id === category.id && t.category?.type?.toLowerCase() === "expense")
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  const dashboardLoading = accountsLoading || categoriesLoading || transactionsLoading;
+  const accountsWithDerivedCardBalances = useMemo(
+    () => withDerivedCreditCardBalances(accounts, userTransactions, categories),
+    [accounts, categories, userTransactions]
+  );
+  const mainAccounts = useMemo(() => accountsWithDerivedCardBalances.filter((account) => !isCreditCardAccount(account)), [accountsWithDerivedCardBalances]);
+  const creditCards = useMemo(() => accountsWithDerivedCardBalances.filter(isCreditCardAccount), [accountsWithDerivedCardBalances]);
+  const creditCardSummary = useMemo(() => creditCards.reduce((summary, account) => ({
+    outstanding: summary.outstanding + getCreditCardOutstanding(account),
+    availableLimit: summary.availableLimit + getCreditCardAvailableLimit(account),
+    creditLimit: summary.creditLimit + (Number(account.credit_limit) || 0),
+  }), { outstanding: 0, availableLimit: 0, creditLimit: 0 }), [creditCards]);
+  const mainAccountIds = useMemo(() => new Set(mainAccounts.map((account) => String(account.id))), [mainAccounts]);
+  const creditCardIds = useMemo(() => new Set(creditCards.map((account) => String(account.id))), [creditCards]);
+  const hasAccounts = accountsWithDerivedCardBalances.length > 0;
+  const hasCategories = categories.length > 0;
+  const hasTransactions = userTransactions.length > 0;
 
-      return {
-        name: category.name,
-        value: totalExpense,
-        color: generateColor(index),
-      };
-    })
-    .filter((data) => data.value > 0);
-
-  const monthlyComparisonData = months.map((month) => {
-    const monthTransactions = userTransactions.filter((t) => {
-      const date = new Date(t.transaction_date);
-      return date.getMonth() === month.value && date.getFullYear() === selectedYear;
-    });
-
-    const totalExpense = monthTransactions
-      .filter((t) => t.category?.type?.toLowerCase() === "expense")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalIncome = monthTransactions
-      .filter((t) => t.category?.type?.toLowerCase() === "income")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    return {
-      name: month.name,
-      Expense: totalExpense,
-      Income: totalIncome,
-    };
-  });
-
-  // Calculate yearly comparison data
-  const yearlyComparisonData = [...Array(5)].map((_, i) => {
-    const year = new Date().getFullYear() - i;
-
-    const yearTransactions = userTransactions.filter((t) => {
-      const date = new Date(t.transaction_date);
-      return date.getFullYear() === year;
-    });
-
-    const totalExpense = yearTransactions
-      .filter((t) => t.category?.type?.toLowerCase() === "expense")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalIncome = yearTransactions
-      .filter((t) => t.category?.type?.toLowerCase() === "income")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    return {
-      name: year.toString(),
-      Expense: totalExpense,
-      Income: totalIncome,
-    };
-  });
-
-  const exportToCSV = () => {
-    const csvContent = [
-      ["Date", "Description", "Amount", "Type", "Category"],
-      ...filteredTableData.map((t) => [
-        new Date(t.transaction_date).toLocaleDateString(),
-        t.description,
-        t.amount,
-        t.category?.type,
-        t.category?.name,
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `transactions_${selectedYear}_${months[selectedMonth].name}.csv`);
-  };
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-
-
-  // Function to calculate the highest expense category for each month
-  const calculateHighestExpenseCategory = () => {
-    const monthlyCategoryExpenses = {};
-
-    userTransactions.forEach((t) => {
-      const date = new Date(t.transaction_date);
-      const monthYear = `${date.getMonth() + 1}-${date.getFullYear()}`; // Corrected to use 1-based month
-      const categoryName = t.category?.name;
-
-      if (!monthlyCategoryExpenses[monthYear]) {
-        monthlyCategoryExpenses[monthYear] = {};
+  const filteredTransactions = useMemo(() =>
+    userTransactions.filter((t) => {
+      const date = parseTransactionDate(t.transaction_date);
+      if (!date) return false;
+      if (startDate || endDate) {
+        const d = getTransactionDateValue(t.transaction_date);
+        return (!startDate || d >= startDate) && (!endDate || d <= endDate);
       }
+      return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+    }), [endDate, selectedMonth, selectedYear, startDate, userTransactions]);
 
-      if (!monthlyCategoryExpenses[monthYear][categoryName]) {
-        monthlyCategoryExpenses[monthYear][categoryName] = 0;
-      }
+  const availableTypes = useMemo(() =>
+    [...new Set(categories.map((c) => c.type?.toLowerCase()).filter(Boolean))],
+    [categories]);
 
-      if (t.category?.type?.toLowerCase() === "expense") {
-        monthlyCategoryExpenses[monthYear][categoryName] += parseFloat(t.amount);
-      }
-    });
-
-    const currentMonthYear = `${new Date().getMonth() + 1}-${new Date().getFullYear()}`; // Corrected to use 1-based month
-    const currentMonthCategories = monthlyCategoryExpenses[currentMonthYear] || {};
-
-    const highestCategory = Object.entries(currentMonthCategories).reduce(
-      (max, [category, amount]) => (amount > max.amount ? { category, amount } : max),
-      { category: null, amount: 0 }
-    );
-
-    return highestCategory.category ? [{ monthYear: currentMonthYear, ...highestCategory }] : [];
-  };
-
-  const highestExpenseCategories = calculateHighestExpenseCategory();
-
-  const calculateAllMonthsHighestExpenseCategories = () => {
-    const monthlyCategoryExpenses = {};
-
-    userTransactions.forEach((t) => {
-      const date = new Date(t.transaction_date);
-      const monthYear = `${date.getMonth() + 1}-${date.getFullYear()}`; // 1-based month
-      const categoryName = t.category?.name;
-
-      if (!monthlyCategoryExpenses[monthYear]) {
-        monthlyCategoryExpenses[monthYear] = {};
-      }
-
-      if (!monthlyCategoryExpenses[monthYear][categoryName]) {
-        monthlyCategoryExpenses[monthYear][categoryName] = 0;
-      }
-
-      if (t.category?.type?.toLowerCase() === "expense") {
-        monthlyCategoryExpenses[monthYear][categoryName] += parseFloat(t.amount);
-      }
-    });
-
-    return Object.entries(monthlyCategoryExpenses).map(([monthYear, categories]) => {
-      const highestCategory = Object.entries(categories).reduce(
-        (max, [category, amount]) => (amount > max.amount ? { category, amount } : max),
-        { category: null, amount: 0 }
-      );
-      return { monthYear, ...highestCategory };
-    });
-  };
-
-  const allMonthsHighestExpenseCategories = calculateAllMonthsHighestExpenseCategories();
-
-  const handleOpenPopup = () => setIsPopupOpen(true);
-  const handleClosePopup = () => setIsPopupOpen(false);
-
-  const popupData = filteredTransactions.filter((t) => {
-    const date = new Date(t.transaction_date);
-    return (
-      t.category?.id === selectedCategory &&
-      date.getMonth() === popupMonth &&
-      date.getFullYear() === popupYear
-    );
-  });
-
-  const totalPopupIncome = popupData
-    .filter((t) => t.category?.type?.toLowerCase() === "income")
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-  const totalPopupExpense = popupData
-    .filter((t) => t.category?.type?.toLowerCase() === "expense")
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-  const handleVoiceQuery = () => {
-    setIsListening(true);
-    SpeechRecognition.startListening({ continuous: true });
-  };
-
-  const handleResetResults = () => {
-    setShowVoiceResults(false);
-    setVoiceQueryResults([]);
-    resetTranscript();
-  };
+  const visibleCategories = useMemo(() =>
+    categories.filter((c) => selectedTypeFilter === "all" ? true : c.type?.toLowerCase() === selectedTypeFilter),
+    [categories, selectedTypeFilter]);
 
   useEffect(() => {
-    if (!isListening) return;
+    if (selectedCategoryFilter !== "all" && !visibleCategories.some((c) => String(c.id) === String(selectedCategoryFilter))) {
+      setSelectedCategoryFilter("all");
+    }
+  }, [selectedCategoryFilter, visibleCategories]);
 
-    const processVoiceQuery = () => {
-      const lowerTranscript = transcript.toLowerCase();
-      const categoryMatch = categories.find((category) =>
-        lowerTranscript.includes(category.name.toLowerCase())
-      );
+  useEffect(() => {
+    setPage(0);
+  }, [endDate, search, selectedCategoryFilter, selectedMonth, selectedTypeFilter, selectedYear, startDate]);
 
-      const monthMatch = months.find((month) =>
-        lowerTranscript.includes(month.name.toLowerCase())
-      );
+  const dashboardTransactions = useMemo(() =>
+    filteredTransactions.filter((t) => {
+      const category = getCategoryForTransaction(t, categories);
+      const catType = category?.type?.toLowerCase();
+      const catId = category?.id ?? t.category_id;
+      return (selectedTypeFilter === "all" || catType === selectedTypeFilter) &&
+        (selectedCategoryFilter === "all" || String(catId) === String(selectedCategoryFilter));
+    }), [categories, filteredTransactions, selectedCategoryFilter, selectedTypeFilter]);
 
-      const yearMatch = [...Array(5)].map((_, i) => {
-        const year = new Date().getFullYear() - i;
-        return year.toString();
-      }).find((year) => lowerTranscript.includes(year));
+  const monthCategoryData = useMemo(() =>
+    visibleCategories.map((cat) => {
+      let expense = 0;
+      let income = 0;
+      dashboardTransactions.forEach((t) => {
+        const category = getCategoryForTransaction(t, categories);
+        if (String(category?.id ?? t.category_id) !== String(cat.id)) return;
+        const amt = parseFloat(t.amount) || 0;
+        const type = category?.type?.toLowerCase();
+        if (type === "expense") expense += amt;
+        if (type === "income") income += amt;
+      });
+      return { name: cat.name, Expense: expense, Income: income };
+    }).filter((c) => c.Expense > 0 || c.Income > 0),
+    [categories, dashboardTransactions, visibleCategories]);
 
-      if (categoryMatch && monthMatch) {
-        const year = yearMatch ? parseInt(yearMatch) : new Date().getFullYear();
-        const filteredData = userTransactions.filter((t) => {
-          const date = new Date(t.transaction_date);
-          return (
-            t.category?.id === categoryMatch.id &&
-            date.getMonth() === monthMatch.value &&
-            date.getFullYear() === year
-          );
+  const dayWiseChartData = useMemo(() => {
+    const map = dashboardTransactions.reduce((acc, t) => {
+      const day = getTransactionDateValue(t.transaction_date);
+      if (!day) return acc;
+      const category = getCategoryForTransaction(t, categories);
+      const type = category?.type?.toLowerCase();
+      const amt = parseFloat(t.amount) || 0;
+      const cat = category?.name || "Uncategorized";
+      if (!acc[day]) acc[day] = { date: day, Income: 0, Expense: 0, categories: {} };
+      if (!acc[day].categories[cat]) acc[day].categories[cat] = { Income: 0, Expense: 0 };
+      if (type === "income") {
+        acc[day].Income += amt;
+        acc[day].categories[cat].Income += amt;
+      }
+      if (type === "expense") {
+        acc[day].Expense += amt;
+        acc[day].categories[cat].Expense += amt;
+      }
+      return acc;
+    }, {});
+    return Object.values(map).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [categories, dashboardTransactions]);
+
+  const filteredTableData = useMemo(() =>
+    dashboardTransactions.filter((t) => {
+      const category = getCategoryForTransaction(t, categories);
+      const query = search.toLowerCase();
+      return t.description?.toLowerCase().includes(query) ||
+        category?.name?.toLowerCase().includes(query) ||
+        category?.type?.toLowerCase().includes(query);
+    }), [categories, dashboardTransactions, search]);
+
+  const paginatedTableData = useMemo(() =>
+    filteredTableData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [filteredTableData, page, rowsPerPage]);
+
+  const pieChartData = useMemo(() =>
+    visibleCategories.map((cat, i) => {
+      const total = dashboardTransactions
+        .filter((t) => {
+          const category = getCategoryForTransaction(t, categories);
+          return String(category?.id ?? t.category_id) === String(cat.id) && category?.type?.toLowerCase() === "expense";
+        })
+        .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+      return { name: cat.name, value: total, color: generateColor(i), fill: generateColor(i) };
+    }).filter((d) => d.value > 0), [categories, dashboardTransactions, visibleCategories]);
+
+  const monthlyComparisonData = useMemo(() =>
+    months.map((month) => {
+      let expense = 0;
+      let income = 0;
+      userTransactions.forEach((t) => {
+        const d = parseTransactionDate(t.transaction_date);
+        if (!d) return;
+        const category = getCategoryForTransaction(t, categories);
+        const ct = category?.type?.toLowerCase();
+        const cid = category?.id ?? t.category_id;
+        if (d.getMonth() !== month.value || d.getFullYear() !== selectedYear) return;
+        if (selectedTypeFilter !== "all" && ct !== selectedTypeFilter) return;
+        if (selectedCategoryFilter !== "all" && String(cid) !== String(selectedCategoryFilter)) return;
+        const amt = parseFloat(t.amount) || 0;
+        if (ct === "expense") expense += amt;
+        if (ct === "income") income += amt;
+      });
+      return { name: month.name, Expense: expense, Income: income };
+    }).filter((m) => m.Expense > 0 || m.Income > 0),
+    [categories, selectedCategoryFilter, selectedTypeFilter, selectedYear, userTransactions]);
+
+  const yearlyComparisonData = useMemo(() =>
+    [...Array(5)].map((_, i) => {
+      const year = new Date().getFullYear() - i;
+      let expense = 0;
+      let income = 0;
+      userTransactions.forEach((t) => {
+        const d = parseTransactionDate(t.transaction_date);
+        if (!d) return;
+        const category = getCategoryForTransaction(t, categories);
+        const ct = category?.type?.toLowerCase();
+        const cid = category?.id ?? t.category_id;
+        if (d.getFullYear() !== year) return;
+        if (selectedTypeFilter !== "all" && ct !== selectedTypeFilter) return;
+        if (selectedCategoryFilter !== "all" && String(cid) !== String(selectedCategoryFilter)) return;
+        const amt = parseFloat(t.amount) || 0;
+        if (ct === "expense") expense += amt;
+        if (ct === "income") income += amt;
+      });
+      return { name: String(year), Expense: expense, Income: income };
+    }).filter((y) => y.Expense > 0 || y.Income > 0),
+    [categories, selectedCategoryFilter, selectedTypeFilter, userTransactions]);
+
+  const calculateHighestExpenseCategory = useCallback(() => {
+    const mce = {};
+    userTransactions.forEach((t) => {
+      const d = parseTransactionDate(t.transaction_date);
+      if (!d) return;
+      const my = `${d.getMonth() + 1}-${d.getFullYear()}`;
+      const category = getCategoryForTransaction(t, categories);
+      const cn = category?.name;
+      const ct = category?.type?.toLowerCase();
+      const cid = category?.id ?? t.category_id;
+      if (!cn || ct !== "expense") return;
+      if ((selectedTypeFilter !== "all" && ct !== selectedTypeFilter) ||
+        (selectedCategoryFilter !== "all" && String(cid) !== String(selectedCategoryFilter))) return;
+      if (!mce[my]) mce[my] = {};
+      if (!mce[my][cn]) mce[my][cn] = 0;
+      mce[my][cn] += parseFloat(t.amount) || 0;
+    });
+    const cmy = `${new Date().getMonth() + 1}-${new Date().getFullYear()}`;
+    const cmc = mce[cmy] || {};
+    const hc = Object.entries(cmc).reduce((max, [cat, amt]) => amt > max.amount ? { category: cat, amount: amt } : max, { category: null, amount: 0 });
+    return hc.category ? [{ monthYear: cmy, ...hc }] : [];
+  }, [categories, selectedCategoryFilter, selectedTypeFilter, userTransactions]);
+
+  const calculateAllMonthsHighestExpenseCategories = useCallback(() => {
+    const mce = {};
+    userTransactions.forEach((t) => {
+      const d = parseTransactionDate(t.transaction_date);
+      if (!d) return;
+      const my = `${d.getMonth() + 1}-${d.getFullYear()}`;
+      const category = getCategoryForTransaction(t, categories);
+      const cn = category?.name;
+      const ct = category?.type?.toLowerCase();
+      const cid = category?.id ?? t.category_id;
+      if (!cn || ct !== "expense") return;
+      if ((selectedTypeFilter !== "all" && ct !== selectedTypeFilter) ||
+        (selectedCategoryFilter !== "all" && String(cid) !== String(selectedCategoryFilter))) return;
+      if (!mce[my]) mce[my] = {};
+      if (!mce[my][cn]) mce[my][cn] = 0;
+      mce[my][cn] += parseFloat(t.amount) || 0;
+    });
+    return Object.entries(mce).map(([my, cats]) => {
+      const hc = Object.entries(cats).reduce((max, [cat, amt]) => amt > max.amount ? { category: cat, amount: amt } : max, { category: null, amount: 0 });
+      return { monthYear: my, ...hc };
+    });
+  }, [categories, selectedCategoryFilter, selectedTypeFilter, userTransactions]);
+
+  const highestExpenseCategories = useMemo(() => calculateHighestExpenseCategory(), [calculateHighestExpenseCategory]);
+  const allMonthsHighestExpenseCategories = useMemo(() => calculateAllMonthsHighestExpenseCategories(), [calculateAllMonthsHighestExpenseCategories]);
+
+  const dashboardSummary = useMemo(() => {
+    const periodStart = startDate ? new Date(`${startDate}T00:00:00`) : new Date(selectedYear, selectedMonth, 1);
+    const periodEnd = endDate ? new Date(endDate + "T23:59:59") : new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+    const periodTotals = summarizeProfitLoss(dashboardTransactions, categories);
+    const balanceSummary = getPeriodBalanceSummary({
+      accounts: mainAccounts,
+      transactions: userTransactions,
+      categories,
+      periodStart,
+      periodEnd,
+    });
+    const categoriesUsed = dashboardTransactions.reduce((set, t) => {
+      const category = getCategoryForTransaction(t, categories);
+      if (category?.name) set.add(category.name);
+      return set;
+    }, new Set());
+    const totalExpense = periodTotals.grossExpense - periodTotals.reimbursed;
+
+    return {
+      ...periodTotals,
+      totalExpense,
+      openingBalance: balanceSummary.openingBalance,
+      periodNet: balanceSummary.periodNet,
+      closingBalance: balanceSummary.closingBalance,
+      currentBalance: balanceSummary.currentBalance,
+      creditCardOutstanding: creditCardSummary.outstanding,
+      creditCardAvailableLimit: creditCardSummary.availableLimit,
+      creditCardLimit: creditCardSummary.creditLimit,
+      transactionCount: dashboardTransactions.length,
+      activeCategoryCount: categoriesUsed.size,
+    };
+  }, [categories, creditCardSummary, dashboardTransactions, endDate, mainAccounts, selectedMonth, selectedYear, startDate, userTransactions]);
+
+  const previousPeriodSummary = useMemo(() => {
+    const prev = new Date(selectedYear, selectedMonth - 1, 1);
+    const pm = prev.getMonth();
+    const py = prev.getFullYear();
+    const transactionsForPeriod = userTransactions.filter((t) => {
+      const d = parseTransactionDate(t.transaction_date);
+      if (!d) return false;
+      const category = getCategoryForTransaction(t, categories);
+      const ct = category?.type?.toLowerCase();
+      const cid = category?.id ?? t.category_id;
+      if (d.getMonth() !== pm || d.getFullYear() !== py) return false;
+      if (selectedTypeFilter !== "all" && ct !== selectedTypeFilter) return false;
+      if (selectedCategoryFilter !== "all" && String(cid) !== String(selectedCategoryFilter)) return false;
+      return true;
+    });
+    const totals = summarizeProfitLoss(transactionsForPeriod, categories);
+    return { ...totals, totalExpense: totals.grossExpense - totals.reimbursed, transactionCount: transactionsForPeriod.length };
+  }, [categories, selectedCategoryFilter, selectedMonth, selectedTypeFilter, selectedYear, userTransactions]);
+
+  const activeFilterLabel = useMemo(() => {
+    const cat = categories.find((c) => String(c.id) === String(selectedCategoryFilter));
+    if (cat) return `${cat.name} (${cat.type || "Type"})`;
+    if (selectedTypeFilter !== "all") return `${selectedTypeFilter.charAt(0).toUpperCase()}${selectedTypeFilter.slice(1)} categories`;
+    return "All categories";
+  }, [categories, selectedCategoryFilter, selectedTypeFilter]);
+
+  const aiSummaryText = useMemo(() => {
+    const periodNet = dashboardSummary.periodNet;
+    const closingBalance = dashboardSummary.closingBalance;
+    const expRatio = dashboardSummary.totalIncome > 0
+      ? ((dashboardSummary.totalExpense / dashboardSummary.totalIncome) * 100).toFixed(1) : "0.0";
+
+    let trend;
+    if (periodNet >= 0) {
+      trend = closingBalance >= 0
+        ? "a healthy positive balance"
+        : "an improving balance — this period was net-positive, though the closing balance is still recovering from an earlier shortfall";
+    } else {
+      trend = closingBalance >= 0
+        ? `a net outflow this period (expenses were ${expRatio}% of income) — the closing balance stays positive only because of the opening balance carried forward`
+        : "negative balance pressure, with expenses exceeding income both this period and cumulatively";
+    }
+
+    const topCat = pieChartData[0]?.name || "no dominant expense category";
+    const topAmt = pieChartData[0]?.value || 0;
+    return `For ${activeFilterLabel}, the dashboard shows ${trend}. Opening balance is ${fmtAmt(dashboardSummary.openingBalance)}, period net is ${fmtAmt(dashboardSummary.periodNet)}, and main closing balance is ${fmtAmt(dashboardSummary.closingBalance)}. Credit card outstanding is ${fmtAmt(dashboardSummary.creditCardOutstanding)}. Income is ${fmtAmt(dashboardSummary.totalIncome)} against net expense of ${fmtAmt(dashboardSummary.totalExpense)}, so expense utilization is ${expRatio}% of income. Strongest expense concentration is in ${topCat} at ${fmtAmt(topAmt)}.`;
+  }, [activeFilterLabel, dashboardSummary, pieChartData]);
+
+  const cashFlowData = useMemo(() => {
+    const dailyMap = dashboardTransactions.reduce((acc, transaction) => {
+      const date = getTransactionDateValue(transaction.transaction_date);
+      if (!date) return acc;
+
+      const category = getCategoryForTransaction(transaction, categories);
+      const type = category?.type?.toLowerCase();
+      const amount = Math.abs(parseFloat(transaction.amount)) || 0;
+
+      if (!acc[date]) acc[date] = { date, Income: 0, Expense: 0, Net: 0, Closing: dashboardSummary.openingBalance };
+      const accountId = String(transaction.account_id);
+      const transferToId = String(transaction.transfer_to || "");
+      const isMainAccountTransaction = mainAccountIds.has(accountId);
+      const isCreditCardPayment = type === "transfer" && mainAccountIds.has(accountId) && creditCardIds.has(transferToId);
+
+      if ((type === "income" || type === "reimbursement") && isMainAccountTransaction) {
+        acc[date].Income += amount;
+        acc[date].Net += amount;
+      }
+      if ((type === "expense" && isMainAccountTransaction) || isCreditCardPayment) {
+        acc[date].Expense += amount;
+        acc[date].Net -= amount;
+      }
+      return acc;
+    }, {});
+
+    let runningBalance = dashboardSummary.openingBalance;
+    return Object.values(dailyMap)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map((item) => {
+        runningBalance += item.Net;
+        return { ...item, Closing: runningBalance };
+      });
+  }, [categories, creditCardIds, dashboardSummary.openingBalance, dashboardTransactions, mainAccountIds]);
+
+  const topSpendingCategories = useMemo(() => {
+    const maxExpense = Math.max(...monthCategoryData.map((item) => item.Expense), 0);
+
+    return monthCategoryData
+      .filter((item) => item.Expense > 0)
+      .map((item) => {
+        const share = dashboardSummary.totalExpense > 0 ? (item.Expense / dashboardSummary.totalExpense) * 100 : 0;
+        const utilization = maxExpense > 0 ? (item.Expense / maxExpense) * 100 : 0;
+        const tone = share >= 45 ? "danger" : share >= 25 ? "warning" : "success";
+        return { ...item, share, utilization, tone };
+      })
+      .sort((a, b) => b.Expense - a.Expense)
+      .slice(0, 5);
+  }, [dashboardSummary.totalExpense, monthCategoryData]);
+
+  const categoryExpenseChange = useMemo(() => {
+    const top = topSpendingCategories[0];
+    if (!top) return null;
+
+    const prev = new Date(selectedYear, selectedMonth - 1, 1);
+    const previousExpense = userTransactions.reduce((sum, transaction) => {
+      const date = parseTransactionDate(transaction.transaction_date);
+      if (!date || date.getMonth() !== prev.getMonth() || date.getFullYear() !== prev.getFullYear()) return sum;
+
+      const category = getCategoryForTransaction(transaction, categories);
+      if (category?.type?.toLowerCase() !== "expense" || category?.name !== top.name) return sum;
+      return sum + (Math.abs(parseFloat(transaction.amount)) || 0);
+    }, 0);
+
+    if (previousExpense <= 0) return { category: top.name, current: top.Expense, previous: 0, percent: null };
+    return {
+      category: top.name,
+      current: top.Expense,
+      previous: previousExpense,
+      percent: ((top.Expense - previousExpense) / previousExpense) * 100,
+    };
+  }, [categories, selectedMonth, selectedYear, topSpendingCategories, userTransactions]);
+
+  const smartInsights = useMemo(() => {
+    const periodDays = cashFlowData.length > 0
+      ? Math.max(1, cashFlowData.length)
+      : Math.max(1, new Date(selectedYear, selectedMonth + 1, 0).getDate());
+    const expenseRatio = dashboardSummary.totalIncome > 0
+      ? (dashboardSummary.totalExpense / dashboardSummary.totalIncome) * 100
+      : 0;
+    const averageDailyExpense = dashboardSummary.totalExpense / periodDays;
+    const coverDays = averageDailyExpense > 0
+      ? Math.max(0, dashboardSummary.closingBalance / averageDailyExpense)
+      : null;
+
+    return {
+      expenseRatio,
+      categoryExpenseChange,
+      averageDailyExpense,
+      coverDays,
+    };
+  }, [cashFlowData.length, categoryExpenseChange, dashboardSummary, selectedMonth, selectedYear]);
+
+  const recentTransactions = useMemo(() =>
+    [...userTransactions]
+      .sort((a, b) => {
+        const dateA = parseTransactionDate(a.transaction_date)?.getTime() || 0;
+        const dateB = parseTransactionDate(b.transaction_date)?.getTime() || 0;
+        return dateB - dateA;
+      })
+      .slice(0, 5),
+    [userTransactions]);
+
+  const popupData = useMemo(() =>
+    dashboardTransactions.filter((t) => {
+      const d = parseTransactionDate(t.transaction_date);
+      if (!d) return false;
+      const category = getCategoryForTransaction(t, categories);
+      return String(category?.id ?? t.category_id) === String(selectedCategory) &&
+        d.getMonth() === popupMonth && d.getFullYear() === popupYear;
+    }), [categories, dashboardTransactions, popupMonth, popupYear, selectedCategory]);
+
+  const exportToCSV = () => {
+    const csv = [
+      ["Date", "Description", "Amount", "Type", "Category"],
+      ...filteredTableData.map((t) => {
+        const category = getCategoryForTransaction(t, categories);
+        return [
+          new Date(t.transaction_date).toLocaleDateString(),
+          t.description,
+          t.amount,
+          category?.type,
+          category?.name,
+        ];
+      }),
+    ].map((r) => r.join(",")).join("\n");
+    saveAs(new Blob([csv], { type: "text/csv;charset=utf-8;" }), `transactions_${selectedYear}_${months[selectedMonth].name}.csv`);
+  };
+
+  const handleExportSummaryPDF = useCallback(async () => {
+    const el = document.createElement("div");
+    el.innerHTML = `
+      <div style="font-family:Arial,sans-serif;padding:24px;color:#0f172a;">
+        <h1 style="margin:0 0 8px;font-size:24px;">Dashboard Summary</h1>
+        <p style="margin:0 0 20px;color:#475569;">${activeFilterLabel}</p>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;">
+          <div style="padding:16px;border:1px solid #cbd5e1;border-radius:12px;"><strong>Opening Balance</strong><br/>${fmtAmt(dashboardSummary.openingBalance)}</div>
+          <div style="padding:16px;border:1px solid #cbd5e1;border-radius:12px;"><strong>Period Net</strong><br/>${fmtAmt(dashboardSummary.periodNet)}</div>
+          <div style="padding:16px;border:1px solid #cbd5e1;border-radius:12px;"><strong>Closing Balance</strong><br/>${fmtAmt(dashboardSummary.closingBalance)}</div>
+          <div style="padding:16px;border:1px solid #cbd5e1;border-radius:12px;"><strong>Net Expense</strong><br/>${fmtAmt(dashboardSummary.totalExpense)}</div>
+        </div>
+        <p style="padding:16px;background:#eff6ff;border-radius:12px;line-height:1.5;">${aiSummaryText}</p>
+      </div>`;
+    const { default: html2pdf } = await import("html2pdf.js");
+    await html2pdf().set({
+      margin: 0.5,
+      filename: `dashboard_${selectedYear}_${selectedMonth + 1}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    }).from(el).save();
+  }, [activeFilterLabel, aiSummaryText, dashboardSummary, selectedMonth, selectedYear]);
+
+  const handleAskMe = () => {
+    setVoiceError("");
+    startListening({
+      lang: "en-IN",
+      onResult: (transcript) => {
+        const normalized = normalizeVoiceText(transcript);
+        const monthIndex = getMonthFromVoiceQuery(transcript, selectedMonth);
+        const year = getYearFromVoiceQuery(transcript, selectedYear);
+        const monthName = months[monthIndex]?.name || months[selectedMonth].name;
+        const expenseTransactions = userTransactions.filter((t) => getCategoryForTransaction(t, categories)?.type?.toLowerCase() === "expense");
+        const monthTransactions = expenseTransactions.filter((t) => {
+          const d = new Date(t.transaction_date);
+          return d.getMonth() === monthIndex && d.getFullYear() === year;
         });
 
-        const totalIncome = filteredData
-          .filter((t) => t.category?.type?.toLowerCase() === "income")
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+        const monthCategoryTotals = monthTransactions.reduce((acc, t) => {
+          const categoryName = getCategoryForTransaction(t, categories)?.name || "Uncategorized";
+          acc[categoryName] = (acc[categoryName] || 0) + (parseFloat(t.amount) || 0);
+          return acc;
+        }, {});
 
-        const totalExpense = filteredData
-          .filter((t) => t.category?.type?.toLowerCase() === "expense")
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+        const topCategoryEntry = Object.entries(monthCategoryTotals).sort((a, b) => b[1] - a[1])[0];
+        const yearlyMonthTotals = expenseTransactions.reduce((acc, t) => {
+          const d = new Date(t.transaction_date);
+          if (d.getFullYear() !== year) return acc;
+          const key = d.getMonth();
+          acc[key] = (acc[key] || 0) + (parseFloat(t.amount) || 0);
+          return acc;
+        }, {});
 
-        const transactions = filteredData.map((t) => ({
-          date: new Date(t.transaction_date).toLocaleDateString(),
-          description: t.description,
-          amount: t.amount,
-          type: t.category?.type,
-        }));
+        const topMonthEntry = Object.entries(yearlyMonthTotals).sort((a, b) => b[1] - a[1])[0];
+        const matchedCategory = findCategoryFromVoiceQuery(transcript, categories);
+        const hasExplicitMonth =
+          monthAliases.some((aliases) => aliases.some((alias) => normalized.includes(normalizeVoiceText(alias)))) ||
+          normalized.includes("this month") ||
+          normalized.includes("current month") ||
+          normalized.includes("is month") ||
+          normalized.includes("is mahine") ||
+          normalized.includes("iss mahine") ||
+          normalized.includes("last month") ||
+          normalized.includes("previous month") ||
+          normalized.includes("pichle mahine") ||
+          normalized.includes("pichhle mahine");
+        const hasExplicitYear = /\b20\d{2}\b/.test(normalized) ||
+          normalized.includes("last year") ||
+          normalized.includes("pichle saal");
+        const asksTopMonthOnly =
+          normalized.includes("kis mahine") ||
+          normalized.includes("kaunse mahine") ||
+          normalized.includes("konse mahine") ||
+          normalized.includes("which month");
+        const asksTopCategory =
+          (normalized.includes("sabse jyada") || normalized.includes("sabse zyada") || normalized.includes("highest") || normalized.includes("most")) &&
+          (
+            normalized.includes("category") ||
+            normalized.includes("categary") ||
+            normalized.includes("kis category") ||
+            normalized.includes("kharcha kis") ||
+            normalized.includes("expense kis")
+          );
+        const asksTopMonth =
+          asksTopMonthOnly ||
+          (
+            (normalized.includes("sabse jyada") || normalized.includes("sabse zyada") || normalized.includes("highest") || normalized.includes("most")) &&
+            (normalized.includes("month") || normalized.includes("mahina") || normalized.includes("mahine") || normalized.includes("महीने"))
+          );
+        const asksCategoryTotal =
+          matchedCategory &&
+          (
+            normalized.includes("kitna") ||
+            normalized.includes("total") ||
+            normalized.includes("kharcha") ||
+            normalized.includes("expense") ||
+            normalized.includes("kitne") ||
+            hasExplicitMonth ||
+            hasExplicitYear
+          );
 
-        setVoiceQueryResults([
-          {
-            category: categoryMatch.name,
-            month: monthMatch.name,
+        let resultPayload = null;
+
+        if (asksTopMonth) {
+          if (!topMonthEntry) {
+            setShowVoiceResults(false);
+            setVoiceQueryResults([]);
+            setVoiceError(`${year} ke liye expense data nahi mila.`);
+            return;
+          }
+          const winningMonthIndex = parseInt(topMonthEntry[0], 10);
+          const winningMonthTransactions = expenseTransactions.filter((t) => {
+            const d = new Date(t.transaction_date);
+            return d.getFullYear() === year && d.getMonth() === winningMonthIndex;
+          });
+          resultPayload = {
+            category: "Highest Expense Month",
+            month: months[winningMonthIndex].name,
+            year,
+            totalIncome: 0,
+            totalExpense: topMonthEntry[1],
+            transactions: winningMonthTransactions.map((t) => {
+              const category = getCategoryForTransaction(t, categories);
+              return {
+                date: new Date(t.transaction_date).toLocaleDateString(),
+                description: t.description,
+                amount: t.amount,
+                type: category?.type,
+              };
+            }),
+          };
+        } else if (asksCategoryTotal) {
+          const matched = userTransactions.filter((t) => {
+            const d = new Date(t.transaction_date);
+            const category = getCategoryForTransaction(t, categories);
+            return String(category?.id ?? t.category_id) === String(matchedCategory.id) &&
+              d.getMonth() === monthIndex &&
+              d.getFullYear() === year;
+          });
+          const totalIncome = matched.filter((t) => getCategoryForTransaction(t, categories)?.type?.toLowerCase() === "income").reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+          const totalExpense = matched.filter((t) => getCategoryForTransaction(t, categories)?.type?.toLowerCase() === "expense").reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+          resultPayload = {
+            category: matchedCategory.name,
+            month: monthName,
             year,
             totalIncome,
             totalExpense,
-            transactions,
-          },
-        ]);
+            transactions: matched.map((t) => {
+              const category = getCategoryForTransaction(t, categories);
+              return {
+                date: new Date(t.transaction_date).toLocaleDateString(),
+                description: t.description,
+                amount: t.amount,
+                type: category?.type,
+              };
+            }),
+          };
+        } else if (asksTopCategory || !matchedCategory || normalized.includes("kharcha")) {
+          if (!topCategoryEntry) {
+            setShowVoiceResults(false);
+            setVoiceQueryResults([]);
+            setVoiceError(`${monthName} ${year} ke liye category expense data nahi mila.`);
+            return;
+          }
+          const winningCategory = topCategoryEntry[0];
+          const winningTransactions = monthTransactions.filter((t) => (getCategoryForTransaction(t, categories)?.name || "Uncategorized") === winningCategory);
+          resultPayload = {
+            category: winningCategory,
+            month: monthName,
+            year,
+            totalIncome: 0,
+            totalExpense: topCategoryEntry[1],
+            transactions: winningTransactions.map((t) => {
+              const category = getCategoryForTransaction(t, categories);
+              return {
+                date: new Date(t.transaction_date).toLocaleDateString(),
+                description: t.description,
+                amount: t.amount,
+                type: category?.type,
+              };
+            }),
+          };
+        }
 
-        setShowVoiceResults(true);
-
-        // Hide results after 20 seconds
-        setTimeout(() => {
+        if (!resultPayload) {
           setShowVoiceResults(false);
           setVoiceQueryResults([]);
-        }, 20000);
+          setVoiceError("Query samajh nahi aayi. Example: March me sabse jyada kharcha kis category me hua.");
+          return;
+        }
 
-        SpeechRecognition.stopListening();
-        setIsListening(false);
-        resetTranscript();
-      }
-    };
+        setVoiceError("");
+        setVoiceQueryResults([resultPayload]);
+        setShowVoiceResults(true);
+      },
+      onError: (msg) => {
+        setShowVoiceResults(false);
+        setVoiceQueryResults([]);
+        setVoiceError(msg);
+      },
+    });
+  };
 
-    processVoiceQuery();
-  }, [transcript, isListening, categories, resetTranscript, userTransactions]);
+  const handleQuickPeriod = useCallback((period) => {
+    const now = new Date();
 
-<<<<<<< HEAD
-  return (
-    <Box p={3} style={{ overflowX: "auto" }}>
-=======
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    if (active.id !== over.id) {
-      setWidgets((prevWidgets) => {
-        const oldIndex = prevWidgets.findIndex((widget) => widget.id === active.id);
-        const newIndex = prevWidgets.findIndex((widget) => widget.id === over.id);
-        return arrayMove(prevWidgets, oldIndex, newIndex);
-      });
+    if (period === "current") {
+      setSelectedMonth(now.getMonth());
+      setSelectedYear(now.getFullYear());
+      setStartDate(formatDateInput(new Date(now.getFullYear(), now.getMonth(), 1)));
+      setEndDate(formatDateInput(now));
+    } else if (period === "previous") {
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      setSelectedMonth(prev.getMonth());
+      setSelectedYear(prev.getFullYear());
+      setStartDate(formatDateInput(prev));
+      setEndDate(formatDateInput(new Date(prev.getFullYear(), prev.getMonth() + 1, 0)));
+    } else if (period === "reset") {
+      setSelectedTypeFilter("all");
+      setSelectedCategoryFilter("all");
+      setStartDate("");
+      setEndDate("");
     }
-  };
-
-  const toggleWidget = (id) => {
-    setWidgets((prevWidgets) =>
-      prevWidgets.some((widget) => widget.id === id)
-        ? prevWidgets.filter((widget) => widget.id !== id)
-        : [...prevWidgets, { id, label: id.charAt(0).toUpperCase() + id.slice(1) }]
-    );
-  };
-
-  const getGridColumns = () => {
-    if (widgets.length === 1 && widgets[0].id === "charts") {
-      return "1fr"; // Full width for charts
-    }
-    return "1fr"; // Default full width for all sections
-  };
+  }, []);
 
   return (
-    <Box p={3} style={{ overflowX: "auto", minHeight: "100vh" }}> {/* Ensure full screen height */}
->>>>>>> f81c650 (Initial commit)
-      <Typography variant="h4" align="center" gutterBottom>
-        Dashboard - {months[selectedMonth].name}
-      </Typography>
+    <Box p={3} className="dashboard-shell">
+      <OrgSetupBanner />
 
-<<<<<<< HEAD
-      <Box mb={3} display="flex" justifyContent="center" gap={2} flexWrap="wrap">
-        <TextField
-          select
-          label="Select Month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-          size="small"
-        >
-          {months.map((month) => (
-            <MenuItem key={month.value} value={month.value}>
-              {month.name}
-            </MenuItem>
-          ))}
-        </TextField>
+      <DashboardHero
+        activeFilterLabel={activeFilterLabel}
+        availableTypes={availableTypes}
+        dashboardSummary={dashboardSummary}
+        endDate={endDate}
+        exportToCSV={exportToCSV}
+        filterOpen={filterOpen}
+        handleAskMe={handleAskMe}
+        handleExportSummaryPDF={handleExportSummaryPDF}
+        handleQuickPeriod={handleQuickPeriod}
+        isListening={isListening}
+        navigate={navigate}
+        selectedCategoryFilter={selectedCategoryFilter}
+        selectedMonth={selectedMonth}
+        selectedTypeFilter={selectedTypeFilter}
+        selectedYear={selectedYear}
+        setEndDate={setEndDate}
+        setFilterOpen={setFilterOpen}
+        setIsPopupOpen={setIsPopupOpen}
+        setSelectedCategoryFilter={setSelectedCategoryFilter}
+        setSelectedMonth={setSelectedMonth}
+        setSelectedTypeFilter={setSelectedTypeFilter}
+        setSelectedYear={setSelectedYear}
+        setStartDate={setStartDate}
+        startDate={startDate}
+        supported={supported}
+        visibleCategories={visibleCategories}
+      />
 
-        <TextField
-          select
-          label="Select Year"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-          size="small"
-        >
-          {[...Array(5)].map((_, i) => {
-            const year = new Date().getFullYear() - i;
-            return (
-              <MenuItem key={year} value={year}>
-                {year}
-              </MenuItem>
-            );
-          })}
-        </TextField>
+      <VoiceQueryResults
+        setShowVoiceResults={setShowVoiceResults}
+        setVoiceError={setVoiceError}
+        setVoiceQueryResults={setVoiceQueryResults}
+        showVoiceResults={showVoiceResults}
+        voiceError={voiceError}
+        voiceQueryResults={voiceQueryResults}
+      />
 
-        <button
-          onClick={exportToCSV}
-          className="dashboard-button export-button"
-        >
-          Export to CSV
-        </button>
-
-        <button
-          onClick={() => navigate("/transactions")}
-          className="dashboard-button add-transaction-button"
-        >
-          <Add /> Add Transaction
-        </button>
-
-        <button
-          onClick={handleOpenPopup}
-          className="dashboard-button view-category-button"
-        >
-          View Category Details
-        </button>
-
-        <button
-          onClick={handleVoiceQuery}
-          className="dashboard-button voice-query-button"
-        >
-          <SmartToy /> Ask me your income and expense
-        </button>
-
-        <button
-          onClick={handleResetResults}
-          className="dashboard-button reset-results-button"
-        >
-          Reset Results
-        </button>
-      </Box>
-
-=======
-      <Box mb={3}>
-        <Grid container spacing={1}
-
-          direction="row"
-          sx={{
-            justifyContent: "center",
-            alignItems: "flex-start",
-          }}
-        >
-          {/* Month Selector */}
-          <Grid item xs={12} sm={6} md={1}>
-            <TextField
-              select
-              fullWidth
-              label="Select Month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              size="small"
-            >
-              {months.map((month) => (
-                <MenuItem key={month.value} value={month.value}>
-                  {month.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-
-          {/* Year Selector */}
-          <Grid item xs={12} sm={6} md={1}>
-            <TextField
-              select
-              fullWidth
-              label="Select Year"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              size="small"
-            >
-              {[...Array(5)].map((_, i) => {
-                const year = new Date().getFullYear() - i;
-                return (
-                  <MenuItem key={year} value={year}>
-                    {year}
-                  </MenuItem>
-                );
-              })}
-            </TextField>
-          </Grid>
-
-          {/* Export to CSV Button */}
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              onClick={exportToCSV}
-              variant="outlined"
-              size="large"
-              title="Export Transactions to CSV"
-              startIcon={<FileDownload />}
-              fullWidth
-            >
-            </Button>
-          </Grid>
-
-          {/* View Category Button */}
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              onClick={handleOpenPopup}
-              variant="outlined"
-              size="large"
-              title="View Category Details"
-              fullWidth
-              style={{
-                transition: "background-color 0.3s, color 0.3s",
-                backgroundColor: "#f5f5f5",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "#e0f7fa";
-                e.target.style.color = "#00796b";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "#f5f5f5";
-                e.target.style.color = "inherit";
-              }}
-            >
-              <ListAlt /> {/* Replaced text with a related icon */}
-            </Button>
-          </Grid>
-
-          {/* Voice Query Button */}
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              onClick={handleVoiceQuery}
-              variant="outlined"
-              size="large"
-              title="Voice Query"
-              startIcon={<SmartToy />}
-              fullWidth
-            >
-            </Button>
-          </Grid>
-
-          {/* Toggle Buttons */}
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              onClick={() => toggleWidget("summary")}
-              variant="outlined"
-              size="large"
-              fullWidth
-              title="Summary"
-            >
-              <ListAlt />
-            </Button>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              onClick={() => toggleWidget("charts")}
-              variant="outlined"
-              size="large"
-              fullWidth
-              title="Charts"
-            >
-              <PieChart />
-            </Button>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              onClick={() => toggleWidget("transactions")}
-              variant="outlined"
-              size="large"
-              fullWidth
-              title="Transactions"
-            >
-              <BarChart />
-            </Button>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              onClick={() => toggleWidget("monthlyComparison")}
-              variant="outlined"
-              size="large"
-              fullWidth
-              title="Monthly Comparison"
-            >
-              <CompareArrows />
-            </Button>
-          </Grid>
-          <Grid item xs={12} sm={6} md={1}>
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => {
-                setWidgets([
-                  { id: "summary", label: "Summary" },
-                  { id: "charts", label: "Charts" },
-                  { id: "transactions", label: "Transactions" },
-                  { id: "monthlyComparison", label: "Month-wise Income and Expenses" },
-                ]);
-              }}
-              startIcon={<Add />}
-              fullWidth
-              title="Reset Widgets"
-            >
-            </Button>
-          </Grid>
-        </Grid>
-
-
-      </Box>
-
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={widgets.map((widget) => widget.id)} strategy={verticalListSortingStrategy}>
-          <Box
-            style={{
-              display: "grid",
-              gridTemplateColumns: getGridColumns(),
-              gap: "16px", // Add spacing between widgets
-              minHeight: "100vh", // Ensure full screen height
-            }}
-          >
-            {widgets.map((widget) => (
-              <SortableItem key={widget.id} id={widget.id}>
-                <Box
-                  style={{
-                    border: "1px solid #ccc",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    backgroundColor: widget.id === "summary"
-                      ? "#e8f5e9"
-                      : widget.id === "charts"
-                      ? "#e3f2fd"
-                      : widget.id === "transactions"
-                      ? "#ffebee"
-                      : "#ede7f6", // Multicolor combination
-                    maxHeight: "100%",
-                    overflowY: "auto",
-                  }}
-                >
-                  {widget.id === "summary" && (
-                    <Box>
-                      <Box mb={3} p={2} style={{ backgroundColor: "#f5f5f5", borderRadius: "8px" }}>
-                        <Typography variant="h6" align="center" gutterBottom>
-                          Summary for {months[selectedMonth].name} {selectedYear}
-                        </Typography>
-                        <Grid container spacing={2} justifyContent="center">
-                          <Grid item xs={12} sm={3}>
-                            <Paper
-                              elevation={3}
-                              style={{
-                                padding: "12px",
-                                textAlign: "center",
-                                backgroundColor: "#e8f5e9",
-                                borderRadius: "8px",
-                              }}
-                            >
-                              <Typography variant="subtitle1" style={{ color: "#4caf50", fontWeight: "bold" }}>
-                                Total Income
-                              </Typography>
-                              <Typography variant="h5" style={{ color: "#4caf50", fontWeight: "bold" }}>
-                                ₹
-                                {filteredTransactions
-                                  .filter((t) => t.category?.type?.toLowerCase() === "income")
-                                  .reduce((sum, t) => sum + parseFloat(t.amount), 0)}
-                              </Typography>
-                            </Paper>
-                          </Grid>
-                          <Grid item xs={12} sm={3}>
-                            <Paper
-                              elevation={3}
-                              style={{
-                                padding: "12px",
-                                textAlign: "center",
-                                backgroundColor: "#ffebee",
-                                borderRadius: "8px",
-                              }}
-                            >
-                              <Typography variant="subtitle1" style={{ color: "#f44336", fontWeight: "bold" }}>
-                                Total Expense
-                              </Typography>
-                              <Typography variant="h5" style={{ color: "#f44336", fontWeight: "bold" }}>
-                                ₹
-                                {filteredTransactions
-                                  .filter((t) => t.category?.type?.toLowerCase() === "expense")
-                                  .reduce((sum, t) => sum + parseFloat(t.amount), 0)}
-                              </Typography>
-                            </Paper>
-                          </Grid>
-                          <Grid item xs={12} sm={3}>
-                            <Paper
-                              elevation={3}
-                              style={{
-                                padding: "12px",
-                                textAlign: "center",
-                                backgroundColor: "#e3f2fd",
-                                borderRadius: "8px",
-                              }}
-                            >
-                              <Typography variant="subtitle1" style={{ color: "#2196f3", fontWeight: "bold" }}>
-                                Net Savings
-                              </Typography>
-                              <Typography variant="h5" style={{ color: "#2196f3", fontWeight: "bold" }}>
-                                ₹
-                                {filteredTransactions
-                                  .filter((t) => t.category?.type?.toLowerCase() === "income")
-                                  .reduce((sum, t) => sum + parseFloat(t.amount), 0) -
-                                  filteredTransactions
-                                    .filter((t) => t.category?.type?.toLowerCase() === "expense")
-                                    .reduce((sum, t) => sum + parseFloat(t.amount), 0)}
-                              </Typography>
-                            </Paper>
-                          </Grid>
-                          <Grid item xs={12} sm={3}>
-                            <Paper
-                              elevation={3}
-                              style={{
-                                padding: "12px",
-                                textAlign: "center",
-                                backgroundColor: "#ede7f6",
-                                borderRadius: "8px",
-                              }}
-                            >
-                              <Typography variant="subtitle1" style={{ color: "#673ab7", fontWeight: "bold" }}>
-                                Current Balance
-                              </Typography>
-                              <Typography variant="h5" style={{ color: "#673ab7", fontWeight: "bold" }}>
-                                ₹{TotalAccountBalance}
-                              </Typography>
-                            </Paper>
-                          </Grid>
-                        </Grid>
-                      </Box>
-                    </Box>
-                  )}
-                  {widget.id === "charts" && (
-                    <Box>
-                      <Typography variant="h6" align="center" gutterBottom>
-                        Charts
-                      </Typography>
-                      <Grid container spacing={3}>
-                        <Charts
-                          pieChartData={pieChartData}
-                          monthCategoryData={monthCategoryData}
-                          dayWiseChartData={dayWiseChartData}
-                          monthlyComparisonData={monthlyComparisonData}
-                          yearlyComparisonData={yearlyComparisonData}
-                          highestExpenseCategories={highestExpenseCategories}
-                          allMonthsHighestExpenseCategories={allMonthsHighestExpenseCategories}
-                        />
-                      </Grid>
-                    </Box>
-                  )}
-                  {widget.id === "transactions" && (
-                    <Box>
-                      <Typography variant="h6" align="center" gutterBottom>
-                        Transactions
-                      </Typography>
-                      <Box mb={2} display="flex" justifyContent="flex-end">
-                        <TextField
-                          label="Search by Description"
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          size="small"
-                          style={{ width: "300px" }}
-                        />
-                      </Box>
-                      <TableContainer
-                        style={{
-                          maxHeight: "400px", // Set a maximum height for the table container
-                          overflowY: "auto", // Enable vertical scrolling
-                          backgroundColor: "rgba(255, 255, 255, 0.8)", // Transparent background
-                          borderRadius: "8px",
-                          width: "100%", // Ensure the table container takes full width
-                        }}
-                      >
-                        <style>
-                          {`
-                            ::-webkit-scrollbar {
-                              width: 8px;
-                            }
-                            ::-webkit-scrollbar-thumb {
-                              background-color: rgba(0, 0, 0, 0.2); /* Visible scrollbar thumb */
-                              border-radius: 4px;
-                            }
-                            ::-webkit-scrollbar-track {
-                              background-color: transparent;
-                            }
-                          `}
-                        </style>
-                        <Table size="small" style={{ minWidth: 650 }}>
-                          <TableHead>
-                            <TableRow style={{ backgroundColor: "#e0e0e0" }}>
-                              <TableCell style={{ fontWeight: "bold" }}>Date</TableCell>
-                              <TableCell style={{ fontWeight: "bold" }}>Desc</TableCell> {/* Shortened Description */}
-                              <TableCell style={{ fontWeight: "bold" }}>Amt (₹)</TableCell> {/* Shortened Amount */}
-                              <TableCell style={{ fontWeight: "bold" }}>Type</TableCell>
-                              <TableCell style={{ fontWeight: "bold" }}>Cat</TableCell> {/* Shortened Category */}
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {filteredTableData.map((t, index) => (
-                              <TableRow
-                                key={index}
-                                style={{
-                                  backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9f9f9",
-                                }}
-                              >
-                                <TableCell>{new Date(t.transaction_date).toLocaleDateString()}</TableCell>
-                                <TableCell>{t.description}</TableCell>
-                                <TableCell>₹{t.amount}</TableCell>
-                                <TableCell>{t.category?.type}</TableCell>
-                                <TableCell>{t.category?.name}</TableCell>
-                              </TableRow>
-                            ))}
-                            {filteredTableData.length === 0 && (
-                              <TableRow>
-                                <TableCell colSpan={5} align="center">
-                                  No transactions found
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-                  )}
-                  {widget.id === "monthlyComparison" && (
-                    <Box>
-                      <Typography variant="h6" align="center" gutterBottom>
-                        Month-wise Income and Expenses
-                      </Typography>
-                      <TableContainer
-                        style={{
-                          maxHeight: "300px", // Scrollable height for the table
-                          overflowY: "auto",
-                          backgroundColor: "rgba(255, 255, 255, 0.8)", // Transparent background
-                          borderRadius: "8px",
-                        }}
-                      >
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell style={{ fontWeight: "bold" }}>Month</TableCell>
-                              <TableCell style={{ fontWeight: "bold" }}>Total Income</TableCell>
-                              <TableCell style={{ fontWeight: "bold" }}>Total Expense</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {monthlyComparisonData.map((data, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{data.name}</TableCell>
-                                <TableCell>₹{data.Income}</TableCell>
-                                <TableCell>₹{data.Expense}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-                  )}
-                </Box>
-              </SortableItem>
-            ))}
-          </Box>
-        </SortableContext>
-      </DndContext>
-
->>>>>>> f81c650 (Initial commit)
-      {showVoiceResults && voiceQueryResults.length > 0 && (
-        <Box mb={3} p={2} style={{ backgroundColor: "#f5f5f5", borderRadius: "8px" }}>
-          <Typography variant="h6" gutterBottom>
-            Your Voice Query Results
-          </Typography>
-          {voiceQueryResults.map((result, index) => (
-            <Box key={index} mb={2}>
-              <Typography variant="body1">
-                <strong>Category:</strong> {result.category}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Month:</strong> {result.month}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Year:</strong> {result.year}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Total Income:</strong> ₹{result.totalIncome}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Total Expense:</strong> ₹{result.totalExpense}
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell style={{ fontWeight: "bold" }}>Date</TableCell>
-                      <TableCell style={{ fontWeight: "bold" }}>Description</TableCell>
-                      <TableCell style={{ fontWeight: "bold" }}>Amount</TableCell>
-                      <TableCell style={{ fontWeight: "bold" }}>Type</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {result.transactions.map((t, tIndex) => (
-                      <TableRow key={tIndex}>
-                        <TableCell>{t.date}</TableCell>
-                        <TableCell>{t.description}</TableCell>
-                        <TableCell>₹{t.amount}</TableCell>
-                        <TableCell>{t.type}</TableCell>
-                      </TableRow>
-                    ))}
-                    {result.transactions.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center">
-                          No transactions found
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          ))}
-<<<<<<< HEAD
-        </Box>
-      )}
-
-      <Grid container spacing={3}>
-        <Charts
-          pieChartData={pieChartData}
-          monthCategoryData={monthCategoryData}
-          dayWiseChartData={dayWiseChartData}
-          monthlyComparisonData={monthlyComparisonData}
-          yearlyComparisonData={yearlyComparisonData}
-          highestExpenseCategories={highestExpenseCategories}
-          allMonthsHighestExpenseCategories={allMonthsHighestExpenseCategories}
+      <Box className="dashboard-single-column">
+        <KpiSection dashboardSummary={dashboardSummary} previousPeriodSummary={previousPeriodSummary} />
+        <CashFlowTimeline cashFlowData={cashFlowData} dashboardSummary={dashboardSummary} />
+        <DashboardSetupState
+          hasAccounts={hasAccounts}
+          hasCategories={hasCategories}
+          hasTransactions={hasTransactions}
+          loading={dashboardLoading && !hasTransactions}
+          navigate={navigate}
         />
-      </Grid>
+        <SmartInsightsPanel insights={smartInsights} />
+        <InsightsSection topSpendingCategories={topSpendingCategories} />
+        <AnalyticsSection
+          activeFilterLabel={activeFilterLabel}
+          allMonthsHighestExpenseCategories={allMonthsHighestExpenseCategories}
+          dayWiseChartData={dayWiseChartData}
+          highestExpenseCategories={highestExpenseCategories}
+          monthCategoryData={monthCategoryData}
+          monthlyComparisonData={monthlyComparisonData}
+          pieChartData={pieChartData}
+          yearlyComparisonData={yearlyComparisonData}
+        />
+        <RecentActivityFeed accounts={accountsWithDerivedCardBalances} categories={categories} navigate={navigate} transactions={recentTransactions} />
+        <AiSummaryPanel aiSummaryText={aiSummaryText} />
+      </Box>
 
-      <Grid item xs={12}>
-        <Paper elevation={3} style={{ padding: 16 }}>
-          <Typography variant="h6" align="center" gutterBottom>Transactions</Typography>
-          <Box mb={2} display="flex" justifyContent="flex-end">
-            <TextField
-              label="Search by Description"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              style={{ width: "300px" }}
-            />
-          </Box>
-          <TableContainer
-            style={{
-              maxHeight: 400,
-              overflowY: "auto",
-              backgroundColor: "#f5f5f5",
-              borderRadius: "8px",
-            }}
-          >
-            <Table size="small" style={{ minWidth: 650 }}>
-              <TableHead>
-                <TableRow style={{ backgroundColor: "#e0e0e0" }}>
-                  <TableCell style={{ fontWeight: "bold" }}>Date</TableCell>
-                  <TableCell style={{ fontWeight: "bold" }}>Description</TableCell>
-                  <TableCell style={{ fontWeight: "bold" }}>Amount</TableCell>
-                  <TableCell style={{ fontWeight: "bold" }}>Type</TableCell>
-                  <TableCell style={{ fontWeight: "bold" }}>Category</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedTableData.map((t, index) => (
-                  <TableRow
-                    key={index}
-                    style={{
-                      backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9f9f9",
-                    }}
-                  >
-                    <TableCell>{new Date(t.transaction_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{t.description}</TableCell>
-                    <TableCell>₹{t.amount}</TableCell>
-                    <TableCell>{t.category?.type}</TableCell>
-                    <TableCell>{t.category?.name}</TableCell>
-                  </TableRow>
-                ))}
-                {paginatedTableData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      No transactions found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredTableData.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Paper>
-      </Grid>
-
-=======
-          <Box display="flex" justifyContent="flex-end">
-            <button
-              onClick={handleResetResults}
-              className="dashboard-button reset-results-button"
-            >
-              Reset Results
-            </button>
-          </Box>
-        </Box>
-      )}
-
->>>>>>> f81c650 (Initial commit)
-      <Dialog open={isPopupOpen} onClose={handleClosePopup} fullWidth maxWidth="sm">
-        <DialogTitle>Category Details</DialogTitle>
-        <DialogContent>
-          <Box display="flex" gap={2} mb={2}>
-            <TextField
-              select
-              label="Select Category"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              size="small"
-              fullWidth
-            >
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Select Month"
-              value={popupMonth}
-              onChange={(e) => setPopupMonth(parseInt(e.target.value))}
-              size="small"
-              fullWidth
-            >
-              {months.map((month) => (
-                <MenuItem key={month.value} value={month.value}>
-                  {month.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Select Year"
-              value={popupYear}
-              onChange={(e) => setPopupYear(parseInt(e.target.value))}
-              size="small"
-              fullWidth
-            >
-              {[...Array(5)].map((_, i) => {
-                const year = new Date().getFullYear() - i;
-                return (
-                  <MenuItem key={year} value={year}>
-                    {year}
-                  </MenuItem>
-                );
-              })}
-            </TextField>
-          </Box>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell style={{ fontWeight: "bold" }}>Date</TableCell>
-<<<<<<< HEAD
-                  <TableCell style={{ fontWeight: "bold" }}>Description</TableCell>
-                  <TableCell style={{ fontWeight: "bold" }}>Amount</TableCell>
-=======
-                  <TableCell style={{ fontWeight: "bold" }}>Desc</TableCell> {/* Shortened Description */}
-                  <TableCell style={{ fontWeight: "bold" }}>Amt (₹)</TableCell> {/* Shortened Amount */}
->>>>>>> f81c650 (Initial commit)
-                  <TableCell style={{ fontWeight: "bold" }}>Type</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {popupData.map((t, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{new Date(t.transaction_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{t.description}</TableCell>
-                    <TableCell>₹{t.amount}</TableCell>
-                    <TableCell>{t.category?.type}</TableCell>
-                  </TableRow>
-                ))}
-                {popupData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      No data available
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Box mt={2}>
-            <Typography variant="body1">
-              <strong>Total Income:</strong> ₹{totalPopupIncome}
-            </Typography>
-            <Typography variant="body1">
-              <strong>Total Expense:</strong> ₹{totalPopupExpense}
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClosePopup} color="primary">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Box className="dashboard-records-grid">
+        <TransactionsTable
+          accounts={accountsWithDerivedCardBalances}
+          categories={categories}
+          filteredTableData={filteredTableData}
+          page={page}
+          paginatedTableData={paginatedTableData}
+          rowsPerPage={rowsPerPage}
+          search={search}
+          setPage={setPage}
+          setRowsPerPage={setRowsPerPage}
+          setSearch={setSearch}
+        />
+        <MonthlySummaryTable monthlyComparisonData={monthlyComparisonData} selectedYear={selectedYear} />
+      </Box>
+      <CategoryDetailsDialog
+        categories={categories}
+        isPopupOpen={isPopupOpen}
+        popupData={popupData}
+        popupMonth={popupMonth}
+        popupYear={popupYear}
+        selectedCategory={selectedCategory}
+        setIsPopupOpen={setIsPopupOpen}
+        setPopupMonth={setPopupMonth}
+        setPopupYear={setPopupYear}
+        setSelectedCategory={setSelectedCategory}
+      />
     </Box>
   );
-};
-
-export default Dashboard;
+}

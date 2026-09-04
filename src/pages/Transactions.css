@@ -1,0 +1,136 @@
+.transactions-page__summary-card {
+  display: flex;
+  min-height: 156px;
+  height: 100%;
+  cursor: pointer;
+  background-color: #ffffff;
+}
+
+.transactions-page__summary-card--active {
+  background-color: #f8fafc;
+  border-color: rgba(8, 145, 178, 0.42);
+}
+
+.transactions-page__summary-card-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 156px;
+  padding: 18px 20px;
+}
+
+.transactions-page__summary-card-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+}
+
+.transactions-page__summary-card-title {
+  min-width: 0;
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.transactions-page__account-badge {
+  flex: 0 0 auto;
+  max-width: 112px;
+  padding: 4px 8px;
+  border: 1px solid rgba(8, 145, 178, 0.24);
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #155e75;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.transactions-page__account-badge--card {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.transactions-page__summary-values {
+  display: grid;
+  gap: 8px;
+}
+
+.transactions-page__summary-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.transactions-page__summary-value-row .MuiTypography-caption-root {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.transactions-page__summary-value-row .MuiTypography-body2-root {
+  color: #0f172a;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.transactions-page__summary-value-row--empty {
+  visibility: hidden;
+}
+
+.transactions-page__table-head {
+  background-color: #1976d2;
+}
+
+.transactions-page__head-cell {
+  color: #000000;
+  font-weight: 700;
+}
+
+.transactions-page__row {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.transactions-page__row:hover {
+  background-color: #f0f0f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.transactions-page__dialog-actions {
+  padding-right: 24px;
+  padding-bottom: 16px;
+  padding-left: 24px;
+}
+
+.transactions-page__balance-summary .metric-banner {
+  background: #eef2ff;
+  border: 1px solid rgba(99, 102, 241, 0.24);
+}
+
+.transactions-page__balance-summary .metric-banner-text {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.transactions-page__form-card {
+  max-width: 1040px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+@media (min-width: 900px) {
+  .transactions-page__form-card {
+    padding: 28px 32px;
+  }
+}

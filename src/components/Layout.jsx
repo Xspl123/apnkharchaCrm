@@ -1,45 +1,59 @@
-import React from "react";
-import { Box } from "@mui/material";
+import { Box, useMediaQuery, useTheme } from "@mui/material";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import RouteFlash from "./RouteFlash";
+import "./Layout.css";
 
-const Layout = ({ sidebarOpen, toggleSidebar, themeColor, setThemeColor, children }) => {
-    return (
-        <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#F4F4F4" }}>
-            {/* ✅ Sidebar */}
-            <Sidebar open={sidebarOpen} toggleSidebar={toggleSidebar} themeColor={themeColor} />
+const Layout = ({
+  sidebarOpen,
+  toggleSidebar,
+  colorMode,
+  toggleColorMode,
+  children,
+}) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const themeColor = colorMode === "dark" ? "#0f172a" : "#3b82f6";
 
-            <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-                {/* ✅ Navbar */}
-                <Navbar 
-                    sidebarOpen={sidebarOpen} 
-                    toggleSidebar={toggleSidebar} 
-                    themeColor={themeColor} 
-                    setThemeColor={setThemeColor} 
-                />
+  return (
+    <Box
+      className="app-layout"
+    >
+      {/* ✅ Sidebar */}
+      <Sidebar
+        open={sidebarOpen}
+        toggleSidebar={toggleSidebar}
+        themeColor={themeColor}
+        isMobile={isMobile}
+      />
 
-               {/* ✅ Main Body */}
-                <Box
-                    sx={{
-                        flexGrow: 1,
-                        p: 3,
-                        display: "flex",
-                        justifyContent: "flex-start",  // ✅ Left se start karega
-                        alignItems: "flex-start",      // ✅ Top pe align hoga
-                        backgroundColor: "#fff",
-                        minHeight: "100vh",            // ✅ Full height cover karega
-                    }}
-                >
-                    {children}
-                </Box>
+      {/* ✅ Main Wrapper */}
+      <Box className="app-layout__content-wrap">
 
+        {/* ✅ Navbar */}
+        <Navbar
+          sidebarOpen={sidebarOpen}
+          toggleSidebar={toggleSidebar}
+          colorMode={colorMode}
+          toggleColorMode={toggleColorMode}
+          themeColor={themeColor}
+        />
 
-                {/* ✅ Footer with themeColor */}
-                <Footer themeColor={themeColor} />
-            </Box>
+        {/* ✅ Main Content */}
+       <Box
+            component="main"
+            className="app-layout__main"
+        >
+          <RouteFlash />
+          {children}
         </Box>
-    );
+
+        {/* ✅ Footer */}
+        <Footer themeColor={themeColor} />
+      </Box>
+    </Box>
+  );
 };
 
 export default Layout;

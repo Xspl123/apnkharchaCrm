@@ -1,0 +1,185 @@
+.client-page {
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+.client-page__header {
+  margin-bottom: 32px;
+}
+
+.client-page__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.client-page__title-icon {
+  color: #667eea;
+  font-size: 32px;
+}
+
+.client-page__subtitle {
+  color: #64748b;
+}
+
+.client-page__action-row {
+  margin-bottom: 24px;
+}
+
+.client-page__toggle-button {
+  padding: 12px 32px;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+}
+
+.client-page__form {
+  margin-bottom: 24px;
+  padding: 24px;
+  border-radius: 24px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.client-page__form-title {
+  font-weight: 600;
+}
+
+.client-page__form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.client-page__form-button {
+  padding: 8px 32px;
+}
+
+.client-page__table-shell {
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.client-page__toolbar {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.client-page__toolbar-title {
+  font-weight: 600;
+}
+
+.client-page__search {
+  width: 300px;
+}
+
+.client-page__table-head {
+  background-color: #1976d2;
+}
+
+.client-page__head-cell {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.client-page__row {
+  transition: all 0.2s ease;
+}
+
+.client-page__row:hover {
+  background-color: #f8fafc;
+}
+
+.client-page__company-name {
+  font-weight: 600;
+}
+
+.client-page__balance-chip {
+  font-weight: 600;
+}
+
+.client-page__action-stack {
+  display: flex;
+  justify-content: center;
+}
+
+.client-page__icon-button--ledger {
+  background-color: #f3e8ff;
+}
+
+.client-page__icon-button--ledger:hover {
+  background-color: #e9d5ff;
+}
+
+.client-page__icon-button--view {
+  background-color: #e6f0ff;
+}
+
+.client-page__icon-button--view:hover {
+  background-color: #d4e4ff;
+}
+
+.client-page__icon-button--edit {
+  background-color: #e6f7ff;
+}
+
+.client-page__icon-button--edit:hover {
+  background-color: #bae7ff;
+}
+
+.client-page__icon-button--delete {
+  background-color: #ffe6e6;
+}
+
+.client-page__icon-button--delete:hover {
+  background-color: #ffcccc;
+}
+
+.client-page__empty-cell {
+  padding-top: 32px;
+  padding-bottom: 32px;
+  text-align: center;
+}
+
+.client-page__empty-avatar {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 8px;
+  background-color: #f1f5f9;
+}
+
+.client-page__empty-icon {
+  font-size: 30px;
+  color: #94a3b8;
+}
+
+.client-page__delete-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.client-page__delete-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--mui-palette-error-main, #d32f2f);
+}
+
+.client-page__view-title {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.client-page__view-grid {
+  margin-top: 8px;
+}
+
+.client-page__view-actions {
+  padding: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+@media (max-width: 600px) {
+  .client-page__search {
+    width: 100%;
+  }
+}
