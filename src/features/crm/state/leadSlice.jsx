@@ -57,9 +57,13 @@ export const getDueFollowUps = createAsyncThunk(
     }
 );
 
-// Upcoming follow-ups for the whole week ahead (Dashboard widget) — a
-// separate lightweight endpoint from getDueFollowUps (today + overdue,
-// used by the Navbar bell) since the two need different date ranges.
+// Server-side "next N days" follow-up look-ahead. Backend: GET
+// /leads/upcoming-followups?days=7 (LeadController::upcomingFollowUps).
+// Note: LeadDashboard currently computes its own upcoming-follow-ups list
+// client-side via useMemo over the already-loaded `leads` state, so this
+// thunk isn't required for that view to work — it's here so any screen
+// that wants the server-scoped version (rather than recomputing from
+// whatever leads happen to be loaded) can dispatch it directly.
 export const getUpcomingFollowUps = createAsyncThunk(
     'leads/getUpcomingFollowUps',
     async (days = 7, { rejectWithValue }) => {
@@ -106,6 +110,55 @@ export const saveScoreRules = createAsyncThunk(
         try {
             const { data } = await axiosClient.put('/leads/score-rules', rules);
             return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+// ── Custom Field Definitions (org/user-scoped "Manage Custom Fields") ──
+export const getCustomFields = createAsyncThunk(
+    'leads/getCustomFields',
+    async (_, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.get('/leads/custom-fields');
+            return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const createCustomField = createAsyncThunk(
+    'leads/createCustomField',
+    async (fieldData, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.post('/leads/custom-fields', fieldData);
+            return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const updateCustomField = createAsyncThunk(
+    'leads/updateCustomField',
+    async ({ id, data: fieldData }, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.put(`/leads/custom-fields/${id}`, fieldData);
+            return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const deleteCustomField = createAsyncThunk(
+    'leads/deleteCustomField',
+    async (id, { rejectWithValue }) => {
+        try {
+            await axiosClient.delete(`/leads/custom-fields/${id}`);
+            return id;
         } catch (err) {
             return rejectWithValue(err.response?.data?.message || 'Failed');
         }
@@ -261,6 +314,8 @@ const leadSlice = createSlice({
         dueFollowUps: [],
         upcomingFollowUps: [],
         scoreRules:   null, // null until fetched; LeadList falls back to DEFAULT_SCORE_RULES while this is null
+        customFields: [], // [{ id, field_key, label, field_type, options, is_required, sort_order }]
+        customFieldsLoading: false,
         isLoading:    false,
         actionLoading: false,
         error:        null,
@@ -294,6 +349,25 @@ const leadSlice = createSlice({
             // ── Lead Scoring Rules (org-shared) ────────────
             .addCase(getScoreRules.fulfilled, (s, a) => { s.scoreRules = a.payload; })
             .addCase(saveScoreRules.fulfilled, (s, a) => { s.scoreRules = a.payload; })
+
+            // ── Custom Field Definitions ──────────────────
+            .addCase(getCustomFields.pending, (s) => { s.customFieldsLoading = true; })
+            .addCase(getCustomFields.fulfilled, (s, a) => {
+                s.customFieldsLoading = false;
+                s.customFields = a.payload || [];
+            })
+            .addCase(getCustomFields.rejected, (s, a) => { s.customFieldsLoading = false; s.error = a.payload; })
+            .addCase(createCustomField.fulfilled, (s, a) => {
+                s.customFields = [...s.customFields, a.payload]
+                    .sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0) || x.id - y.id);
+            })
+            .addCase(updateCustomField.fulfilled, (s, a) => {
+                const i = s.customFields.findIndex((f) => f.id === a.payload.id);
+                if (i !== -1) s.customFields[i] = a.payload;
+            })
+            .addCase(deleteCustomField.fulfilled, (s, a) => {
+                s.customFields = s.customFields.filter((f) => f.id !== a.payload);
+            })
 
             // ── Get By ID ─────────────────────────────────
             .addCase(getLeadById.pending,   (s) => { s.isLoading = true; })

@@ -7,6 +7,7 @@ import {
     getLeads, getLeadSummary, createLead, updateLead,
     deleteLead, getLeadById, addLeadActivity,
     getScoreRules, saveScoreRules,
+    getCustomFields, createCustomField, updateCustomField, deleteCustomField,
 } from '../state/leadSlice';
 import { getOrgMembers } from '../../organisation/state/orgSlice';
 import usePermission from '../../../hooks/usePermission';
@@ -18,6 +19,7 @@ import {
     InputAdornment, Select, MenuItem, FormControl, InputLabel,
     Grid, CircularProgress, Alert, Checkbox, TablePagination,
     Radio, RadioGroup, FormControlLabel, Divider,
+    List, ListItem, ListItemText, ListItemSecondaryAction,
 } from '@mui/material';
 import {
     Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
@@ -30,6 +32,7 @@ import {
     FileDownload as ExportIcon, UploadFile as ImportIcon,
     Rule as RuleIcon, AssignmentInd as AssignIcon,
     CallMerge as MergeIcon, Dashboard as DashboardIcon,
+    ViewColumn as CustomFieldsIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
@@ -74,7 +77,26 @@ const emptyForm = {
     website: '', country: '', city: '', source: 'other',
     product_interest: '', budget: '', currency: 'INR',
     notes: '', status: 'new', owner_id: '', expected_close_date: '', lost_reason: '',
+    custom_fields: {},
 };
+
+// ── Custom Fields (dynamic per-org/user lead attributes) ──────────
+const CUSTOM_FIELD_TYPES = [
+    { value: 'text', label: 'Text' },
+    { value: 'number', label: 'Number' },
+    { value: 'date', label: 'Date' },
+    { value: 'select', label: 'Select (dropdown)' },
+];
+
+const emptyCustomFieldForm = {
+    label: '', field_type: 'text', options: '', is_required: false, sort_order: 0,
+};
+
+// LeadCustomField.options comes back from the API as an array (json column);
+// the "Manage Custom Fields" form edits it as a comma-separated string.
+const optionsArrayToString = (options) => (Array.isArray(options) ? options.join(', ') : '');
+const optionsStringToArray = (str) =>
+    (str || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 const getUserLabel = (user) => {
     if (!user) return '';
@@ -473,7 +495,7 @@ class ErrorBoundary extends React.Component {
 function LeadListComponent() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { leads = [], summary, isLoading, actionLoading, scoreRules: remoteScoreRules } = useSelector((s) => s.leads || { leads: [] });
+    const { leads = [], summary, isLoading, actionLoading, scoreRules: remoteScoreRules, customFields = [] } = useSelector((s) => s.leads || { leads: [] });
     const { can } = usePermission();
     const { user: currentUser } = useSelector((s) => s.auth || {});
     const { members: orgMembers = [] } = useSelector((s) => s.orgs || {});
@@ -508,6 +530,14 @@ function LeadListComponent() {
     );
     const [scoreForm, setScoreForm] = useState(scoreRules);
     const [scoreSaving, setScoreSaving] = useState(false);
+    const [customFieldsDialog, setCustomFieldsDialog] = useState(false);
+    const [cfEditId, setCfEditId] = useState(null);
+    const [cfForm, setCfForm] = useState(emptyCustomFieldForm);
+    const [cfError, setCfError] = useState('');
+    const [cfSaving, setCfSaving] = useState(false);
+    const [cfDeleteId, setCfDeleteId] = useState(null);
+    const [cfFilterKey, setCfFilterKey] = useState('');
+    const [cfFilterValue, setCfFilterValue] = useState('');
     const [importError, setImportError] = useState('');
     const [pageMsg, setPageMsg] = useState('');
 
@@ -516,6 +546,7 @@ function LeadListComponent() {
         dispatch(getLeadSummary());
         dispatch(getOrgMembers());
         dispatch(getScoreRules());
+        dispatch(getCustomFields());
     }, [dispatch]);
 
     const leadSignals = useMemo(() => {
@@ -554,9 +585,13 @@ function LeadListComponent() {
                 (activityFilter === 'meeting' && activity.hasMeeting) ||
                 (activityFilter === 'no_activity' && activity.noActivity) ||
                 (activityFilter === 'no_next_action' && activity.noNextAction);
-            return matchSearch && matchStatus && matchSource && matchOwner && matchPriority && matchFromDate && matchToDate && matchActivity;
+            const cfRawValue = l.custom_fields?.[cfFilterKey];
+            const matchCustomField = !cfFilterKey || (cfFilterValue.trim()
+                ? String(cfRawValue ?? '').toLowerCase().includes(cfFilterValue.trim().toLowerCase())
+                : cfRawValue !== undefined && cfRawValue !== null && cfRawValue !== '');
+            return matchSearch && matchStatus && matchSource && matchOwner && matchPriority && matchFromDate && matchToDate && matchActivity && matchCustomField;
         });
-    }, [activityFilter, activitySignals, fromDate, leadSignals, leads, ownerFilter, priorityFilter, search, sourceFilter, statusFilter, toDate]);
+    }, [activityFilter, activitySignals, cfFilterKey, cfFilterValue, fromDate, leadSignals, leads, ownerFilter, priorityFilter, search, sourceFilter, statusFilter, toDate]);
 
     useEffect(() => {
         setPage(0);
@@ -959,6 +994,74 @@ function LeadListComponent() {
         setFormData((p) => ({ ...p, [name]: value }));
     };
 
+    // Dynamic custom-field value change inside the Add/Edit Lead form
+    const handleLeadCustomFieldChange = (fieldKey, value) => {
+        setFormData((p) => ({ ...p, custom_fields: { ...p.custom_fields, [fieldKey]: value } }));
+    };
+
+    // ── Manage Custom Fields (field definitions, not lead values) ──
+    const handleOpenCustomFieldCreate = () => {
+        setCfForm(emptyCustomFieldForm);
+        setCfEditId(null);
+        setCfError('');
+    };
+
+    const handleOpenCustomFieldEdit = (field) => {
+        setCfForm({
+            label: field.label || '',
+            field_type: field.field_type || 'text',
+            options: optionsArrayToString(field.options),
+            is_required: !!field.is_required,
+            sort_order: field.sort_order ?? 0,
+        });
+        setCfEditId(field.id);
+        setCfError('');
+    };
+
+    const handleCustomFieldFormChange = (e) => {
+        const { name, value } = e.target;
+        setCfForm((p) => ({ ...p, [name]: value }));
+    };
+
+    const handleSubmitCustomField = async (e) => {
+        e.preventDefault();
+        setCfError('');
+        if (!cfForm.label.trim()) {
+            setCfError('Label required hai');
+            return;
+        }
+        if (cfForm.field_type === 'select' && optionsStringToArray(cfForm.options).length === 0) {
+            setCfError('Select type ke liye kam se kam ek option required hai');
+            return;
+        }
+        const payload = {
+            label: cfForm.label.trim(),
+            field_type: cfForm.field_type,
+            options: cfForm.field_type === 'select' ? optionsStringToArray(cfForm.options) : null,
+            is_required: !!cfForm.is_required,
+            sort_order: cfForm.sort_order === '' ? 0 : parseInt(cfForm.sort_order, 10),
+        };
+        setCfSaving(true);
+        try {
+            if (cfEditId) {
+                await dispatch(updateCustomField({ id: cfEditId, data: payload })).unwrap();
+            } else {
+                await dispatch(createCustomField(payload)).unwrap();
+            }
+            handleOpenCustomFieldCreate(); // reset the inline form back to "add new"
+        } catch (err) {
+            setCfError(err || 'Something went wrong');
+        } finally {
+            setCfSaving(false);
+        }
+    };
+
+    const handleDeleteCustomField = async () => {
+        if (!cfDeleteId) return;
+        await dispatch(deleteCustomField(cfDeleteId));
+        setCfDeleteId(null);
+    };
+
     const handleOpenCreate = () => {
         setFormData(emptyForm);
         setEditMode(false);
@@ -985,6 +1088,7 @@ function LeadListComponent() {
             owner_id: getLeadOwnerId(lead),
             expected_close_date: lead.expected_close_date || '',
             lost_reason: lead.lost_reason || '',
+            custom_fields: lead.custom_fields || {},
         });
         setEditMode(true);
         setEditId(lead.id);
@@ -1200,10 +1304,56 @@ function LeadListComponent() {
                             </Select>
                         </FormControl>
 
+                        {customFields.length > 0 && (
+                            <>
+                                <FormControl size="small" sx={{ minWidth: 170 }}>
+                                    <InputLabel>Custom Field</InputLabel>
+                                    <Select value={cfFilterKey} label="Custom Field"
+                                        onChange={(e) => { setCfFilterKey(e.target.value); setCfFilterValue(''); }}
+                                        sx={{ borderRadius: '10px' }}>
+                                        <MenuItem value="">None</MenuItem>
+                                        {customFields.map((f) => (
+                                            <MenuItem key={f.id} value={f.field_key}>{f.label}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                                {cfFilterKey && (() => {
+                                    const activeField = customFields.find((f) => f.field_key === cfFilterKey);
+                                    if (activeField?.field_type === 'select') {
+                                        return (
+                                            <FormControl size="small" sx={{ minWidth: 150 }}>
+                                                <InputLabel>Value</InputLabel>
+                                                <Select value={cfFilterValue} label="Value"
+                                                    onChange={(e) => setCfFilterValue(e.target.value)}
+                                                    sx={{ borderRadius: '10px' }}>
+                                                    <MenuItem value="">Any (set)</MenuItem>
+                                                    {(activeField.options || []).map((opt) => (
+                                                        <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        );
+                                    }
+                                    return (
+                                        <TextField size="small" label="Value" placeholder="Any (set)"
+                                            value={cfFilterValue} onChange={(e) => setCfFilterValue(e.target.value)}
+                                            sx={{ minWidth: 150, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                                    );
+                                })()}
+                            </>
+                        )}
+
                         {can('leads.edit') && insights.unassigned > 0 && (
                             <Button variant="outlined" startIcon={<AssignIcon />} onClick={handleAutoAssignUnassigned}
                                 sx={{ borderRadius: '10px', textTransform: 'none', color: '#b45309', borderColor: '#fcd34d' }}>
                                 Auto-Assign ({insights.unassigned})
+                            </Button>
+                        )}
+                        {can('leads.edit') && (
+                            <Button variant="outlined" startIcon={<CustomFieldsIcon />}
+                                onClick={() => { handleOpenCustomFieldCreate(); setCustomFieldsDialog(true); }}
+                                sx={{ borderRadius: '10px', textTransform: 'none' }}>
+                                Manage Custom Fields
                             </Button>
                         )}
                         {can('leads.create') && (
@@ -1282,7 +1432,7 @@ function LeadListComponent() {
                     <Table stickyHeader sx={{ minWidth: 1380 }}>
                         <TableHead>
                             <TableRow sx={{ bgcolor: '#ffffff' }}>
-                                {['Select', '#', 'Company', 'Contact', 'Assigned To', 'Value', 'Source', 'Status', 'Health', 'Last Activity', 'Next Action', 'Actions'].map((h) => (
+                                {['Select', '#', 'Company', 'Contact', 'Assigned To', 'Value', 'Source', 'Status', 'Health', 'Last Activity', 'Next Action', ...(customFields.length > 0 ? ['Custom Fields'] : []), 'Actions'].map((h) => (
                                     <TableCell key={h} sx={{ fontWeight: 800, color: '#374151', bgcolor: '#ffffff', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap', fontSize: 12 }}>
                                         {h === 'Select' ? (
                                             <Checkbox
@@ -1298,11 +1448,11 @@ function LeadListComponent() {
                         </TableHead>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={12} align="center" sx={{ py: 4 }}>
+                                <TableRow><TableCell colSpan={customFields.length > 0 ? 13 : 12} align="center" sx={{ py: 4 }}>
                                     <CircularProgress size={28} />
                                 </TableCell></TableRow>
                             ) : filtered.length === 0 ? (
-                                <TableRow><TableCell colSpan={12} align="center" sx={{ py: 5, color: 'text.secondary' }}>
+                                <TableRow><TableCell colSpan={customFields.length > 0 ? 13 : 12} align="center" sx={{ py: 5, color: 'text.secondary' }}>
                                     <BusinessIcon sx={{ fontSize: 40, color: '#d1d5db', display: 'block', mx: 'auto', mb: 1 }} />
                                     No leads found
                                 </TableCell></TableRow>
@@ -1413,6 +1563,22 @@ function LeadListComponent() {
                                                 </Typography>
                                             </Stack>
                                         </TableCell>
+                                        {customFields.length > 0 && (
+                                            <TableCell>
+                                                <Stack spacing={0.5}>
+                                                    {customFields
+                                                        .filter((f) => lead.custom_fields?.[f.field_key] !== undefined && lead.custom_fields?.[f.field_key] !== null && lead.custom_fields?.[f.field_key] !== '')
+                                                        .map((f) => (
+                                                            <Chip key={f.id} size="small"
+                                                                label={`${f.label}: ${lead.custom_fields[f.field_key]}`}
+                                                                sx={{ bgcolor: '#f3f4f6', color: '#374151', fontSize: 10, fontWeight: 600, height: 20, alignSelf: 'flex-start' }} />
+                                                        ))}
+                                                    {customFields.every((f) => !lead.custom_fields?.[f.field_key]) && (
+                                                        <Typography variant="caption" color="text.secondary">—</Typography>
+                                                    )}
+                                                </Stack>
+                                            </TableCell>
+                                        )}
                                         <TableCell>
                                             <Stack direction="row" spacing={0.5}>
                                                 <Tooltip title="View Details">
@@ -1605,6 +1771,47 @@ function LeadListComponent() {
                                     value={formData.notes} onChange={handleChange}
                                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
                             </Grid>
+                            {customFields.length > 0 && (
+                                <Grid item xs={12}>
+                                    <Divider sx={{ my: 1 }} />
+                                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ mb: 1 }}>
+                                        Custom Fields
+                                    </Typography>
+                                </Grid>
+                            )}
+                            {customFields.map((f) => {
+                                const val = formData.custom_fields?.[f.field_key] ?? '';
+                                if (f.field_type === 'select') {
+                                    return (
+                                        <Grid item xs={12} sm={6} key={f.id}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>{f.label}{f.is_required ? ' *' : ''}</InputLabel>
+                                                <Select value={val} label={`${f.label}${f.is_required ? ' *' : ''}`}
+                                                    required={f.is_required}
+                                                    onChange={(e) => handleLeadCustomFieldChange(f.field_key, e.target.value)}
+                                                    sx={{ borderRadius: '10px' }}>
+                                                    <MenuItem value="">—</MenuItem>
+                                                    {(f.options || []).map((opt) => (
+                                                        <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    );
+                                }
+                                return (
+                                    <Grid item xs={12} sm={6} key={f.id}>
+                                        <TextField fullWidth size="small"
+                                            label={`${f.label}${f.is_required ? ' *' : ''}`}
+                                            required={f.is_required}
+                                            type={f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text'}
+                                            InputLabelProps={f.field_type === 'date' ? { shrink: true } : undefined}
+                                            value={val}
+                                            onChange={(e) => handleLeadCustomFieldChange(f.field_key, e.target.value)}
+                                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                                    </Grid>
+                                );
+                            })}
                         </Grid>
                     </DialogContent>
                     <DialogActions sx={{ px: 3, pb: 3 }}>
@@ -1711,6 +1918,117 @@ function LeadListComponent() {
                         startIcon={scoreSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}>
                         {scoreSaving ? 'Saving...' : 'Save Rules'}
                     </GradientButton>
+                </DialogActions>
+            </Dialog>
+
+            {/* Manage Custom Fields Dialog */}
+            <Dialog open={customFieldsDialog} onClose={() => setCustomFieldsDialog(false)} maxWidth="sm" fullWidth
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                    <Typography fontWeight={700}>Manage Custom Fields</Typography>
+                    <IconButton size="small" onClick={() => setCustomFieldsDialog(false)}><CloseIcon /></IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ pt: 3 }}>
+                    <List dense sx={{ mb: 2 }}>
+                        {customFields.length === 0 && (
+                            <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
+                                Abhi tak koi custom field nahi banaya gaya.
+                            </Typography>
+                        )}
+                        {customFields.map((f) => (
+                            <ListItem key={f.id}
+                                sx={{ border: '1px solid #e5e7eb', borderRadius: '10px', mb: 1, bgcolor: cfEditId === f.id ? '#eef2ff' : '#fff' }}>
+                                <ListItemText
+                                    primary={`${f.label}${f.is_required ? ' *' : ''}`}
+                                    secondary={`${f.field_type}${f.field_type === 'select' ? ` — ${optionsArrayToString(f.options)}` : ''} · key: ${f.field_key}`}
+                                />
+                                <ListItemSecondaryAction>
+                                    <IconButton size="small" onClick={() => handleOpenCustomFieldEdit(f)} sx={{ color: '#f59e0b' }}>
+                                        <EditIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                    <IconButton size="small" onClick={() => setCfDeleteId(f.id)} sx={{ color: '#ef4444' }}>
+                                        <DeleteIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                </ListItemSecondaryAction>
+                            </ListItem>
+                        ))}
+                    </List>
+
+                    <Divider sx={{ mb: 2 }} />
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                        {cfEditId ? 'Edit Field' : 'Add New Field'}
+                    </Typography>
+                    {cfError && <Alert severity="error" sx={{ mb: 2 }}>{cfError}</Alert>}
+                    <Box component="form" onSubmit={handleSubmitCustomField}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={7}>
+                                <TextField fullWidth size="small" label="Label *" name="label"
+                                    value={cfForm.label} onChange={handleCustomFieldFormChange} required
+                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                            </Grid>
+                            <Grid item xs={12} sm={5}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Field Type</InputLabel>
+                                    <Select name="field_type" value={cfForm.field_type} label="Field Type"
+                                        onChange={handleCustomFieldFormChange} sx={{ borderRadius: '10px' }}>
+                                        {CUSTOM_FIELD_TYPES.map((t) => (
+                                            <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            {cfForm.field_type === 'select' && (
+                                <Grid item xs={12}>
+                                    <TextField fullWidth size="small" label="Options (comma separated) *" name="options"
+                                        placeholder="e.g. 1-10, 11-50, 50+"
+                                        value={cfForm.options} onChange={handleCustomFieldFormChange}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                                </Grid>
+                            )}
+                            <Grid item xs={12} sm={6}>
+                                <TextField fullWidth size="small" label="Sort Order" name="sort_order" type="number"
+                                    value={cfForm.sort_order} onChange={handleCustomFieldFormChange}
+                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                            </Grid>
+                            <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'center' }}>
+                                <FormControlLabel
+                                    control={<Checkbox checked={cfForm.is_required}
+                                        onChange={(e) => setCfForm((p) => ({ ...p, is_required: e.target.checked }))} />}
+                                    label="Required" />
+                            </Grid>
+                        </Grid>
+                        <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ mt: 2 }}>
+                            {cfEditId && (
+                                <Button onClick={handleOpenCustomFieldCreate} disabled={cfSaving} sx={{ borderRadius: '10px' }}>
+                                    Cancel Edit
+                                </Button>
+                            )}
+                            <GradientButton type="submit" disabled={cfSaving}
+                                startIcon={cfSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}>
+                                {cfSaving ? 'Saving...' : cfEditId ? 'Update Field' : 'Add Field'}
+                            </GradientButton>
+                        </Stack>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setCustomFieldsDialog(false)} sx={{ borderRadius: '10px' }}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Custom Field Confirm Dialog */}
+            <Dialog open={!!cfDeleteId} onClose={() => setCfDeleteId(null)}
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle fontWeight={700}>Delete Custom Field?</DialogTitle>
+                <DialogContent>
+                    <Alert severity="warning">
+                        Is field ki definition delete ho jaayegi. Leads par pehle se saved values database mein reh jaayengi lekin form/table mein nahi dikhengi.
+                    </Alert>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setCfDeleteId(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>
+                    <Button onClick={handleDeleteCustomField} variant="contained" color="error" sx={{ borderRadius: '10px' }}>
+                        Delete
+                    </Button>
                 </DialogActions>
             </Dialog>
 
