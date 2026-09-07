@@ -165,6 +165,43 @@ export const deleteCustomField = createAsyncThunk(
     }
 );
 
+// ── Web Push Notifications ──────────────────────────────────────
+export const getVapidPublicKey = createAsyncThunk(
+    'push/getVapidPublicKey',
+    async (_, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.get('/push/vapid-public-key');
+            return data.public_key;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const subscribePush = createAsyncThunk(
+    'push/subscribe',
+    async (subscriptionPayload, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.post('/push/subscribe', subscriptionPayload);
+            return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const unsubscribePush = createAsyncThunk(
+    'push/unsubscribe',
+    async (endpoint, { rejectWithValue }) => {
+        try {
+            await axiosClient.post('/push/unsubscribe', { endpoint });
+            return endpoint;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
 export const getLeadById = createAsyncThunk(
     'leads/getById',
     async (id, { rejectWithValue }) => {

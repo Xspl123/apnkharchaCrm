@@ -6,8 +6,9 @@ import {
     Chip, Divider, Button,
 } from '@mui/material';
 import { NotificationsActive as NotifIcon } from '@mui/icons-material';
-import { getDueFollowUps, getNewWebLeads } from '../state/leadSlice';
+import { getDueFollowUps, getNewWebLeads, getVapidPublicKey, subscribePush } from '../state/leadSlice';
 import { isCrmEnabled } from '../../../config/moduleConfig';
+import { isPushSupported, subscribeToPush, subscriptionToPayload } from '../utils/webPush';
 
 // Refresh due/overdue follow-ups and new web leads periodically so the bell
 // stays accurate even if the user never opens the Lead List page.
@@ -65,9 +66,52 @@ export default function FollowUpReminderBell() {
         return () => clearInterval(interval);
     }, [dispatch, isAuthenticated]);
 
+    // Re-establish the push subscription on every load if permission was
+    // already granted in a previous session — subscribeToPush() is a
+    // no-op that just returns the existing subscription if one is already
+    // active, so this is safe to run on every mount.
+    useEffect(() => {
+        if (!isCrmEnabled || !isAuthenticated) return;
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+        if (!isPushSupported()) return;
+
+        (async () => {
+            try {
+                const keyAction = await dispatch(getVapidPublicKey());
+                const vapidPublicKey = keyAction.payload;
+                if (!vapidPublicKey) return;
+                const subscription = await subscribeToPush(vapidPublicKey);
+                if (subscription) {
+                    dispatch(subscribePush(subscriptionToPayload(subscription)));
+                }
+            } catch {
+                // Non-fatal — in-tab Notification fallback still works.
+            }
+        })();
+    }, [dispatch, isAuthenticated]);
+
     const requestNotifPermission = () => {
         if (typeof Notification === 'undefined') return;
-        Notification.requestPermission().then((result) => setNotifPermission(result));
+        Notification.requestPermission().then(async (result) => {
+            setNotifPermission(result);
+            if (result !== 'granted' || !isPushSupported()) return;
+            // Permission granted AND this browser supports real Push (not
+            // just the in-tab Notification API) — register the service
+            // worker + subscribe, so due-followup pushes still arrive even
+            // after the tab/browser is closed, not just while it's open.
+            try {
+                const keyAction = await dispatch(getVapidPublicKey());
+                const vapidPublicKey = keyAction.payload;
+                if (!vapidPublicKey) return;
+                const subscription = await subscribeToPush(vapidPublicKey);
+                if (subscription) {
+                    dispatch(subscribePush(subscriptionToPayload(subscription)));
+                }
+            } catch {
+                // Push registration failing shouldn't break the existing
+                // in-tab Notification flow — it still works either way.
+            }
+        });
     };
 
     const dueFollowUpsList = useMemo(() => {
