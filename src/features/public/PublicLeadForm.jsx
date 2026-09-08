@@ -17,6 +17,22 @@ const emptyForm = {
     hp_confirm: '', // honeypot — real visitors never see or fill this
 };
 
+// Reads standard UTM params off the page's own URL, e.g. a form linked as
+// https://.../lead-form/acme?utm_source=facebook&utm_medium=cpc&utm_campaign=diwali_sale
+// This runs once at module load (not per-render) since the query string a
+// visitor lands with doesn't change while they fill the form, and reading
+// it here means it survives even if they navigate within the SPA.
+function readUtmParamsFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const utm = {};
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach((key) => {
+        const value = params.get(key);
+        if (value) utm[key] = value;
+    });
+    return utm;
+}
+const capturedUtmParams = readUtmParamsFromUrl();
+
 // Fully public, unauthenticated page. Rendered directly in AppRoutes
 // (outside both PublicRoute and ProtectedRoute) so it works the same
 // whether or not the visitor happens to be logged into the CRM elsewhere
@@ -81,7 +97,7 @@ export default function PublicLeadForm() {
 
         setSubmitting(true);
         try {
-            await axiosClient.post(`/public/leads/${orgSlug}`, form);
+            await axiosClient.post(`/public/leads/${orgSlug}`, { ...form, ...capturedUtmParams });
             setSubmitted(true);
         } catch (err) {
             const status = err.response?.status;

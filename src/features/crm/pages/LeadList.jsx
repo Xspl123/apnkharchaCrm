@@ -656,6 +656,31 @@ function LeadListComponent() {
         return [...grouped.values()].sort((a, b) => b.pipeline - a.pipeline).slice(0, 5);
     }, [leads, scoreRules?.stageWeights]);
 
+    // Same idea as sourceAttribution, but grouped by utm_campaign instead —
+    // only leads that actually carry a UTM tag (from the public lead form's
+    // ?utm_campaign=... query param) show up here, so this card only
+    // appears once at least one tagged lead exists.
+    const campaignAttribution = useMemo(() => {
+        const grouped = new Map();
+        (leads || []).forEach((lead) => {
+            const key = lead?.utm_campaign;
+            if (!key) return;
+            const current = grouped.get(key) || {
+                campaign: key, source: lead?.utm_source || lead?.source || '—',
+                leads: 0, won: 0, pipeline: 0, revenue: 0,
+            };
+            const value = getLeadValue(lead);
+            current.leads += 1;
+            current.pipeline += value * ((scoreRules?.stageWeights?.[lead?.status] ?? SALES_STAGE_WEIGHT[lead?.status] ?? 10) / 100);
+            if (lead?.status === 'closed_won') {
+                current.won += 1;
+                current.revenue += value;
+            }
+            grouped.set(key, current);
+        });
+        return [...grouped.values()].sort((a, b) => b.pipeline - a.pipeline).slice(0, 5);
+    }, [leads, scoreRules?.stageWeights]);
+
     const duplicateGroups = useMemo(() => {
         const buckets = new Map();
         const add = (type, value, lead) => {
@@ -1190,6 +1215,33 @@ function LeadListComponent() {
                                 <Grid item xs={12} sm={6} md={2.4} key={item.source}>
                                     <Box sx={{ p: 1.5, border: '1px solid #e5e7eb', borderRadius: '12px', bgcolor: '#fff' }}>
                                         <Typography fontWeight={800} variant="body2">{item.source.replace('_', ' ').toUpperCase()}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{item.leads} leads | {item.won} won</Typography>
+                                        <Typography variant="body2" fontWeight={700} sx={{ mt: 1 }}>Won {formatMoney(item.revenue)}</Typography>
+                                        <Typography variant="caption" color="text.secondary">Weighted {formatMoney(item.pipeline)}</Typography>
+                                    </Box>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </CardContent>
+                </GlassCard>
+            )}
+
+            {campaignAttribution.length > 0 && (
+                <GlassCard sx={{ mb: 3 }}>
+                    <CardContent>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
+                            <Box>
+                                <Typography variant="h6" fontWeight={800}>Top Campaigns (UTM)</Typography>
+                                <Typography variant="caption" color="text.secondary">Revenue and weighted pipeline grouped by utm_campaign — only tagged leads show here</Typography>
+                            </Box>
+                            <Chip label="UTM tracking" sx={{ bgcolor: '#f5f3ff', color: '#6d28d9', fontWeight: 700 }} />
+                        </Stack>
+                        <Grid container spacing={1.5}>
+                            {campaignAttribution.map((item) => (
+                                <Grid item xs={12} sm={6} md={2.4} key={item.campaign}>
+                                    <Box sx={{ p: 1.5, border: '1px solid #e5e7eb', borderRadius: '12px', bgcolor: '#fff' }}>
+                                        <Typography fontWeight={800} variant="body2" noWrap title={item.campaign}>{item.campaign}</Typography>
+                                        <Typography variant="caption" color="text.secondary" display="block">via {item.source}</Typography>
                                         <Typography variant="caption" color="text.secondary">{item.leads} leads | {item.won} won</Typography>
                                         <Typography variant="body2" fontWeight={700} sx={{ mt: 1 }}>Won {formatMoney(item.revenue)}</Typography>
                                         <Typography variant="caption" color="text.secondary">Weighted {formatMoney(item.pipeline)}</Typography>

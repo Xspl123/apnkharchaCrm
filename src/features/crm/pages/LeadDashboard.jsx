@@ -18,6 +18,7 @@ import {
     LocalFireDepartment as HotIcon,
     TrendingUp as TrendingUpIcon,
     Rule as RuleIcon,
+    Link as LinkIcon,
     Save as SaveIcon,
     WarningAmber as WarningIcon,
 } from '@mui/icons-material';
@@ -31,6 +32,7 @@ import {
     getScoreRules, saveScoreRules, getUpcomingFollowUps,
 } from '../state/leadSlice';
 import { getOrganisation } from '../../organisation/state/orgSlice';
+import UtmLinkGenerator from '../components/UtmLinkGenerator'; // path apne folder structure ke hisaab se check karo
 
 const STATUS_CONFIG = {
     new: { color: '#6366f1', bg: '#eef2ff', label: 'New' },
@@ -197,6 +199,7 @@ export default function LeadDashboard() {
     const [pageMsg, setPageMsg] = useState('');
     const scoreRules = useMemo(() => mergeScoreRules(remoteScoreRules), [remoteScoreRules]);
     const [scoreDialog, setScoreDialog] = useState(false);
+    const [utmDialog, setUtmDialog] = useState(false);
     const [scoreForm, setScoreForm] = useState(scoreRules);
     const [scoreSaving, setScoreSaving] = useState(false);
 
@@ -444,6 +447,11 @@ export default function LeadDashboard() {
                                 sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.45)', borderRadius: '10px', textTransform: 'none' }}>
                                 Copy Form Link
                             </Button>
+                        <Button variant="outlined" startIcon={<LinkIcon />} onClick={() => setUtmDialog(true)}
+                            sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.45)', borderRadius: '10px', textTransform: 'none' }}>
+                            UTM Generator
+                        </Button>
+
                             <Button variant="outlined" startIcon={<PipelineIcon />} onClick={() => navigate('/crm/pipeline')}
                                 sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.45)', borderRadius: '10px', textTransform: 'none' }}>
                                 Pipeline
@@ -802,6 +810,7 @@ export default function LeadDashboard() {
                     </Button>
                 </DialogActions>
             </Dialog>
+                <UtmLinkGenerator open={utmDialog} onClose={() => setUtmDialog(false)} organisation={organisation} />
         </Box>
     );
 }
