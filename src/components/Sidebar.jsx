@@ -20,6 +20,9 @@ const DRAWER_WIDTH    = 260;
 const COLLAPSED_WIDTH = 72;
 const EMPTY_COMPANIES = [];
 
+// Fixed app icon — same logo shown for every org, regardless of that org's own logo_url.
+const APP_BRAND_LOGO = "/pwa/icon-512.png";
+
 export default function Sidebar({ open, toggleSidebar, isMobile }) {
     const navigate   = useNavigate();
     const location   = useLocation();
@@ -40,7 +43,7 @@ export default function Sidebar({ open, toggleSidebar, isMobile }) {
         .join('|');
 
     const primaryCompany = companies[0];
-    const brandLogo      = primaryCompany?.logo_url || organisation?.logo || "";
+    const brandLogo      = APP_BRAND_LOGO;
     const brandName      = primaryCompany?.company_name || organisation?.name || "Apna Kharcha Services";
 
     const handleToggle = useCallback((key) => {

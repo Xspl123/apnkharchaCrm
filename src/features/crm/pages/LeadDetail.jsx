@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     getLeadById, updateLeadStatus, addLeadActivity,
-    addLeadFollowUp, markFollowUpDone,
+    addLeadFollowUp, markFollowUpDone, sendLeadEmail,
 } from '../state/leadSlice';
 import {
     getCampaigns, attachLeadsToCampaign, detachLeadFromCampaign,
@@ -14,6 +14,7 @@ import {
     Chip, Stack, Avatar, IconButton, Select,
     MenuItem, FormControl, InputLabel, Tab, Tabs,
     CircularProgress, Alert, Tooltip, Grid, Checkbox, ListItemText,
+    Divider, InputBase,
 } from '@mui/material';
 import {
     ArrowBack as BackIcon, Phone as PhoneIcon,
@@ -23,6 +24,7 @@ import {
     Save as SaveIcon, Add as AddIcon,
     Edit as EditIcon,
     Close as CloseIcon,
+    Send as SendIcon,
     Business as BusinessIcon,
     TrendingUp as TrendingUpIcon,
     WarningAmber as WarningAmberIcon,
@@ -138,6 +140,71 @@ const getLeadCampaignItems = (lead) => {
     return candidates.find(Array.isArray) || [];
 };
 
+/* ---------------------------------------------------------------- */
+/* RecipientRow — chip-based multi-email input used in Email Dialog */
+/* ---------------------------------------------------------------- */
+function RecipientRow({ label, value, onChange, required, trailing, onRemoveRow }) {
+    const [input, setInput] = useState('');
+
+    const addEmail = (raw) => {
+        const email = raw.trim().replace(/,$/, '');
+        if (!email) return;
+        const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (isValid && !value.includes(email)) {
+            onChange([...value, email]);
+        }
+        setInput('');
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+            e.preventDefault();
+            addEmail(input);
+        } else if (e.key === 'Backspace' && !input && value.length) {
+            onChange(value.slice(0, -1));
+        }
+    };
+
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', py: 0.75, minHeight: 40 }}>
+            <Typography sx={{ width: 56, fontSize: '0.8rem', color: 'text.secondary', pt: 0.75, flexShrink: 0 }}>
+                {label}{required && ' *'}
+            </Typography>
+            <Box sx={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+                {value.map((email) => (
+                    <Chip
+                        key={email}
+                        label={email}
+                        size="small"
+                        onDelete={() => onChange(value.filter((v) => v !== email))}
+                        sx={{
+                            borderRadius: '8px', bgcolor: 'rgba(253,100,2,0.08)',
+                            color: '#fd6402', fontWeight: 600, fontSize: '0.75rem',
+                            '& .MuiChip-deleteIcon': { color: '#fd6402' },
+                        }}
+                    />
+                ))}
+                <InputBase
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={() => addEmail(input)}
+                    placeholder={value.length ? '' : `Add ${label.toLowerCase()} recipient`}
+                    sx={{ fontSize: '0.875rem', flex: 1, minWidth: 120 }}
+                />
+            </Box>
+            <Box sx={{ pt: 0.25 }}>
+                {trailing}
+                {onRemoveRow && (
+                    <IconButton size="small" onClick={onRemoveRow}>
+                        <CloseIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                )}
+            </Box>
+        </Box>
+    );
+}
+
 export default function LeadDetail() {
     const { id }     = useParams();
     const dispatch   = useDispatch();
@@ -150,6 +217,15 @@ export default function LeadDetail() {
     const [activityDialog,setActivityDialog]= useState(false);
     const [followUpDialog,setFollowUpDialog]= useState(false);
     const [campaignDialog,setCampaignDialog]= useState(false);
+
+    // ---- Email dialog state (array-based To/Cc/Bcc) ----
+    const [emailDialog, setEmailDialog] = useState(false);
+    const [emailForm, setEmailForm] = useState({ to: [], cc: [], bcc: [], subject: '', body: '' });
+    const [showCc, setShowCc] = useState(false);
+    const [showBcc, setShowBcc] = useState(false);
+    const [emailSending, setEmailSending] = useState(false);
+    const [emailError, setEmailError] = useState('');
+
     const [newStatus,     setNewStatus]     = useState('');
     const [lostReason,    setLostReason]    = useState('');
     const [statusError,   setStatusError]   = useState('');
@@ -286,6 +362,52 @@ export default function LeadDetail() {
         setMsg('Activity logged!'); setTimeout(() => setMsg(''), 3000);
     };
 
+    const handleOpenEmailDialog = () => {
+        setEmailForm({
+            to: lead.email ? [lead.email] : [],
+            cc: [],
+            bcc: [],
+            subject: '',
+            body: '',
+        });
+        setShowCc(false);
+        setShowBcc(false);
+        setEmailError('');
+        setEmailDialog(true);
+    };
+
+    const handleSendEmail = async () => {
+        setEmailError('');
+        if (!emailForm.to.length) {
+            setEmailError('To address zaroori hai (lead ka email save nahi hai)');
+            return;
+        }
+        if (!emailForm.subject.trim() || !emailForm.body.trim()) {
+            setEmailError('Subject aur message dono zaroori hain');
+            return;
+        }
+        setEmailSending(true);
+        try {
+            await dispatch(sendLeadEmail({
+                id: lead.id,
+                data: {
+                    to: emailForm.to.join(','),
+                    cc: emailForm.cc.length ? emailForm.cc.join(',') : undefined,
+                    bcc: emailForm.bcc.length ? emailForm.bcc.join(',') : undefined,
+                    subject: emailForm.subject.trim(),
+                    body: emailForm.body,
+                },
+            })).unwrap();
+            setEmailDialog(false);
+            dispatch(getLeadById(lead.id)); // refresh activity timeline so the sent email shows up
+            setMsg('Email bhej diya gaya!'); setTimeout(() => setMsg(''), 3000);
+        } catch (err) {
+            setEmailError(err || 'Email bhejne mein dikkat hui');
+        } finally {
+            setEmailSending(false);
+        }
+    };
+
     const handleAddFollowUp = async () => {
         await dispatch(addLeadFollowUp({ id: lead.id, data: followUp }));
         setFollowUpDialog(false);
@@ -355,6 +477,10 @@ export default function LeadDetail() {
                             <Button size="small" variant="outlined" startIcon={<NoteIcon />} onClick={() => setActivityDialog(true)}
                                 sx={{ borderRadius: '10px', textTransform: 'none' }}>
                                 Log Activity
+                            </Button>
+                            <Button size="small" variant="outlined" startIcon={<EmailIcon />} onClick={handleOpenEmailDialog}
+                                sx={{ borderRadius: '10px', textTransform: 'none' }}>
+                                Send Email
                             </Button>
                             <Button size="small" variant="outlined" startIcon={<EventIcon />} onClick={() => setFollowUpDialog(true)}
                                 sx={{ borderRadius: '10px', textTransform: 'none' }}>
@@ -745,6 +871,156 @@ export default function LeadDetail() {
                     <GradientButton onClick={handleAddActivity} disabled={actionLoading} startIcon={<SaveIcon />}>
                         Log Activity
                     </GradientButton>
+                </DialogActions>
+            </Dialog>
+
+            {/* Email Dialog — Zoho/Gmail style compose */}
+            <Dialog
+                open={emailDialog}
+                onClose={() => !emailSending && setEmailDialog(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: '18px', overflow: 'hidden' } }}
+            >
+                {/* Header */}
+                <Box
+                    sx={{
+                        px: 3, py: 2.25,
+                        display: 'flex', alignItems: 'center', gap: 1.5,
+                        background: 'linear-gradient(135deg, #fd6402 0%, #ff8a3d 100%)',
+                    }}
+                >
+                    <Box sx={{
+                        width: 38, height: 38, borderRadius: '12px',
+                        bgcolor: 'rgba(255,255,255,0.22)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <EmailIcon sx={{ color: '#fff', fontSize: 20 }} />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2 }}>
+                            Compose Email
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.72rem' }}>
+                            Reply directly to your inbox — Reply-To set automatically
+                        </Typography>
+                    </Box>
+                    <IconButton
+                        size="small"
+                        onClick={() => setEmailDialog(false)}
+                        disabled={emailSending}
+                        sx={{ color: '#fff' }}
+                    >
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+
+                <DialogContent sx={{ p: 0 }}>
+                    {emailError && (
+                        <Alert severity="error" sx={{ borderRadius: 0 }}>{emailError}</Alert>
+                    )}
+
+                    {/* Recipients block */}
+                    <Box sx={{ px: 3, pt: 2.5 }}>
+                        <RecipientRow
+                            label="To"
+                            required
+                            value={emailForm.to}
+                            onChange={(val) => setEmailForm((p) => ({ ...p, to: val }))}
+                            trailing={
+                                <Stack direction="row" spacing={0.5}>
+                                    {!showCc && (
+                                        <Button size="small" onClick={() => setShowCc(true)} sx={{ minWidth: 0, fontSize: '0.72rem', color: 'text.secondary' }}>
+                                            Cc
+                                        </Button>
+                                    )}
+                                    {!showBcc && (
+                                        <Button size="small" onClick={() => setShowBcc(true)} sx={{ minWidth: 0, fontSize: '0.72rem', color: 'text.secondary' }}>
+                                            Bcc
+                                        </Button>
+                                    )}
+                                </Stack>
+                            }
+                        />
+                        {showCc && (
+                            <RecipientRow
+                                label="Cc"
+                                value={emailForm.cc}
+                                onChange={(val) => setEmailForm((p) => ({ ...p, cc: val }))}
+                                onRemoveRow={() => { setShowCc(false); setEmailForm((p) => ({ ...p, cc: [] })); }}
+                            />
+                        )}
+                        {showBcc && (
+                            <RecipientRow
+                                label="Bcc"
+                                value={emailForm.bcc}
+                                onChange={(val) => setEmailForm((p) => ({ ...p, bcc: val }))}
+                                onRemoveRow={() => { setShowBcc(false); setEmailForm((p) => ({ ...p, bcc: [] })); }}
+                            />
+                        )}
+                    </Box>
+
+                    <Divider sx={{ mx: 3, my: 1 }} />
+
+                    {/* Subject */}
+                    <Box sx={{ px: 3, display: 'flex', alignItems: 'center' }}>
+                        <Typography sx={{ width: 56, fontSize: '0.8rem', color: 'text.secondary', flexShrink: 0 }}>
+                            Subject
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            variant="standard"
+                            placeholder="Enter subject *"
+                            value={emailForm.subject}
+                            onChange={(e) => setEmailForm((p) => ({ ...p, subject: e.target.value }))}
+                            InputProps={{ disableUnderline: true }}
+                            inputProps={{ maxLength: 150 }}
+                            sx={{ '& input': { fontSize: '0.9rem', fontWeight: 600, py: 1 } }}
+                        />
+                    </Box>
+
+                    <Divider sx={{ mx: 3 }} />
+
+                    {/* Body */}
+                    <Box sx={{ px: 3, py: 2 }}>
+                        <TextField
+                            fullWidth
+                            variant="standard"
+                            placeholder="Write your message..."
+                            multiline
+                            rows={8}
+                            value={emailForm.body}
+                            onChange={(e) => setEmailForm((p) => ({ ...p, body: e.target.value }))}
+                            InputProps={{ disableUnderline: true }}
+                            sx={{ '& textarea': { fontSize: '0.875rem', lineHeight: 1.6 } }}
+                        />
+                    </Box>
+                </DialogContent>
+
+                <Divider />
+
+                {/* Footer */}
+                <DialogActions sx={{ px: 3, py: 1.75, justifyContent: 'space-between' }}>
+                    <Typography variant="caption" color="text.secondary">
+                        {emailForm.body?.length || 0} characters
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                        <Button
+                            onClick={() => setEmailDialog(false)}
+                            disabled={emailSending}
+                            sx={{ borderRadius: '10px', color: 'text.secondary' }}
+                        >
+                            Cancel
+                        </Button>
+                        <GradientButton
+                            onClick={handleSendEmail}
+                            disabled={emailSending || !emailForm.to?.length || !emailForm.subject}
+                            startIcon={emailSending ? <CircularProgress size={16} color="inherit" /> : <SendIcon fontSize="small" />}
+                            sx={{ borderRadius: '10px', px: 3 }}
+                        >
+                            {emailSending ? 'Sending...' : 'Send'}
+                        </GradientButton>
+                    </Stack>
                 </DialogActions>
             </Dialog>
 

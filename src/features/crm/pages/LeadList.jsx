@@ -8,6 +8,7 @@ import {
     deleteLead, getLeadById, addLeadActivity,
     getScoreRules, saveScoreRules,
     getCustomFields, createCustomField, updateCustomField, deleteCustomField,
+    getWorkflowRules, createWorkflowRule, updateWorkflowRule, deleteWorkflowRule,
 } from '../state/leadSlice';
 import { getOrgMembers } from '../../organisation/state/orgSlice';
 import usePermission from '../../../hooks/usePermission';
@@ -33,6 +34,7 @@ import {
     Rule as RuleIcon, AssignmentInd as AssignIcon,
     CallMerge as MergeIcon, Dashboard as DashboardIcon,
     ViewColumn as CustomFieldsIcon,
+    Bolt as WorkflowIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
@@ -97,6 +99,12 @@ const emptyCustomFieldForm = {
 const optionsArrayToString = (options) => (Array.isArray(options) ? options.join(', ') : '');
 const optionsStringToArray = (str) =>
     (str || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+// ── Workflow Rules (v1: status_change trigger → notify_owner action) ──
+const emptyWorkflowRuleForm = {
+    name: '', trigger_status: 'quotation_sent', action_type: 'notify_owner',
+    action_message: '', is_active: true,
+};
 
 const getUserLabel = (user) => {
     if (!user) return '';
@@ -495,7 +503,7 @@ class ErrorBoundary extends React.Component {
 function LeadListComponent() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { leads = [], summary, isLoading, actionLoading, scoreRules: remoteScoreRules, customFields = [] } = useSelector((s) => s.leads || { leads: [] });
+    const { leads = [], summary, isLoading, actionLoading, scoreRules: remoteScoreRules, customFields = [], workflowRules = [] } = useSelector((s) => s.leads || { leads: [] });
     const { can } = usePermission();
     const { user: currentUser } = useSelector((s) => s.auth || {});
     const { members: orgMembers = [] } = useSelector((s) => s.orgs || {});
@@ -538,8 +546,15 @@ function LeadListComponent() {
     const [cfDeleteId, setCfDeleteId] = useState(null);
     const [cfFilterKey, setCfFilterKey] = useState('');
     const [cfFilterValue, setCfFilterValue] = useState('');
+    const [workflowRulesDialog, setWorkflowRulesDialog] = useState(false);
+    const [wfEditId, setWfEditId] = useState(null);
+    const [wfForm, setWfForm] = useState(emptyWorkflowRuleForm);
+    const [wfError, setWfError] = useState('');
+    const [wfSaving, setWfSaving] = useState(false);
+    const [wfDeleteId, setWfDeleteId] = useState(null);
     const [importError, setImportError] = useState('');
     const [pageMsg, setPageMsg] = useState('');
+    const [pageWarning, setPageWarning] = useState('');
 
     useEffect(() => {
         dispatch(getLeads());
@@ -547,6 +562,7 @@ function LeadListComponent() {
         dispatch(getOrgMembers());
         dispatch(getScoreRules());
         dispatch(getCustomFields());
+        dispatch(getWorkflowRules());
     }, [dispatch]);
 
     const leadSignals = useMemo(() => {
@@ -1087,6 +1103,65 @@ function LeadListComponent() {
         setCfDeleteId(null);
     };
 
+    // ── Manage Workflow Rules ────────────────────────────
+    const handleOpenWorkflowRuleCreate = () => {
+        setWfForm(emptyWorkflowRuleForm);
+        setWfEditId(null);
+        setWfError('');
+    };
+
+    const handleOpenWorkflowRuleEdit = (rule) => {
+        setWfForm({
+            name: rule.name || '',
+            trigger_status: rule.trigger_status || 'quotation_sent',
+            action_type: rule.action_type || 'notify_owner',
+            action_message: rule.action_message || '',
+            is_active: rule.is_active !== false,
+        });
+        setWfEditId(rule.id);
+        setWfError('');
+    };
+
+    const handleWorkflowRuleFormChange = (e) => {
+        const { name, value } = e.target;
+        setWfForm((p) => ({ ...p, [name]: value }));
+    };
+
+    const handleSubmitWorkflowRule = async (e) => {
+        e.preventDefault();
+        setWfError('');
+        if (!wfForm.name.trim()) {
+            setWfError('Rule name required hai');
+            return;
+        }
+        const payload = {
+            name: wfForm.name.trim(),
+            trigger_status: wfForm.trigger_status,
+            action_type: wfForm.action_type,
+            action_message: wfForm.action_message.trim() || null,
+            is_active: !!wfForm.is_active,
+        };
+        setWfSaving(true);
+        try {
+            if (wfEditId) {
+                await dispatch(updateWorkflowRule({ id: wfEditId, data: payload })).unwrap();
+            } else {
+                await dispatch(createWorkflowRule(payload)).unwrap();
+            }
+            handleOpenWorkflowRuleCreate(); // reset the inline form back to "add new"
+        } catch (err) {
+            setWfError(err || 'Something went wrong');
+        } finally {
+            setWfSaving(false);
+        }
+    };
+
+    const handleDeleteWorkflowRule = async () => {
+        if (!wfDeleteId) return;
+        await dispatch(deleteWorkflowRule(wfDeleteId));
+        setWfDeleteId(null);
+    };
+
     const handleOpenCreate = () => {
         setFormData(emptyForm);
         setEditMode(false);
@@ -1139,7 +1214,11 @@ function LeadListComponent() {
             if (editMode) {
                 await dispatch(updateLead({ id: editId, data: submitData })).unwrap();
             } else {
-                await dispatch(createLead(submitData)).unwrap();
+                const created = await dispatch(createLead(submitData)).unwrap();
+                if (created?.possible_duplicates?.length > 0) {
+                    const names = created.possible_duplicates.map((d) => d.company_name).join(', ');
+                    setPageWarning(`"${created.company_name}" possible duplicate lagti hai — matches: ${names}`);
+                }
             }
             setDialog(false);
             dispatch(getLeads());
@@ -1177,6 +1256,7 @@ function LeadListComponent() {
                 </GlassCard>
             </motion.div>
             {pageMsg && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setPageMsg('')}>{pageMsg}</Alert>}
+            {pageWarning && <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setPageWarning('')}>{pageWarning}</Alert>}
             {importError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setImportError('')}>{importError}</Alert>}
             {duplicateGroups.length > 0 && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
@@ -1406,6 +1486,13 @@ function LeadListComponent() {
                                 onClick={() => { handleOpenCustomFieldCreate(); setCustomFieldsDialog(true); }}
                                 sx={{ borderRadius: '10px', textTransform: 'none' }}>
                                 Manage Custom Fields
+                            </Button>
+                        )}
+                        {can('leads.edit') && (
+                            <Button variant="outlined" startIcon={<WorkflowIcon />}
+                                onClick={() => { handleOpenWorkflowRuleCreate(); setWorkflowRulesDialog(true); }}
+                                sx={{ borderRadius: '10px', textTransform: 'none' }}>
+                                Workflow Rules
                             </Button>
                         )}
                         {can('leads.create') && (
@@ -2079,6 +2166,128 @@ function LeadListComponent() {
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setCfDeleteId(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>
                     <Button onClick={handleDeleteCustomField} variant="contained" color="error" sx={{ borderRadius: '10px' }}>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Manage Workflow Rules Dialog */}
+            <Dialog open={workflowRulesDialog} onClose={() => setWorkflowRulesDialog(false)} maxWidth="sm" fullWidth
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                    <Typography fontWeight={700}>Workflow Rules</Typography>
+                    <IconButton size="small" onClick={() => setWorkflowRulesDialog(false)}><CloseIcon /></IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ pt: 3 }}>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        Jab bhi kisi lead ka status change ho kar chuni hui stage tak pahunche, lead ke owner ko turant push notification chali jaayegi (Notifications bell wala hi channel — koi email/SMS nahi).
+                    </Alert>
+                    <List dense sx={{ mb: 2 }}>
+                        {workflowRules.length === 0 && (
+                            <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
+                                Abhi tak koi workflow rule nahi banaya gaya.
+                            </Typography>
+                        )}
+                        {workflowRules.map((rule) => (
+                            <ListItem key={rule.id}
+                                sx={{ border: '1px solid #e5e7eb', borderRadius: '10px', mb: 1, bgcolor: wfEditId === rule.id ? '#eef2ff' : '#fff' }}>
+                                <ListItemText
+                                    primary={
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <span>{rule.name}</span>
+                                            {!rule.is_active && (
+                                                <Chip label="Inactive" size="small" sx={{ height: 18, fontSize: 10, bgcolor: '#f3f4f6', color: '#6b7280' }} />
+                                            )}
+                                        </Stack>
+                                    }
+                                    secondary={`Jab status "${STATUS_CONFIG[rule.trigger_status]?.label || rule.trigger_status}" ho → owner ko notify karo${rule.action_message ? `: "${rule.action_message}"` : ''}`}
+                                />
+                                <ListItemSecondaryAction>
+                                    <IconButton size="small" onClick={() => handleOpenWorkflowRuleEdit(rule)} sx={{ color: '#f59e0b' }}>
+                                        <EditIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                    <IconButton size="small" onClick={() => setWfDeleteId(rule.id)} sx={{ color: '#ef4444' }}>
+                                        <DeleteIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                </ListItemSecondaryAction>
+                            </ListItem>
+                        ))}
+                    </List>
+
+                    <Divider sx={{ mb: 2 }} />
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                        {wfEditId ? 'Edit Rule' : 'Add New Rule'}
+                    </Typography>
+                    {wfError && <Alert severity="error" sx={{ mb: 2 }}>{wfError}</Alert>}
+                    <Box component="form" onSubmit={handleSubmitWorkflowRule}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12}>
+                                <TextField fullWidth size="small" label="Rule Name *" name="name"
+                                    placeholder="e.g. Notify on Quotation Sent"
+                                    value={wfForm.name} onChange={handleWorkflowRuleFormChange} required
+                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>When status becomes</InputLabel>
+                                    <Select name="trigger_status" value={wfForm.trigger_status} label="When status becomes"
+                                        onChange={handleWorkflowRuleFormChange} sx={{ borderRadius: '10px' }}>
+                                        {Object.entries(STATUS_CONFIG).map(([key, val]) => (
+                                            <MenuItem key={key} value={key}>{val.label}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Action</InputLabel>
+                                    <Select name="action_type" value={wfForm.action_type} label="Action"
+                                        onChange={handleWorkflowRuleFormChange} sx={{ borderRadius: '10px' }}>
+                                        <MenuItem value="notify_owner">Notify Owner (Push)</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField fullWidth size="small" label="Custom Message (optional)" name="action_message"
+                                    placeholder="Default: <Company> is now <status>"
+                                    value={wfForm.action_message} onChange={handleWorkflowRuleFormChange}
+                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <FormControlLabel
+                                    control={<Checkbox checked={wfForm.is_active}
+                                        onChange={(e) => setWfForm((p) => ({ ...p, is_active: e.target.checked }))} />}
+                                    label="Active" />
+                            </Grid>
+                        </Grid>
+                        <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ mt: 2 }}>
+                            {wfEditId && (
+                                <Button onClick={handleOpenWorkflowRuleCreate} disabled={wfSaving} sx={{ borderRadius: '10px' }}>
+                                    Cancel Edit
+                                </Button>
+                            )}
+                            <GradientButton type="submit" disabled={wfSaving}
+                                startIcon={wfSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}>
+                                {wfSaving ? 'Saving...' : wfEditId ? 'Update Rule' : 'Add Rule'}
+                            </GradientButton>
+                        </Stack>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setWorkflowRulesDialog(false)} sx={{ borderRadius: '10px' }}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Workflow Rule Confirm Dialog */}
+            <Dialog open={!!wfDeleteId} onClose={() => setWfDeleteId(null)}
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle fontWeight={700}>Delete Workflow Rule?</DialogTitle>
+                <DialogContent>
+                    <Alert severity="warning">Yeh rule delete ho jaayega — is status pe pahunchne wale leads ke liye ab automatic notification nahi jaayegi.</Alert>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setWfDeleteId(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>
+                    <Button onClick={handleDeleteWorkflowRule} variant="contained" color="error" sx={{ borderRadius: '10px' }}>
                         Delete
                     </Button>
                 </DialogActions>

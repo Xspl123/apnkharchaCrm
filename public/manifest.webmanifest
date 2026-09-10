@@ -1,0 +1,25 @@
+{
+  "name": "ApnaKharcha CRM",
+  "short_name": "ApnaKharcha",
+  "description": "Expense Tracker & CRM",
+  "start_url": "/crm/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#1E40AF",
+  "background_color": "#F8FAFC",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}

@@ -165,6 +165,55 @@ export const deleteCustomField = createAsyncThunk(
     }
 );
 
+// ── Workflow Rules (status_change → notify_owner, v1) ───────────
+export const getWorkflowRules = createAsyncThunk(
+    'leads/getWorkflowRules',
+    async (_, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.get('/leads/workflow-rules');
+            return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const createWorkflowRule = createAsyncThunk(
+    'leads/createWorkflowRule',
+    async (ruleData, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.post('/leads/workflow-rules', ruleData);
+            return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const updateWorkflowRule = createAsyncThunk(
+    'leads/updateWorkflowRule',
+    async ({ id, data: ruleData }, { rejectWithValue }) => {
+        try {
+            const { data } = await axiosClient.put(`/leads/workflow-rules/${id}`, ruleData);
+            return data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
+export const deleteWorkflowRule = createAsyncThunk(
+    'leads/deleteWorkflowRule',
+    async (id, { rejectWithValue }) => {
+        try {
+            await axiosClient.delete(`/leads/workflow-rules/${id}`);
+            return id;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
 // ── Web Push Notifications ──────────────────────────────────────
 export const getVapidPublicKey = createAsyncThunk(
     'push/getVapidPublicKey',
@@ -276,6 +325,22 @@ export const addLeadActivity = createAsyncThunk(
     }
 );
 
+// Sends an actual email to the lead (via the org's configured Gmail SMTP)
+// and logs it on the activity timeline server-side — distinct from
+// addLeadActivity above, which only records a note and never sends
+// anything.
+export const sendLeadEmail = createAsyncThunk(
+    'leads/sendLeadEmail',
+    async ({ id, data }, { rejectWithValue }) => {
+        try {
+            const res = await axiosClient.post(`/leads/${id}/send-email`, data);
+            return { leadId: id, message: res.data.message };
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
 export const addLeadFollowUp = createAsyncThunk(
     'leads/addFollowUp',
     async ({ id, data }, { rejectWithValue }) => {
@@ -353,6 +418,7 @@ const leadSlice = createSlice({
         scoreRules:   null, // null until fetched; LeadList falls back to DEFAULT_SCORE_RULES while this is null
         customFields: [], // [{ id, field_key, label, field_type, options, is_required, sort_order }]
         customFieldsLoading: false,
+        workflowRules: [], // [{ id, name, trigger_type, trigger_status, action_type, action_message, is_active }]
         isLoading:    false,
         actionLoading: false,
         error:        null,
@@ -404,6 +470,17 @@ const leadSlice = createSlice({
             })
             .addCase(deleteCustomField.fulfilled, (s, a) => {
                 s.customFields = s.customFields.filter((f) => f.id !== a.payload);
+            })
+
+            // ── Workflow Rules ─────────────────────────────
+            .addCase(getWorkflowRules.fulfilled, (s, a) => { s.workflowRules = a.payload || []; })
+            .addCase(createWorkflowRule.fulfilled, (s, a) => { s.workflowRules = [...s.workflowRules, a.payload]; })
+            .addCase(updateWorkflowRule.fulfilled, (s, a) => {
+                const i = s.workflowRules.findIndex((r) => r.id === a.payload.id);
+                if (i !== -1) s.workflowRules[i] = a.payload;
+            })
+            .addCase(deleteWorkflowRule.fulfilled, (s, a) => {
+                s.workflowRules = s.workflowRules.filter((r) => r.id !== a.payload);
             })
 
             // ── Get By ID ─────────────────────────────────

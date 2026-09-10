@@ -1,45 +1,67 @@
-// Minimal push-only service worker. It does NOT do any offline caching /
-// PWA asset precaching — its only job is to receive Web Push events from
-// the Laravel backend and turn them into an OS-level notification, and to
-// route a click on that notification back into the app.
+// ApnaKharcha CRM Service Worker
+// Push Notifications + PWA Support
 
-self.addEventListener('push', (event) => {
-    let payload = { title: 'Notification', body: '' };
-    try {
-        if (event.data) payload = event.data.json();
-    } catch {
-        // Fallback for any push sent as plain text instead of JSON
-        payload = { title: 'Notification', body: event.data ? event.data.text() : '' };
-    }
-
-    const { title, body, data, icon } = payload;
-
-    event.waitUntil(
-        self.registration.showNotification(title || 'Notification', {
-            body: body || '',
-            icon: icon || '/notification-icon.png',
-            badge: '/notification-badge.png',
-            data: data || {},
-            tag: data?.leadId ? `lead-${data.leadId}` : undefined,
-        })
-    );
+// Install Service Worker
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
 });
 
-// Clicking the notification focuses an already-open tab if one exists,
-// otherwise opens a new one — either way landing on the relevant lead.
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    const leadId = event.notification.data?.leadId;
-    const targetUrl = leadId ? `/crm/leads/${leadId}` : '/crm/leads';
+// Activate Service Worker
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
 
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
-            const existing = clientsArr.find((c) => 'focus' in c);
-            if (existing) {
-                existing.navigate(targetUrl);
-                return existing.focus();
-            }
-            return self.clients.openWindow(targetUrl);
-        })
-    );
+// Push Notification
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "ApnaKharcha CRM",
+    body: "",
+  };
+
+  try {
+    if (event.data) payload = event.data.json();
+  } catch {
+    payload = {
+      title: "ApnaKharcha CRM",
+      body: event.data ? event.data.text() : "",
+    };
+  }
+
+  const { title, body, data, icon } = payload;
+
+  event.waitUntil(
+    self.registration.showNotification(title || "ApnaKharcha CRM", {
+      body: body || "",
+      icon: icon || "/pwa/icon-192.png",
+      badge: "/pwa/icon-192.png",
+      data: data || {},
+      tag: data?.leadId ? `lead-${data.leadId}` : "general",
+      renotify: true,
+      requireInteraction: true,
+    })
+  );
+});
+
+// Notification Click
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const leadId = event.notification.data?.leadId;
+  const targetUrl = leadId ? `/crm/leads/${leadId}` : "/crm/leads";
+
+  event.waitUntil(
+    clients.matchAll({
+      type: "window",
+      includeUncontrolled: true,
+    }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+
+      return clients.openWindow(targetUrl);
+    })
+  );
 });

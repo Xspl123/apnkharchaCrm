@@ -2,15 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#F8FAFC" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <!-- Favicon (fixed: favicon.png did not exist in public/, now points to existing pwa icon) -->
+    <link rel="icon" type="image/png" href="/pwa/icon-192.png" />
+
+    <!-- Mobile View -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#1E40AF" />
+    <meta name="application-name" content="ApnaKharcha CRM" />
+    <meta
+      name="description"
+      content="ApnaKharcha CRM & Expense Tracker - Leads, Sales, Accounts and Expense Management."
+    />
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Apple / iPhone -->
+    <link rel="apple-touch-icon" href="/pwa/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="default"
+    />
+    <meta name="apple-mobile-web-app-title" content="ApnaKharcha" />
+
+    <!-- Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
+      rel="stylesheet"
+    />
+
     <title>Apna Kharcha Services</title>
   </head>
-  <body style="margin: 0; background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);">
+
+  <body
+    style="margin:0; background:linear-gradient(180deg,#F8FAFC 0%,#EEF2F7 100%);"
+  >
     <div id="root"></div>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
