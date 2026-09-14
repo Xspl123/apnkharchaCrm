@@ -9,12 +9,18 @@ import {
     getCampaigns, attachLeadsToCampaign, detachLeadFromCampaign,
 } from '../state/campaignSlice';
 import {
+    getQuotations, createQuotationFromLead, updateQuotation,
+    updateQuotationStatus, deleteQuotation, getQuotationById, sendQuotationEmail,
+} from '../state/quotationSlice';
+import { getProducts } from '../../inventory/state/inventorySlice';
+import {
     Box, Card, CardContent, Typography, Button, TextField,
     Dialog, DialogTitle, DialogContent, DialogActions,
     Chip, Stack, Avatar, IconButton, Select,
     MenuItem, FormControl, InputLabel, Tab, Tabs,
     CircularProgress, Alert, Tooltip, Grid, Checkbox, ListItemText,
-    Divider, InputBase,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Autocomplete, Divider,
 } from '@mui/material';
 import {
     ArrowBack as BackIcon, Phone as PhoneIcon,
@@ -24,7 +30,6 @@ import {
     Save as SaveIcon, Add as AddIcon,
     Edit as EditIcon,
     Close as CloseIcon,
-    Send as SendIcon,
     Business as BusinessIcon,
     TrendingUp as TrendingUpIcon,
     WarningAmber as WarningAmberIcon,
@@ -34,6 +39,10 @@ import {
     ReceiptLong as ReceiptLongIcon,
     Groups as GroupsIcon,
     Insights as InsightsIcon,
+    Delete as DeleteIcon,
+    Visibility as ViewIcon,
+    Download as DownloadIcon,
+    Send as SendIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
@@ -61,6 +70,46 @@ const STATUS_CONFIG = {
     invoice_generated:      { color: '#7c3aed', bg: '#f5f3ff', label: 'Invoice Generated' },
     closed_won:             { color: '#16a34a', bg: '#dcfce7', label: '🎉 Closed Won' },
     closed_lost:            { color: '#dc2626', bg: '#fee2e2', label: '❌ Closed Lost' },
+};
+
+// ── Quotations (built directly from a lead) ────────────────────────
+const QUOTATION_STATUS_CONFIG = {
+    draft:    { color: '#64748b', bg: '#f1f5f9', label: 'Draft' },
+    sent:     { color: '#0284c7', bg: '#eff6ff', label: 'Sent' },
+    approved: { color: '#16a34a', bg: '#dcfce7', label: 'Approved' },
+    rejected: { color: '#dc2626', bg: '#fee2e2', label: 'Rejected' },
+    expired:  { color: '#b45309', bg: '#fffbeb', label: 'Expired' },
+};
+
+const emptyQuotationItem = () => ({
+    product_id: null, item_name: '', description: '', hsn_code: '',
+    qty: 1, unit: 'pcs', rate: '', tax_rate: 0,
+});
+
+const emptyQuotationForm = () => ({
+    quotation_date: new Date().toISOString().slice(0, 10),
+    expiry_date: '',
+    notes: '',
+    terms_conditions: '',
+    items: [emptyQuotationItem()],
+});
+
+const calcItemAmount = (item) => {
+    const qty = Number(item.qty) || 0;
+    const rate = Number(item.rate) || 0;
+    return qty * rate;
+};
+
+const calcItemTax = (item) => {
+    const amount = calcItemAmount(item);
+    const taxRate = Number(item.tax_rate) || 0;
+    return (amount * taxRate) / 100;
+};
+
+const calcQuotationTotals = (items) => {
+    const subTotal = items.reduce((sum, item) => sum + calcItemAmount(item), 0);
+    const taxTotal = items.reduce((sum, item) => sum + calcItemTax(item), 0);
+    return { subTotal, taxTotal, grandTotal: subTotal + taxTotal };
 };
 
 const ACTIVITY_ICONS = {
@@ -140,92 +189,24 @@ const getLeadCampaignItems = (lead) => {
     return candidates.find(Array.isArray) || [];
 };
 
-/* ---------------------------------------------------------------- */
-/* RecipientRow — chip-based multi-email input used in Email Dialog */
-/* ---------------------------------------------------------------- */
-function RecipientRow({ label, value, onChange, required, trailing, onRemoveRow }) {
-    const [input, setInput] = useState('');
-
-    const addEmail = (raw) => {
-        const email = raw.trim().replace(/,$/, '');
-        if (!email) return;
-        const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        if (isValid && !value.includes(email)) {
-            onChange([...value, email]);
-        }
-        setInput('');
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
-            e.preventDefault();
-            addEmail(input);
-        } else if (e.key === 'Backspace' && !input && value.length) {
-            onChange(value.slice(0, -1));
-        }
-    };
-
-    return (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', py: 0.75, minHeight: 40 }}>
-            <Typography sx={{ width: 56, fontSize: '0.8rem', color: 'text.secondary', pt: 0.75, flexShrink: 0 }}>
-                {label}{required && ' *'}
-            </Typography>
-            <Box sx={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
-                {value.map((email) => (
-                    <Chip
-                        key={email}
-                        label={email}
-                        size="small"
-                        onDelete={() => onChange(value.filter((v) => v !== email))}
-                        sx={{
-                            borderRadius: '8px', bgcolor: 'rgba(253,100,2,0.08)',
-                            color: '#fd6402', fontWeight: 600, fontSize: '0.75rem',
-                            '& .MuiChip-deleteIcon': { color: '#fd6402' },
-                        }}
-                    />
-                ))}
-                <InputBase
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onBlur={() => addEmail(input)}
-                    placeholder={value.length ? '' : `Add ${label.toLowerCase()} recipient`}
-                    sx={{ fontSize: '0.875rem', flex: 1, minWidth: 120 }}
-                />
-            </Box>
-            <Box sx={{ pt: 0.25 }}>
-                {trailing}
-                {onRemoveRow && (
-                    <IconButton size="small" onClick={onRemoveRow}>
-                        <CloseIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                )}
-            </Box>
-        </Box>
-    );
-}
-
 export default function LeadDetail() {
     const { id }     = useParams();
     const dispatch   = useDispatch();
     const navigate   = useNavigate();
     const { selectedLead: lead, isLoading, actionLoading } = useSelector((s) => s.leads);
     const { campaigns } = useSelector((s) => s.campaigns);
+    const { quotations = [], actionLoading: quotationSaving } = useSelector((s) => s.quotations || {});
+    const { products = [] } = useSelector((s) => s.inventory || {});
 
     const [tab,           setTab]           = useState(0);
     const [statusDialog,  setStatusDialog]  = useState(false);
     const [activityDialog,setActivityDialog]= useState(false);
     const [followUpDialog,setFollowUpDialog]= useState(false);
     const [campaignDialog,setCampaignDialog]= useState(false);
-
-    // ---- Email dialog state (array-based To/Cc/Bcc) ----
     const [emailDialog, setEmailDialog] = useState(false);
-    const [emailForm, setEmailForm] = useState({ to: [], cc: [], bcc: [], subject: '', body: '' });
-    const [showCc, setShowCc] = useState(false);
-    const [showBcc, setShowBcc] = useState(false);
+    const [emailForm, setEmailForm] = useState({ to: '', cc: '', subject: '', body: '' });
     const [emailSending, setEmailSending] = useState(false);
     const [emailError, setEmailError] = useState('');
-
     const [newStatus,     setNewStatus]     = useState('');
     const [lostReason,    setLostReason]    = useState('');
     const [statusError,   setStatusError]   = useState('');
@@ -234,11 +215,25 @@ export default function LeadDetail() {
     const [selectedCampaignIds, setSelectedCampaignIds] = useState([]);
     const [msg,           setMsg]           = useState('');
     const [campaignError, setCampaignError] = useState('');
+    const [quotationDialog, setQuotationDialog] = useState(false);
+    const [quotationEditId, setQuotationEditId] = useState(null);
+    const [quotationForm, setQuotationForm] = useState(emptyQuotationForm());
+    const [quotationError, setQuotationError] = useState('');
+    const [quotationDeleteId, setQuotationDeleteId] = useState(null);
+    const [pdfLoadingId, setPdfLoadingId] = useState(null);
+    const [sendQuotationDialog, setSendQuotationDialog] = useState(null); // holds the quotation being sent
+    const [sendQuotationForm, setSendQuotationForm] = useState({ to: '', cc: '', subject: '', body: '' });
+    const [sendQuotationSaving, setSendQuotationSaving] = useState(false);
+    const [sendQuotationError, setSendQuotationError] = useState('');
 
     useEffect(() => {
         dispatch(getLeadById(id));
         dispatch(getCampaigns());
     }, [dispatch, id]);
+
+    useEffect(() => {
+        if (lead?.id) dispatch(getQuotations({ lead_id: lead.id }));
+    }, [dispatch, lead?.id]);
 
     if (isLoading || !lead) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
@@ -338,7 +333,7 @@ export default function LeadDetail() {
     const moduleLinks = [
         { label: 'Convert to Client', path: `/clients?${conversionQuery}`, icon: <GroupsIcon fontSize="small" /> },
         { label: 'Create Company', path: `/companies?${conversionQuery}`, icon: <BusinessIcon fontSize="small" /> },
-        { label: 'Quotation / Invoice', path: `/invoices?${conversionQuery}`, icon: <ReceiptLongIcon fontSize="small" /> },
+        { label: 'Invoice', path: `/invoices?${conversionQuery}`, icon: <ReceiptLongIcon fontSize="small" /> },
         { label: 'Campaigns', path: '/crm/campaigns', icon: <AccountTreeIcon fontSize="small" /> },
     ];
     const linkedCampaigns = getLeadCampaignItems(lead);
@@ -363,22 +358,14 @@ export default function LeadDetail() {
     };
 
     const handleOpenEmailDialog = () => {
-        setEmailForm({
-            to: lead.email ? [lead.email] : [],
-            cc: [],
-            bcc: [],
-            subject: '',
-            body: '',
-        });
-        setShowCc(false);
-        setShowBcc(false);
+        setEmailForm({ to: lead.email || '', cc: '', subject: '', body: '' });
         setEmailError('');
         setEmailDialog(true);
     };
 
     const handleSendEmail = async () => {
         setEmailError('');
-        if (!emailForm.to.length) {
+        if (!emailForm.to.trim()) {
             setEmailError('To address zaroori hai (lead ka email save nahi hai)');
             return;
         }
@@ -391,9 +378,8 @@ export default function LeadDetail() {
             await dispatch(sendLeadEmail({
                 id: lead.id,
                 data: {
-                    to: emailForm.to.join(','),
-                    cc: emailForm.cc.length ? emailForm.cc.join(',') : undefined,
-                    bcc: emailForm.bcc.length ? emailForm.bcc.join(',') : undefined,
+                    to: emailForm.to.trim(),
+                    cc: emailForm.cc.trim() || undefined,
                     subject: emailForm.subject.trim(),
                     body: emailForm.body,
                 },
@@ -405,6 +391,216 @@ export default function LeadDetail() {
             setEmailError(err || 'Email bhejne mein dikkat hui');
         } finally {
             setEmailSending(false);
+        }
+    };
+
+    // ── Quotations ────────────────────────────────────────
+    const handleOpenQuotationCreate = () => {
+        setQuotationForm(emptyQuotationForm());
+        setQuotationEditId(null);
+        setQuotationError('');
+        dispatch(getProducts()); // lazy-load the product picker only when the builder actually opens
+        setQuotationDialog(true);
+    };
+
+    const handleOpenQuotationEdit = (q) => {
+        setQuotationForm({
+            quotation_date: q.quotation_date || new Date().toISOString().slice(0, 10),
+            expiry_date: q.expiry_date || '',
+            notes: q.notes || '',
+            terms_conditions: q.terms_conditions || '',
+            items: (q.items || []).map((item) => ({
+                product_id: item.product_id || null,
+                item_name: item.item_name || '',
+                description: item.description || '',
+                hsn_code: item.hsn_code || '',
+                qty: item.qty ?? 1,
+                unit: item.unit || 'pcs',
+                rate: item.rate ?? '',
+                tax_rate: item.tax_rate ?? 0,
+            })),
+        });
+        setQuotationEditId(q.id);
+        setQuotationError('');
+        dispatch(getProducts());
+        setQuotationDialog(true);
+    };
+
+    const handleQuotationFieldChange = (field, value) => {
+        setQuotationForm((p) => ({ ...p, [field]: value }));
+    };
+
+    const handleQuotationItemChange = (index, field, value) => {
+        setQuotationForm((p) => {
+            const items = [...p.items];
+            items[index] = { ...items[index], [field]: value };
+            return { ...p, items };
+        });
+    };
+
+    // When a product is picked from the autocomplete, auto-fill the row
+    // from that product's catalog data — user can still override anything.
+    const handleQuotationItemProductSelect = (index, product) => {
+        setQuotationForm((p) => {
+            const items = [...p.items];
+            items[index] = product
+                ? {
+                    ...items[index],
+                    product_id: product.id,
+                    item_name: product.name,
+                    hsn_code: product.hsn_code || '',
+                    unit: product.unit || 'pcs',
+                    rate: product.selling_price ?? items[index].rate,
+                    tax_rate: product.tax_rate ?? items[index].tax_rate,
+                }
+                : { ...items[index], product_id: null };
+            return { ...p, items };
+        });
+    };
+
+    const handleAddQuotationItem = () => {
+        setQuotationForm((p) => ({ ...p, items: [...p.items, emptyQuotationItem()] }));
+    };
+
+    const handleRemoveQuotationItem = (index) => {
+        setQuotationForm((p) => ({ ...p, items: p.items.filter((_, i) => i !== index) }));
+    };
+
+    const handleSubmitQuotation = async () => {
+        setQuotationError('');
+        if (!quotationForm.quotation_date) {
+            setQuotationError('Quotation date zaroori hai');
+            return;
+        }
+        const validItems = quotationForm.items.filter((item) => item.item_name.trim());
+        if (validItems.length === 0) {
+            setQuotationError('Kam se kam ek item (naam ke saath) zaroori hai');
+            return;
+        }
+        for (const item of validItems) {
+            if (!item.qty || Number(item.qty) <= 0 || item.rate === '' || Number(item.rate) < 0) {
+                setQuotationError(`"${item.item_name}" ke liye valid qty aur rate daalein`);
+                return;
+            }
+        }
+
+        const payload = {
+            quotation_date: quotationForm.quotation_date,
+            expiry_date: quotationForm.expiry_date || null,
+            notes: quotationForm.notes || null,
+            terms_conditions: quotationForm.terms_conditions || null,
+            items: validItems.map((item) => ({
+                product_id: item.product_id || null,
+                item_name: item.item_name.trim(),
+                description: item.description || null,
+                hsn_code: item.hsn_code || null,
+                qty: Number(item.qty),
+                unit: item.unit || 'pcs',
+                rate: Number(item.rate),
+                tax_rate: Number(item.tax_rate) || 0,
+            })),
+        };
+
+        try {
+            if (quotationEditId) {
+                await dispatch(updateQuotation({ id: quotationEditId, data: payload })).unwrap();
+                setMsg('Quotation update ho gayi!');
+            } else {
+                await dispatch(createQuotationFromLead({ leadId: lead.id, data: payload })).unwrap();
+                dispatch(getLeadById(lead.id)); // status may have auto-advanced to "quotation_sent"
+                setMsg('Quotation ban gayi!');
+            }
+            setTimeout(() => setMsg(''), 3000);
+            setQuotationDialog(false);
+        } catch (err) {
+            setQuotationError(err || 'Quotation save nahi ho payi');
+        }
+    };
+
+    const handleQuotationStatusChange = (id, status) => {
+        dispatch(updateQuotationStatus({ id, status }));
+    };
+
+    const handleDeleteQuotation = async () => {
+        if (!quotationDeleteId) return;
+        await dispatch(deleteQuotation(quotationDeleteId));
+        setQuotationDeleteId(null);
+    };
+
+    // Small shim so QuotationPrintPDF.handleExportPDF (which takes a
+    // (message, severity) callback, matching the existing Invoice PDF
+    // feature's showSnackbar prop) can report back through the same
+    // success/error banner already used elsewhere on this page.
+    const quotationPdfSnackbar = (message, severity) => {
+        if (severity === 'error') setSendQuotationError(message);
+        else { setMsg(message); setTimeout(() => setMsg(''), 3000); }
+    };
+
+    const handleDownloadQuotationPdf = async (quotation) => {
+        setPdfLoadingId(quotation.id);
+        try {
+            const full = await dispatch(getQuotationById(quotation.id)).unwrap();
+            const [{ default: QuotationPrintPDF }, { default: html2pdf }] = await Promise.all([
+                import('../../../components/QuotationPrintPDF/QuotationPrintPDF'),
+                import('html2pdf.js'),
+            ]);
+            await QuotationPrintPDF.handleExportPDF(full, () => {}, quotationPdfSnackbar, html2pdf);
+        } catch (err) {
+            quotationPdfSnackbar(err || 'PDF download nahi ho paya', 'error');
+        } finally {
+            setPdfLoadingId(null);
+        }
+    };
+
+    const handleOpenSendQuotationEmail = (quotation) => {
+        setSendQuotationForm({
+            to: quotation.lead?.email || quotation.client?.email || '',
+            cc: '',
+            subject: `Quotation ${quotation.quotation_no} from ${quotation.company?.company_name || ''}`.trim(),
+            body: `Please find attached our quotation ${quotation.quotation_no} as discussed.`,
+        });
+        setSendQuotationError('');
+        setSendQuotationDialog(quotation);
+    };
+
+    const handleSendQuotationEmail = async () => {
+        if (!sendQuotationDialog) return;
+        setSendQuotationError('');
+        if (!sendQuotationForm.to.trim()) {
+            setSendQuotationError('To address zaroori hai');
+            return;
+        }
+        if (!sendQuotationForm.subject.trim() || !sendQuotationForm.body.trim()) {
+            setSendQuotationError('Subject aur message dono zaroori hain');
+            return;
+        }
+        setSendQuotationSaving(true);
+        try {
+            const full = await dispatch(getQuotationById(sendQuotationDialog.id)).unwrap();
+            const [{ default: QuotationPrintPDF }, { default: html2pdf }] = await Promise.all([
+                import('../../../components/QuotationPrintPDF/QuotationPrintPDF'),
+                import('html2pdf.js'),
+            ]);
+            const pdfBase64 = await QuotationPrintPDF.getPdfBase64(full, html2pdf);
+            await dispatch(sendQuotationEmail({
+                id: sendQuotationDialog.id,
+                data: {
+                    to: sendQuotationForm.to.trim(),
+                    cc: sendQuotationForm.cc.trim() || undefined,
+                    subject: sendQuotationForm.subject.trim(),
+                    body: sendQuotationForm.body,
+                    pdf_base64: pdfBase64,
+                },
+            })).unwrap();
+            setSendQuotationDialog(null);
+            dispatch(getQuotations({ lead_id: lead.id })); // reflect the auto Draft→Sent status change
+            dispatch(getLeadById(lead.id)); // reflect the new activity-log entry
+            setMsg('Quotation email bhej di gayi!');
+            setTimeout(() => setMsg(''), 3000);
+        } catch (err) {
+            setSendQuotationError(err || 'Email bhejne mein dikkat hui');
+        } finally {
+            setSendQuotationSaving(false);
         }
     };
 
@@ -580,8 +776,8 @@ export default function LeadDetail() {
                 <Grid item xs={12} lg={5}>
                     <EnterpriseCard>
                         <CardContent>
-                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                                <Box>
+                            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'flex-start' }} spacing={1.5} mb={2}>
+                                <Box sx={{ minWidth: 0 }}>
                                     <Typography variant="h6" fontWeight={700} mb={0.5}>Connected Modules</Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         Lead ko business flow ke saath connect karo, isolated record mat rakho.
@@ -592,7 +788,7 @@ export default function LeadDetail() {
                                     variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={handleOpenCampaignDialog}
-                                    sx={{ borderRadius: '10px', textTransform: 'none' }}
+                                    sx={{ borderRadius: '10px', textTransform: 'none', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: { xs: 'flex-start', sm: 'flex-start' } }}
                                 >
                                     Link Campaign
                                 </Button>
@@ -791,6 +987,97 @@ export default function LeadDetail() {
                                     </Stack>
                                 </MetricCard>
                             </Grid>
+
+                            <Grid item xs={12}>
+                                <MetricCard>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1.5} mb={2}>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <ReceiptLongIcon sx={{ color: '#1d4ed8' }} />
+                                            <Typography fontWeight={700}>Quotations</Typography>
+                                        </Stack>
+                                        <Button size="small" variant="outlined" startIcon={<AddIcon />}
+                                            onClick={handleOpenQuotationCreate}
+                                            sx={{ borderRadius: '10px', textTransform: 'none', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: { xs: 'flex-start', sm: 'center' } }}>
+                                            Create Quotation
+                                        </Button>
+                                    </Stack>
+
+                                    {quotations.length === 0 ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Abhi tak is lead ke liye koi quotation nahi banayi gayi.
+                                        </Typography>
+                                    ) : (
+                                        <TableContainer>
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell sx={{ fontWeight: 700 }}>Quotation #</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }} align="right">Total</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {quotations.map((q) => {
+                                                        const qsc = QUOTATION_STATUS_CONFIG[q.status] || QUOTATION_STATUS_CONFIG.draft;
+                                                        return (
+                                                            <TableRow key={q.id} hover>
+                                                                <TableCell>
+                                                                    <Typography variant="body2" fontWeight={600}>{q.quotation_no}</Typography>
+                                                                </TableCell>
+                                                                <TableCell>{q.quotation_date}</TableCell>
+                                                                <TableCell>
+                                                                    <FormControl size="small" variant="standard">
+                                                                        <Select value={q.status} disableUnderline
+                                                                            onChange={(e) => handleQuotationStatusChange(q.id, e.target.value)}
+                                                                            renderValue={() => (
+                                                                                <Chip label={qsc.label} size="small"
+                                                                                    sx={{ bgcolor: qsc.bg, color: qsc.color, fontWeight: 700, fontSize: 11 }} />
+                                                                            )}>
+                                                                            {Object.entries(QUOTATION_STATUS_CONFIG).map(([key, val]) => (
+                                                                                <MenuItem key={key} value={key}>{val.label}</MenuItem>
+                                                                            ))}
+                                                                        </Select>
+                                                                    </FormControl>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Typography variant="body2" fontWeight={700}>
+                                                                        ₹{Number(q.total_amount).toLocaleString()}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Tooltip title="Download PDF">
+                                                                        <IconButton size="small" onClick={() => handleDownloadQuotationPdf(q)}
+                                                                            disabled={pdfLoadingId === q.id} sx={{ color: '#0284c7' }}>
+                                                                            {pdfLoadingId === q.id ? <CircularProgress size={16} /> : <DownloadIcon sx={{ fontSize: 18 }} />}
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                    <Tooltip title="Send Email">
+                                                                        <IconButton size="small" onClick={() => handleOpenSendQuotationEmail(q)} sx={{ color: '#16a34a' }}>
+                                                                            <SendIcon sx={{ fontSize: 18 }} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                    <Tooltip title="Edit">
+                                                                        <IconButton size="small" onClick={() => handleOpenQuotationEdit(q)} sx={{ color: '#f59e0b' }}>
+                                                                            <EditIcon sx={{ fontSize: 18 }} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                    <Tooltip title="Delete">
+                                                                        <IconButton size="small" onClick={() => setQuotationDeleteId(q.id)} sx={{ color: '#ef4444' }}>
+                                                                            <DeleteIcon sx={{ fontSize: 18 }} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                    )}
+                                </MetricCard>
+                            </Grid>
                         </Grid>
                     )}
 
@@ -874,153 +1161,211 @@ export default function LeadDetail() {
                 </DialogActions>
             </Dialog>
 
-            {/* Email Dialog — Zoho/Gmail style compose */}
-            <Dialog
-                open={emailDialog}
-                onClose={() => !emailSending && setEmailDialog(false)}
-                maxWidth="sm"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: '18px', overflow: 'hidden' } }}
-            >
-                {/* Header */}
-                <Box
-                    sx={{
-                        px: 3, py: 2.25,
-                        display: 'flex', alignItems: 'center', gap: 1.5,
-                        background: 'linear-gradient(135deg, #fd6402 0%, #ff8a3d 100%)',
-                    }}
-                >
-                    <Box sx={{
-                        width: 38, height: 38, borderRadius: '12px',
-                        bgcolor: 'rgba(255,255,255,0.22)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <EmailIcon sx={{ color: '#fff', fontSize: 20 }} />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2 }}>
-                            Compose Email
+            {/* Send Email Dialog */}
+            <Dialog open={emailDialog} onClose={() => setEmailDialog(false)} maxWidth="sm" fullWidth
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle fontWeight={700}>Send Email</DialogTitle>
+                <DialogContent>
+                    {emailError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{emailError}</Alert>}
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        <TextField fullWidth size="small" label="To *" type="email"
+                            value={emailForm.to} onChange={(e) => setEmailForm((p) => ({ ...p, to: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <TextField fullWidth size="small" label="CC (optional)" type="email"
+                            value={emailForm.cc} onChange={(e) => setEmailForm((p) => ({ ...p, cc: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <TextField fullWidth size="small" label="Subject *"
+                            value={emailForm.subject} onChange={(e) => setEmailForm((p) => ({ ...p, subject: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <TextField fullWidth size="small" label="Message *" multiline rows={6}
+                            value={emailForm.body} onChange={(e) => setEmailForm((p) => ({ ...p, body: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <Typography variant="caption" color="text.secondary">
+                            Reply seedha aapke apne email pe aayegi (Reply-To set hota hai automatically).
                         </Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.72rem' }}>
-                            Reply directly to your inbox — Reply-To set automatically
-                        </Typography>
-                    </Box>
-                    <IconButton
-                        size="small"
-                        onClick={() => setEmailDialog(false)}
-                        disabled={emailSending}
-                        sx={{ color: '#fff' }}
-                    >
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </Box>
-
-                <DialogContent sx={{ p: 0 }}>
-                    {emailError && (
-                        <Alert severity="error" sx={{ borderRadius: 0 }}>{emailError}</Alert>
-                    )}
-
-                    {/* Recipients block */}
-                    <Box sx={{ px: 3, pt: 2.5 }}>
-                        <RecipientRow
-                            label="To"
-                            required
-                            value={emailForm.to}
-                            onChange={(val) => setEmailForm((p) => ({ ...p, to: val }))}
-                            trailing={
-                                <Stack direction="row" spacing={0.5}>
-                                    {!showCc && (
-                                        <Button size="small" onClick={() => setShowCc(true)} sx={{ minWidth: 0, fontSize: '0.72rem', color: 'text.secondary' }}>
-                                            Cc
-                                        </Button>
-                                    )}
-                                    {!showBcc && (
-                                        <Button size="small" onClick={() => setShowBcc(true)} sx={{ minWidth: 0, fontSize: '0.72rem', color: 'text.secondary' }}>
-                                            Bcc
-                                        </Button>
-                                    )}
-                                </Stack>
-                            }
-                        />
-                        {showCc && (
-                            <RecipientRow
-                                label="Cc"
-                                value={emailForm.cc}
-                                onChange={(val) => setEmailForm((p) => ({ ...p, cc: val }))}
-                                onRemoveRow={() => { setShowCc(false); setEmailForm((p) => ({ ...p, cc: [] })); }}
-                            />
-                        )}
-                        {showBcc && (
-                            <RecipientRow
-                                label="Bcc"
-                                value={emailForm.bcc}
-                                onChange={(val) => setEmailForm((p) => ({ ...p, bcc: val }))}
-                                onRemoveRow={() => { setShowBcc(false); setEmailForm((p) => ({ ...p, bcc: [] })); }}
-                            />
-                        )}
-                    </Box>
-
-                    <Divider sx={{ mx: 3, my: 1 }} />
-
-                    {/* Subject */}
-                    <Box sx={{ px: 3, display: 'flex', alignItems: 'center' }}>
-                        <Typography sx={{ width: 56, fontSize: '0.8rem', color: 'text.secondary', flexShrink: 0 }}>
-                            Subject
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            variant="standard"
-                            placeholder="Enter subject *"
-                            value={emailForm.subject}
-                            onChange={(e) => setEmailForm((p) => ({ ...p, subject: e.target.value }))}
-                            InputProps={{ disableUnderline: true }}
-                            inputProps={{ maxLength: 150 }}
-                            sx={{ '& input': { fontSize: '0.9rem', fontWeight: 600, py: 1 } }}
-                        />
-                    </Box>
-
-                    <Divider sx={{ mx: 3 }} />
-
-                    {/* Body */}
-                    <Box sx={{ px: 3, py: 2 }}>
-                        <TextField
-                            fullWidth
-                            variant="standard"
-                            placeholder="Write your message..."
-                            multiline
-                            rows={8}
-                            value={emailForm.body}
-                            onChange={(e) => setEmailForm((p) => ({ ...p, body: e.target.value }))}
-                            InputProps={{ disableUnderline: true }}
-                            sx={{ '& textarea': { fontSize: '0.875rem', lineHeight: 1.6 } }}
-                        />
-                    </Box>
-                </DialogContent>
-
-                <Divider />
-
-                {/* Footer */}
-                <DialogActions sx={{ px: 3, py: 1.75, justifyContent: 'space-between' }}>
-                    <Typography variant="caption" color="text.secondary">
-                        {emailForm.body?.length || 0} characters
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                        <Button
-                            onClick={() => setEmailDialog(false)}
-                            disabled={emailSending}
-                            sx={{ borderRadius: '10px', color: 'text.secondary' }}
-                        >
-                            Cancel
-                        </Button>
-                        <GradientButton
-                            onClick={handleSendEmail}
-                            disabled={emailSending || !emailForm.to?.length || !emailForm.subject}
-                            startIcon={emailSending ? <CircularProgress size={16} color="inherit" /> : <SendIcon fontSize="small" />}
-                            sx={{ borderRadius: '10px', px: 3 }}
-                        >
-                            {emailSending ? 'Sending...' : 'Send'}
-                        </GradientButton>
                     </Stack>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setEmailDialog(false)} disabled={emailSending} sx={{ borderRadius: '10px' }}>Cancel</Button>
+                    <GradientButton onClick={handleSendEmail} disabled={emailSending}
+                        startIcon={emailSending ? <CircularProgress size={16} color="inherit" /> : <EmailIcon />}>
+                        {emailSending ? 'Sending...' : 'Send'}
+                    </GradientButton>
+                </DialogActions>
+            </Dialog>
+
+            {/* Quotation Builder Dialog */}
+            <Dialog open={quotationDialog} onClose={() => setQuotationDialog(false)} maxWidth="md" fullWidth
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                    <Typography fontWeight={700}>{quotationEditId ? 'Edit Quotation' : 'Create Quotation'}</Typography>
+                    <IconButton size="small" onClick={() => setQuotationDialog(false)}><CloseIcon /></IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ pt: 4 }}>
+                    {quotationError && <Alert severity="error" sx={{ mb: 2 }}>{quotationError}</Alert>}
+                    <Grid container spacing={2} sx={{ mb: 2, mt: 0.5 }}>
+                        <Grid item xs={12} sm={6}>
+                            <TextField fullWidth size="small" label="Quotation Date *" type="date"
+                                value={quotationForm.quotation_date}
+                                onChange={(e) => handleQuotationFieldChange('quotation_date', e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField fullWidth size="small" label="Expiry Date" type="date"
+                                value={quotationForm.expiry_date}
+                                onChange={(e) => handleQuotationFieldChange('expiry_date', e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        </Grid>
+                    </Grid>
+
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Items</Typography>
+                    <Stack spacing={1.5} sx={{ mb: 1 }}>
+                        {quotationForm.items.map((item, index) => {
+                            const amount = calcItemAmount(item);
+                            const selectedProduct = products.find((p) => p.id === item.product_id) || null;
+                            return (
+                                <Box key={index} sx={{ p: 1.5, border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+                                    <Grid container spacing={1.5} alignItems="center">
+                                        <Grid item xs={12} sm={4}>
+                                            <Autocomplete
+                                                size="small"
+                                                options={products}
+                                                value={selectedProduct}
+                                                getOptionLabel={(p) => p.name || ''}
+                                                isOptionEqualToValue={(a, b) => a.id === b.id}
+                                                onChange={(_, val) => handleQuotationItemProductSelect(index, val)}
+                                                renderInput={(params) => <TextField {...params} label="Product (optional)" />}
+                                            />
+                                            <TextField fullWidth size="small" label="Item Name *" sx={{ mt: 1 }}
+                                                value={item.item_name}
+                                                onChange={(e) => handleQuotationItemChange(index, 'item_name', e.target.value)} />
+                                        </Grid>
+                                        <Grid item xs={4} sm={1.5}>
+                                            <TextField fullWidth size="small" label="Qty" type="number"
+                                                value={item.qty}
+                                                onChange={(e) => handleQuotationItemChange(index, 'qty', e.target.value)} />
+                                        </Grid>
+                                        <Grid item xs={4} sm={1.5}>
+                                            <TextField fullWidth size="small" label="Unit"
+                                                value={item.unit}
+                                                onChange={(e) => handleQuotationItemChange(index, 'unit', e.target.value)} />
+                                        </Grid>
+                                        <Grid item xs={4} sm={2}>
+                                            <TextField fullWidth size="small" label="Rate" type="number"
+                                                value={item.rate}
+                                                onChange={(e) => handleQuotationItemChange(index, 'rate', e.target.value)} />
+                                        </Grid>
+                                        <Grid item xs={6} sm={1.5}>
+                                            <TextField fullWidth size="small" label="Tax %" type="number"
+                                                value={item.tax_rate}
+                                                onChange={(e) => handleQuotationItemChange(index, 'tax_rate', e.target.value)} />
+                                        </Grid>
+                                        <Grid item xs={5} sm={1}>
+                                            <Typography variant="body2" fontWeight={700} noWrap>
+                                                ₹{amount.toLocaleString()}
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={1} sm={0.5}>
+                                            <IconButton size="small" onClick={() => handleRemoveQuotationItem(index)}
+                                                disabled={quotationForm.items.length === 1} sx={{ color: '#ef4444' }}>
+                                                <DeleteIcon sx={{ fontSize: 18 }} />
+                                            </IconButton>
+                                        </Grid>
+                                    </Grid>
+                                </Box>
+                            );
+                        })}
+                    </Stack>
+                    <Button size="small" startIcon={<AddIcon />} onClick={handleAddQuotationItem}
+                        sx={{ textTransform: 'none', mb: 2 }}>
+                        Add Item
+                    </Button>
+
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={12} sm={6}>
+                            <TextField fullWidth size="small" label="Notes" multiline rows={2}
+                                value={quotationForm.notes}
+                                onChange={(e) => handleQuotationFieldChange('notes', e.target.value)}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField fullWidth size="small" label="Terms & Conditions" multiline rows={2}
+                                value={quotationForm.terms_conditions}
+                                onChange={(e) => handleQuotationFieldChange('terms_conditions', e.target.value)}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        </Grid>
+                    </Grid>
+
+                    <Divider sx={{ mb: 2 }} />
+                    {(() => {
+                        const { subTotal, taxTotal, grandTotal } = calcQuotationTotals(quotationForm.items);
+                        return (
+                            <Stack alignItems="flex-end" spacing={0.5}>
+                                <Typography variant="body2" color="text.secondary">Sub Total: ₹{subTotal.toLocaleString()}</Typography>
+                                <Typography variant="body2" color="text.secondary">Tax: ₹{taxTotal.toLocaleString()}</Typography>
+                                <Typography variant="h6" fontWeight={800}>Total: ₹{grandTotal.toLocaleString()}</Typography>
+                            </Stack>
+                        );
+                    })()}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setQuotationDialog(false)} disabled={quotationSaving} sx={{ borderRadius: '10px' }}>Cancel</Button>
+                    <GradientButton onClick={handleSubmitQuotation} disabled={quotationSaving}
+                        startIcon={quotationSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}>
+                        {quotationSaving ? 'Saving...' : quotationEditId ? 'Update Quotation' : 'Create Quotation'}
+                    </GradientButton>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Quotation Confirm Dialog */}
+            <Dialog open={!!quotationDeleteId} onClose={() => setQuotationDeleteId(null)}
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle fontWeight={700}>Delete Quotation?</DialogTitle>
+                <DialogContent>
+                    <Alert severity="warning">Yeh quotation permanently delete ho jaayegi.</Alert>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setQuotationDeleteId(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>
+                    <Button onClick={handleDeleteQuotation} variant="contained" color="error" sx={{ borderRadius: '10px' }}>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Send Quotation Email Dialog */}
+            <Dialog open={!!sendQuotationDialog} onClose={() => setSendQuotationDialog(null)} maxWidth="sm" fullWidth
+                PaperProps={{ sx: { borderRadius: '16px' } }}>
+                <DialogTitle fontWeight={700}>
+                    Send Quotation {sendQuotationDialog?.quotation_no}
+                </DialogTitle>
+                <DialogContent>
+                    {sendQuotationError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{sendQuotationError}</Alert>}
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        <TextField fullWidth size="small" label="To *" type="email"
+                            value={sendQuotationForm.to} onChange={(e) => setSendQuotationForm((p) => ({ ...p, to: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <TextField fullWidth size="small" label="CC (optional)" type="email"
+                            value={sendQuotationForm.cc} onChange={(e) => setSendQuotationForm((p) => ({ ...p, cc: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <TextField fullWidth size="small" label="Subject *"
+                            value={sendQuotationForm.subject} onChange={(e) => setSendQuotationForm((p) => ({ ...p, subject: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <TextField fullWidth size="small" label="Message *" multiline rows={5}
+                            value={sendQuotationForm.body} onChange={(e) => setSendQuotationForm((p) => ({ ...p, body: e.target.value }))}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                        <Typography variant="caption" color="text.secondary">
+                            Quotation PDF automatically attach ho jaayegi. Reply seedha aapke email pe aayegi.
+                        </Typography>
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setSendQuotationDialog(null)} disabled={sendQuotationSaving} sx={{ borderRadius: '10px' }}>Cancel</Button>
+                    <GradientButton onClick={handleSendQuotationEmail} disabled={sendQuotationSaving}
+                        startIcon={sendQuotationSaving ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}>
+                        {sendQuotationSaving ? 'Sending...' : 'Send'}
+                    </GradientButton>
                 </DialogActions>
             </Dialog>
 

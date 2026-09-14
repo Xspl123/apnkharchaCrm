@@ -20,6 +20,7 @@ import userReducer from "../features/admin/state/userSlice";
 import roleReducer from "../features/admin/state/roleSlice";
 import leadReducer from "../features/crm/state/leadSlice";
 import campaignReducer from "../features/crm/state/campaignSlice";
+import quotationReducer from "../features/crm/state/quotationSlice";
 import orgReducer from "../features/organisation/state/orgSlice";
 import SuperAdminReducer from "./features/superAdminSlice";
 import { isCrmEnabled, isCrmOnlyEdition, isExpenseOnlyEdition } from "../config/moduleConfig";
@@ -28,6 +29,7 @@ const crmReducers = isCrmEnabled
   ? {
       leads: leadReducer,
       campaigns: campaignReducer,
+      quotations: quotationReducer,
     }
   : {};
 
