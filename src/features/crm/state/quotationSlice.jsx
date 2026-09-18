@@ -42,6 +42,22 @@ export const createQuotationFromLead = createAsyncThunk(
     }
 );
 
+// Creates a NEW quotation row (next version) linked back to the original
+// via parent_quotation_id — the original row is left untouched, so a
+// price negotiation (e.g. ₹499 → ₹450) produces QT-0008 V1 (as sent) and
+// QT-0008 V2 (revised) side by side instead of overwriting history.
+export const reviseQuotation = createAsyncThunk(
+    'quotations/revise',
+    async ({ id, data }, { rejectWithValue }) => {
+        try {
+            const res = await axiosClient.post(`/quotations/${id}/revise`, data);
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed');
+        }
+    }
+);
+
 export const updateQuotation = createAsyncThunk(
     'quotations/update',
     async ({ id, data }, { rejectWithValue }) => {
@@ -123,6 +139,13 @@ const quotationSlice = createSlice({
                 s.quotations = [a.payload, ...s.quotations];
             })
             .addCase(createQuotationFromLead.rejected, (s, a) => { s.actionLoading = false; s.error = a.payload; })
+
+            .addCase(reviseQuotation.pending, (s) => { s.actionLoading = true; })
+            .addCase(reviseQuotation.fulfilled, (s, a) => {
+                s.actionLoading = false;
+                s.quotations = [a.payload, ...s.quotations];
+            })
+            .addCase(reviseQuotation.rejected, (s, a) => { s.actionLoading = false; s.error = a.payload; })
 
             .addCase(updateQuotation.pending, (s) => { s.actionLoading = true; })
             .addCase(updateQuotation.fulfilled, (s, a) => {

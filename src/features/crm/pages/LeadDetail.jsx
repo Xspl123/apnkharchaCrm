@@ -11,6 +11,7 @@ import {
 import {
     getQuotations, createQuotationFromLead, updateQuotation,
     updateQuotationStatus, deleteQuotation, getQuotationById, sendQuotationEmail,
+    reviseQuotation,
 } from '../state/quotationSlice';
 import { getProducts } from '../../inventory/state/inventorySlice';
 import {
@@ -20,7 +21,7 @@ import {
     MenuItem, FormControl, InputLabel, Tab, Tabs,
     CircularProgress, Alert, Tooltip, Grid, Checkbox, ListItemText,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Autocomplete, Divider,
+    Autocomplete, Divider, FormControlLabel,
 } from '@mui/material';
 import {
     ArrowBack as BackIcon, Phone as PhoneIcon,
@@ -43,6 +44,7 @@ import {
     Visibility as ViewIcon,
     Download as DownloadIcon,
     Send as SendIcon,
+    History as HistoryIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
@@ -220,6 +222,8 @@ export default function LeadDetail() {
     const [quotationForm, setQuotationForm] = useState(emptyQuotationForm());
     const [quotationError, setQuotationError] = useState('');
     const [quotationDeleteId, setQuotationDeleteId] = useState(null);
+    const [useLeadProduct, setUseLeadProduct] = useState(true);
+    const [quotationReviseSourceId, setQuotationReviseSourceId] = useState(null);
     const [pdfLoadingId, setPdfLoadingId] = useState(null);
     const [sendQuotationDialog, setSendQuotationDialog] = useState(null); // holds the quotation being sent
     const [sendQuotationForm, setSendQuotationForm] = useState({ to: '', cc: '', subject: '', body: '' });
@@ -396,11 +400,30 @@ export default function LeadDetail() {
 
     // ── Quotations ────────────────────────────────────────
     const handleOpenQuotationCreate = () => {
-        setQuotationForm(emptyQuotationForm());
+        const form = emptyQuotationForm();
+        // Lead already carries a Product Interest, so the first quotation
+        // item is pre-filled from it by default — avoids re-typing the
+        // same product name the lead already told us about.
+        const hasLeadProduct = !!lead?.product_interest;
+        if (hasLeadProduct) {
+            form.items[0].item_name = lead.product_interest;
+        }
+        setUseLeadProduct(hasLeadProduct);
+        setQuotationForm(form);
         setQuotationEditId(null);
+        setQuotationReviseSourceId(null);
         setQuotationError('');
         dispatch(getProducts()); // lazy-load the product picker only when the builder actually opens
         setQuotationDialog(true);
+    };
+
+    const handleToggleUseLeadProduct = (checked) => {
+        setUseLeadProduct(checked);
+        setQuotationForm((p) => {
+            const items = [...p.items];
+            items[0] = { ...items[0], item_name: checked ? (lead?.product_interest || '') : '' };
+            return { ...p, items };
+        });
     };
 
     const handleOpenQuotationEdit = (q) => {
@@ -421,6 +444,34 @@ export default function LeadDetail() {
             })),
         });
         setQuotationEditId(q.id);
+        setQuotationReviseSourceId(null);
+        setQuotationError('');
+        dispatch(getProducts());
+        setQuotationDialog(true);
+    };
+
+    // "Revise" starts a NEW version of an existing quotation (e.g. after a
+    // price negotiation) instead of silently overwriting the sent one —
+    // keeps QT-0008 V1 and V2 both on record.
+    const handleOpenQuotationRevise = (q) => {
+        setQuotationForm({
+            quotation_date: new Date().toISOString().slice(0, 10),
+            expiry_date: q.expiry_date || '',
+            notes: q.notes || '',
+            terms_conditions: q.terms_conditions || '',
+            items: (q.items || []).map((item) => ({
+                product_id: item.product_id || null,
+                item_name: item.item_name || '',
+                description: item.description || '',
+                hsn_code: item.hsn_code || '',
+                qty: item.qty ?? 1,
+                unit: item.unit || 'pcs',
+                rate: item.rate ?? '',
+                tax_rate: item.tax_rate ?? 0,
+            })),
+        });
+        setQuotationEditId(null);
+        setQuotationReviseSourceId(q.id);
         setQuotationError('');
         dispatch(getProducts());
         setQuotationDialog(true);
@@ -502,7 +553,10 @@ export default function LeadDetail() {
         };
 
         try {
-            if (quotationEditId) {
+            if (quotationReviseSourceId) {
+                await dispatch(reviseQuotation({ id: quotationReviseSourceId, data: payload })).unwrap();
+                setMsg('Nayi version ban gayi!');
+            } else if (quotationEditId) {
                 await dispatch(updateQuotation({ id: quotationEditId, data: payload })).unwrap();
                 setMsg('Quotation update ho gayi!');
             } else {
@@ -1019,12 +1073,30 @@ export default function LeadDetail() {
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>
-                                                    {quotations.map((q) => {
+                                                    {(() => {
+                                                        // A quotation is "superseded" if some other quotation in this
+                                                        // list points back to it as its parent — i.e. a newer version
+                                                        // already exists, so this row is historical, not the current one.
+                                                        const supersededIds = new Set(
+                                                            quotations.filter((x) => x.parent_quotation_id).map((x) => x.parent_quotation_id)
+                                                        );
+                                                        return quotations.map((q) => {
                                                         const qsc = QUOTATION_STATUS_CONFIG[q.status] || QUOTATION_STATUS_CONFIG.draft;
+                                                        const isSuperseded = supersededIds.has(q.id);
                                                         return (
-                                                            <TableRow key={q.id} hover>
+                                                            <TableRow key={q.id} hover sx={isSuperseded ? { opacity: 0.6 } : undefined}>
                                                                 <TableCell>
-                                                                    <Typography variant="body2" fontWeight={600}>{q.quotation_no}</Typography>
+                                                                    <Stack direction="row" spacing={0.75} alignItems="center">
+                                                                        <Typography variant="body2" fontWeight={600}>{q.quotation_no}</Typography>
+                                                                        {q.version > 1 && (
+                                                                            <Chip label={`V${q.version}`} size="small"
+                                                                                sx={{ height: 18, fontSize: 10, fontWeight: 800, bgcolor: '#f3e8ff', color: '#7c3aed' }} />
+                                                                        )}
+                                                                        {isSuperseded && (
+                                                                            <Chip label="Superseded" size="small"
+                                                                                sx={{ height: 18, fontSize: 10, fontWeight: 700, bgcolor: '#f1f5f9', color: '#64748b' }} />
+                                                                        )}
+                                                                    </Stack>
                                                                 </TableCell>
                                                                 <TableCell>{q.quotation_date}</TableCell>
                                                                 <TableCell>
@@ -1058,6 +1130,11 @@ export default function LeadDetail() {
                                                                             <SendIcon sx={{ fontSize: 18 }} />
                                                                         </IconButton>
                                                                     </Tooltip>
+                                                                    <Tooltip title="Revise (new version)">
+                                                                        <IconButton size="small" onClick={() => handleOpenQuotationRevise(q)} sx={{ color: '#7c3aed' }}>
+                                                                            <HistoryIcon sx={{ fontSize: 18 }} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
                                                                     <Tooltip title="Edit">
                                                                         <IconButton size="small" onClick={() => handleOpenQuotationEdit(q)} sx={{ color: '#f59e0b' }}>
                                                                             <EditIcon sx={{ fontSize: 18 }} />
@@ -1071,7 +1148,7 @@ export default function LeadDetail() {
                                                                 </TableCell>
                                                             </TableRow>
                                                         );
-                                                    })}
+                                                    }); })()}
                                                 </TableBody>
                                             </Table>
                                         </TableContainer>
@@ -1198,11 +1275,36 @@ export default function LeadDetail() {
             <Dialog open={quotationDialog} onClose={() => setQuotationDialog(false)} maxWidth="md" fullWidth
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb' }}>
-                    <Typography fontWeight={700}>{quotationEditId ? 'Edit Quotation' : 'Create Quotation'}</Typography>
+                    <Typography fontWeight={700}>
+                        {quotationReviseSourceId ? 'Revise Quotation (new version)' : quotationEditId ? 'Edit Quotation' : 'Create Quotation'}
+                    </Typography>
                     <IconButton size="small" onClick={() => setQuotationDialog(false)}><CloseIcon /></IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ pt: 4 }}>
                     {quotationError && <Alert severity="error" sx={{ mb: 2 }}>{quotationError}</Alert>}
+
+                    {/* Lead already carries a Product Interest — offer to
+                        use it as the first item instead of re-typing it. */}
+                    {!quotationEditId && !quotationReviseSourceId && lead?.product_interest && (
+                        <Box sx={{ mb: 2, p: 1.5, borderRadius: '10px', bgcolor: '#eef2ff', border: '1px solid #c7d2fe' }}>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                                Quotation for Lead #{lead.id}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
+                                📦 Product Interest: {lead.product_interest}
+                            </Typography>
+                            <FormControlLabel
+                                control={<Checkbox size="small" checked={useLeadProduct}
+                                    onChange={(e) => handleToggleUseLeadProduct(e.target.checked)} />}
+                                label={<Typography variant="caption">Use lead product as first item</Typography>} />
+                        </Box>
+                    )}
+                    {quotationReviseSourceId && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Yeh naya version banayega — purani quotation waisi hi (Sent/whatever status) rahegi, history mein.
+                        </Alert>
+                    )}
+
                     <Grid container spacing={2} sx={{ mb: 2, mt: 0.5 }}>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth size="small" label="Quotation Date *" type="date"
@@ -1314,7 +1416,7 @@ export default function LeadDetail() {
                     <Button onClick={() => setQuotationDialog(false)} disabled={quotationSaving} sx={{ borderRadius: '10px' }}>Cancel</Button>
                     <GradientButton onClick={handleSubmitQuotation} disabled={quotationSaving}
                         startIcon={quotationSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}>
-                        {quotationSaving ? 'Saving...' : quotationEditId ? 'Update Quotation' : 'Create Quotation'}
+                        {quotationSaving ? 'Saving...' : quotationReviseSourceId ? 'Create New Version' : quotationEditId ? 'Update Quotation' : 'Create Quotation'}
                     </GradientButton>
                 </DialogActions>
             </Dialog>

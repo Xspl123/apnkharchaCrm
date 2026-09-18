@@ -101,8 +101,16 @@ const optionsStringToArray = (str) =>
     (str || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 // ── Workflow Rules (v1: status_change trigger → notify_owner action) ──
+const QUOTATION_STATUS_CONFIG = {
+    draft:    { label: 'Draft' },
+    sent:     { label: 'Sent' },
+    approved: { label: 'Approved' },
+    rejected: { label: 'Rejected' },
+    expired:  { label: 'Expired' },
+};
+
 const emptyWorkflowRuleForm = {
-    name: '', trigger_status: 'quotation_sent', action_type: 'notify_owner',
+    name: '', trigger_type: 'status_change', trigger_status: 'quotation_sent', action_type: 'notify_owner',
     action_message: '', is_active: true,
 };
 
@@ -1113,6 +1121,7 @@ function LeadListComponent() {
     const handleOpenWorkflowRuleEdit = (rule) => {
         setWfForm({
             name: rule.name || '',
+            trigger_type: rule.trigger_type || 'status_change',
             trigger_status: rule.trigger_status || 'quotation_sent',
             action_type: rule.action_type || 'notify_owner',
             action_message: rule.action_message || '',
@@ -1124,6 +1133,17 @@ function LeadListComponent() {
 
     const handleWorkflowRuleFormChange = (e) => {
         const { name, value } = e.target;
+        if (name === 'trigger_type') {
+            // Switching type changes which status list is valid — reset to
+            // a sensible default in the new list instead of leaving a
+            // status value that belongs to the other type.
+            setWfForm((p) => ({
+                ...p,
+                trigger_type: value,
+                trigger_status: value === 'quotation_status_change' ? 'sent' : 'quotation_sent',
+            }));
+            return;
+        }
         setWfForm((p) => ({ ...p, [name]: value }));
     };
 
@@ -1136,6 +1156,7 @@ function LeadListComponent() {
         }
         const payload = {
             name: wfForm.name.trim(),
+            trigger_type: wfForm.trigger_type,
             trigger_status: wfForm.trigger_status,
             action_type: wfForm.action_type,
             action_message: wfForm.action_message.trim() || null,
@@ -2200,7 +2221,7 @@ function LeadListComponent() {
                                             )}
                                         </Stack>
                                     }
-                                    secondary={`Jab status "${STATUS_CONFIG[rule.trigger_status]?.label || rule.trigger_status}" ho → owner ko notify karo${rule.action_message ? `: "${rule.action_message}"` : ''}`}
+                                    secondary={`Jab ${rule.trigger_type === 'quotation_status_change' ? 'quotation status' : 'lead status'} "${(rule.trigger_type === 'quotation_status_change' ? QUOTATION_STATUS_CONFIG : STATUS_CONFIG)[rule.trigger_status]?.label || rule.trigger_status}" ho → owner ko notify karo${rule.action_message ? `: "${rule.action_message}"` : ''}`}
                                 />
                                 <ListItemSecondaryAction>
                                     <IconButton size="small" onClick={() => handleOpenWorkflowRuleEdit(rule)} sx={{ color: '#f59e0b' }}>
@@ -2227,12 +2248,22 @@ function LeadListComponent() {
                                     value={wfForm.name} onChange={handleWorkflowRuleFormChange} required
                                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
                             </Grid>
+                            <Grid item xs={12}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Trigger On</InputLabel>
+                                    <Select name="trigger_type" value={wfForm.trigger_type} label="Trigger On"
+                                        onChange={handleWorkflowRuleFormChange} sx={{ borderRadius: '10px' }}>
+                                        <MenuItem value="status_change">Lead Status Change</MenuItem>
+                                        <MenuItem value="quotation_status_change">Quotation Status Change</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
                             <Grid item xs={12} sm={6}>
                                 <FormControl fullWidth size="small">
                                     <InputLabel>When status becomes</InputLabel>
                                     <Select name="trigger_status" value={wfForm.trigger_status} label="When status becomes"
                                         onChange={handleWorkflowRuleFormChange} sx={{ borderRadius: '10px' }}>
-                                        {Object.entries(STATUS_CONFIG).map(([key, val]) => (
+                                        {Object.entries(wfForm.trigger_type === 'quotation_status_change' ? QUOTATION_STATUS_CONFIG : STATUS_CONFIG).map(([key, val]) => (
                                             <MenuItem key={key} value={key}>{val.label}</MenuItem>
                                         ))}
                                     </Select>
