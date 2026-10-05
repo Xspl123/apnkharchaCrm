@@ -22,7 +22,7 @@ import {
     Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
 
 // ── Styled Components ─────────────────────────────────────
 
@@ -92,6 +92,8 @@ const FormSection = ({ title, icon }) => (
 
 const VendorList = () => {
     const dispatch = useDispatch();
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const { vendors, isLoading, actionLoading } = useSelector((s) => s.vendors);
 
     // ── UI State ──────────────────────────────────────────
@@ -196,7 +198,7 @@ const VendorList = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.vendor_name.trim()) {
-            showSnackbar('Vendor name required hai!', 'error');
+            showSnackbar('Vendor name is required.', 'error');
             return;
         }
         try {
@@ -396,7 +398,7 @@ const VendorList = () => {
                                                 {editMode ? `Edit — ${selectedVendor?.vendor_name}` : 'New Vendor'}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {editMode ? 'Vendor details update karo' : 'Naya vendor add karo'}
+                                                {editMode ? 'Update vendor details' : 'Add a new vendor'}
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -695,14 +697,14 @@ const VendorList = () => {
                                                         <BusinessIcon sx={{ fontSize: 40, color: '#94a3b8' }} />
                                                     </Avatar>
                                                     <Typography variant="h6" color="text.secondary">
-                                                        Koi vendor nahi mila
+                                                        No vendors found.
                                                     </Typography>
                                                     <GradientButton
                                                         startIcon={<AddIcon />}
                                                         onClick={handleOpenCreate}
                                                         gradient="linear-gradient(135deg, #667eea, #764ba2)"
                                                     >
-                                                        Pehla Vendor Add Karo
+                                                        Add Your First Vendor
                                                     </GradientButton>
                                                 </Stack>
                                             </TableCell>
@@ -843,7 +845,16 @@ const VendorList = () => {
                     onClose={() => setViewDialog(false)}
                     maxWidth="sm"
                     fullWidth
-                    PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}
+                    PaperProps={{
+                        sx: {
+                            borderRadius: '20px',
+                            p: 1,
+                            bgcolor: 'background.paper',
+                            color: 'text.primary',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                        },
+                    }}
                 >
                     <DialogTitle>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -869,7 +880,7 @@ const VendorList = () => {
                         {viewVendor && (
                             <Stack spacing={2}>
                                 {/* Contact */}
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: '12px' }}>
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: isDark ? '#182235' : 'grey.50', borderRadius: '12px' }}>
                                     <Typography variant="caption" fontWeight={700} color="text.secondary"
                                         sx={{ textTransform: 'uppercase' }}>
                                         Contact
@@ -891,7 +902,7 @@ const VendorList = () => {
 
                                 {/* GST */}
                                 {(viewVendor.gstin || viewVendor.pan) && (
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0f9ff', borderRadius: '12px' }}>
+                                    <Paper elevation={0} sx={{ p: 2, bgcolor: isDark ? '#162947' : '#f0f9ff', borderRadius: '12px' }}>
                                         <Typography variant="caption" fontWeight={700} color="text.secondary"
                                             sx={{ textTransform: 'uppercase' }}>
                                             GST Info
@@ -899,11 +910,11 @@ const VendorList = () => {
                                         <Stack direction="row" spacing={1} mt={1}>
                                             {viewVendor.gstin && (
                                                 <Chip label={`GST: ${viewVendor.gstin}`} size="small"
-                                                    sx={{ bgcolor: '#e0f2fe', color: '#0369a1', fontWeight: 600 }} />
+                                                    sx={{ bgcolor: isDark ? '#1e3a5f' : '#e0f2fe', color: isDark ? '#bae6fd' : '#0369a1', fontWeight: 600 }} />
                                             )}
                                             {viewVendor.pan && (
                                                 <Chip label={`PAN: ${viewVendor.pan}`} size="small"
-                                                    sx={{ bgcolor: '#fef2f2', color: '#991b1b', fontWeight: 600 }} />
+                                                    sx={{ bgcolor: isDark ? '#3b2028' : '#fef2f2', color: isDark ? '#fecaca' : '#991b1b', fontWeight: 600 }} />
                                             )}
                                         </Stack>
                                     </Paper>
@@ -911,7 +922,7 @@ const VendorList = () => {
 
                                 {/* Bank */}
                                 {viewVendor.bank_name && (
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: '12px' }}>
+                                    <Paper elevation={0} sx={{ p: 2, bgcolor: isDark ? '#182235' : 'grey.50', borderRadius: '12px' }}>
                                         <Typography variant="caption" fontWeight={700} color="text.secondary"
                                             sx={{ textTransform: 'uppercase' }}>
                                             Bank Details
@@ -938,7 +949,7 @@ const VendorList = () => {
                                 )}
 
                                 {viewVendor.notes && (
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: '12px' }}>
+                                    <Paper elevation={0} sx={{ p: 2, bgcolor: isDark ? '#182235' : 'grey.50', borderRadius: '12px' }}>
                                         <Typography variant="caption" fontWeight={700} color="text.secondary"
                                             sx={{ textTransform: 'uppercase' }}>
                                             Notes
@@ -961,7 +972,7 @@ const VendorList = () => {
                             startIcon={<EditIcon />}
                             sx={{ borderRadius: '10px' }}
                         >
-                            Edit Karo
+                            Edit
                         </Button>
                         <Button
                             onClick={() => setViewDialog(false)}
@@ -991,7 +1002,7 @@ const VendorList = () => {
                     </DialogTitle>
                     <DialogContent sx={{ textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary">
-                            Kya aap sure hain? Yeh action undo nahi ho sakta.
+                            Are you sure? This action cannot be undone.
                         </Typography>
                         <Typography variant="subtitle1" fontWeight={700} color="error.main" mt={1}>
                             {vendorToDelete?.vendor_name}
@@ -1012,7 +1023,7 @@ const VendorList = () => {
                             disabled={loading}
                             sx={{ borderRadius: '10px', px: 3 }}
                         >
-                            Delete Karo
+                            Delete
                         </Button>
                     </DialogActions>
                 </Dialog>

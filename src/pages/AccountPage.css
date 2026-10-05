@@ -140,3 +140,48 @@
 .account-page__opening-row:hover td {
   background: #e0e7ff;
 }
+
+[data-color-mode="dark"] .account-page__overview-card {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-color-mode="dark"] .account-page__overview-card--credit {
+  background: linear-gradient(180deg, #103329 0%, #111827 100%);
+}
+
+[data-color-mode="dark"] .account-page__overview-card--debit {
+  background: linear-gradient(180deg, #34251b 0%, #111827 100%);
+}
+
+[data-color-mode="dark"] .account-page__overview-card--balance {
+  background: linear-gradient(180deg, #162947 0%, #111827 100%);
+}
+
+[data-color-mode="dark"] .account-page__overview-card .MuiTypography-h5-root,
+[data-color-mode="dark"] .account-page__section-header h6 {
+  color: #e5eef9;
+}
+
+[data-color-mode="dark"] .account-page__section-header p,
+[data-color-mode="dark"] .account-page__overview-card .MuiTypography-caption-root {
+  color: #94a3b8;
+}
+
+[data-color-mode="dark"] .account-page__table-head,
+[data-color-mode="dark"] .account-page__table-shell tbody tr:nth-of-type(even) {
+  background: #182235;
+}
+
+[data-color-mode="dark"] .account-page__head-cell {
+  color: #e5eef9;
+}
+
+[data-color-mode="dark"] .account-page__table-shell tbody tr:hover {
+  background: #1e293b;
+}
+
+[data-color-mode="dark"] .account-page__opening-row td,
+[data-color-mode="dark"] .account-page__opening-row:hover td {
+  background: #202b47;
+  color: #c7d2fe;
+}

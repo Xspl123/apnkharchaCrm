@@ -357,25 +357,25 @@ const InventoryReport = () => {
                 </Box>
             )}
 
-            <Container maxWidth="xl" sx={{ py: 4 }}>
+            <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2 } }}>
 
                 {/* ══ HEADER ══ */}
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                     <Paper elevation={0} sx={{
-                        p: 2.5, mb: 3, borderRadius: '16px',
+                        p: { xs: 2, sm: 2.5 }, mb: 3, borderRadius: '16px',
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         color: 'white',
                     }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                                <Typography variant="h5" fontWeight={700}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                            <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                                     📊 Inventory Report & Analytics
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.3 }}>
                                     Stock valuation, category-wise breakdown, aur advanced inventory analytics
                                 </Typography>
                             </Box>
-                            <Stack direction="row" spacing={1}>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                 <Tooltip title="Export CSV" TransitionComponent={Zoom}>
                                     <GradientButton
                                         size="small"
@@ -425,7 +425,7 @@ const InventoryReport = () => {
                         <SummaryCard
                             title="Low Stock Items"
                             value={summary.low_stock_count || 0}
-                            subtitle="Reorder karna padega"
+                            subtitle="Reorder required"
                             icon={<WarningIcon sx={{ fontSize: 22 }} />}
                             gradient="linear-gradient(135deg,#f7971e,#ffd200)"
                             delay={0.2}
@@ -964,9 +964,9 @@ const InventoryReport = () => {
                     <CardContent sx={{ p: 0 }}>
 
                         {/* Table Header */}
-                        <Stack direction="row" justifyContent="space-between"
-                            alignItems="center" sx={{ p: 2.5, pb: 0 }}>
-                            <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"
+                            alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1} sx={{ p: { xs: 1.5, sm: 2.5 }, pb: 0 }}>
+                            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
                                 <Avatar sx={{ bgcolor: '#ede7f6', color: '#7b1fa2',
                                     width: 36, height: 36 }}>
                                     <StockIcon sx={{ fontSize: 18 }} />
@@ -977,7 +977,7 @@ const InventoryReport = () => {
                                 <Chip label={`${filtered.length} items`}
                                     size="small" color="primary" sx={{ fontWeight: 700 }} />
                             </Stack>
-                            <Stack direction="row" spacing={1} alignItems="center">
+                            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                                 <Typography variant="body2" color="text.secondary">
                                     Total Value:
                                 </Typography>
@@ -988,8 +988,8 @@ const InventoryReport = () => {
                         </Stack>
                         <Divider sx={{ mt: 2 }} />
 
-                        <TableContainer>
-                            <Table>
+                        <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+                            <Table sx={{ minWidth: { xs: 900, md: 0 } }}>
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: 'grey.50' }}>
                                         <TableCell sx={{ fontWeight: 700, py: 2 }}>#</TableCell>
@@ -1038,7 +1038,7 @@ const InventoryReport = () => {
                                                         <StockIcon sx={{ fontSize: 40, color: '#9c27b0' }} />
                                                     </Avatar>
                                                     <Typography variant="h6" color="text.secondary">
-                                                        Koi product nahi mila
+                                                        No products found.
                                                     </Typography>
                                                 </Stack>
                                             </TableCell>

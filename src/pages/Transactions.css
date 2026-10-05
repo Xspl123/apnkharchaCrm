@@ -88,6 +88,24 @@
   visibility: hidden;
 }
 
+[data-color-mode="dark"] .transactions-page__summary-card {
+  border-color: rgba(148, 163, 184, 0.2);
+  background-color: #111827;
+}
+
+[data-color-mode="dark"] .transactions-page__summary-card--active {
+  background-color: #1e293b;
+}
+
+[data-color-mode="dark"] .transactions-page__summary-card-title,
+[data-color-mode="dark"] .transactions-page__summary-value-row .MuiTypography-body2-root {
+  color: #e5eef9;
+}
+
+[data-color-mode="dark"] .transactions-page__summary-value-row .MuiTypography-caption-root {
+  color: #cbd5e1;
+}
+
 .transactions-page__table-head {
   background-color: #1976d2;
 }

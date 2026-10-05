@@ -10,7 +10,7 @@ import {
     Box, Card, CardContent, Typography, Button, TextField,
     Dialog, DialogTitle, DialogContent, DialogActions,
     Table, TableBody, TableCell, TableContainer, TableHead,
-    TableRow, IconButton, Chip, Avatar, Stack,
+    TableRow, TablePagination, IconButton, Chip, Avatar, Stack,
     Select, MenuItem, FormControl, InputLabel, Switch,
     FormControlLabel, Tooltip, InputAdornment, Alert,
     CircularProgress,
@@ -70,6 +70,8 @@ export default function UserManagement() {
 
     const [search,    setSearch]    = useState('');
     const [roleFilter, setRoleFilter] = useState('');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
     const [dialog,    setDialog]    = useState(false);
     const [editMode,  setEditMode]  = useState(false);
     const [editId,    setEditId]    = useState(null);
@@ -83,6 +85,10 @@ export default function UserManagement() {
         dispatch(getRoles());
     }, [dispatch]);
 
+    useEffect(() => {
+        setPage(0);
+    }, [search, roleFilter]);
+
     // ── Filter ────────────────────────────────────────────
     const filtered = users.filter((u) => {
         const matchSearch = !search ||
@@ -91,6 +97,12 @@ export default function UserManagement() {
         const matchRole = !roleFilter || u.role?.id === Number(roleFilter);
         return matchSearch && matchRole;
     });
+    const paginatedUsers = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+    useEffect(() => {
+        const lastPage = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
+        if (page > lastPage) setPage(lastPage);
+    }, [filtered.length, page, rowsPerPage]);
 
     // ── Handlers ──────────────────────────────────────────
     const handleOpenCreate = () => {
@@ -159,13 +171,29 @@ export default function UserManagement() {
         setDeleteDialog(null);
     };
 
+         // ── Group roles by org (for grouped card view) ────────────
+                const rolesByOrg = roles.reduce((acc, r) => {
+                    const key = r.org_id ? `org-${r.org_id}` : 'platform';
+                    const label = r.org_id ? r.org_name : 'Platform';
+                    if (!acc[key]) acc[key] = { label, roles: [] };
+                    acc[key].roles.push(r);
+                    return acc;
+                }, {});
+
+                const isMultiOrgView = Object.keys(rolesByOrg).length > 1;
+
+                console.log('DEBUG roles.length:', roles.length);
+                console.log('DEBUG rolesByOrg keys:', Object.keys(rolesByOrg));
+                console.log('DEBUG isMultiOrgView:', isMultiOrgView);
+                console.log('DEBUG sample role:', roles[5]);
+
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
             {/* Header */}
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                 <GlassCard sx={{ mb: 3, background: 'linear-gradient(135deg,#667eea,#764ba2)', color: '#fff' }}>
-                    <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
+                    <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
+                        <Box sx={{ minWidth: 0 }}>
                             <Typography variant="h5" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <PeopleIcon /> User Management
                             </Typography>
@@ -179,42 +207,123 @@ export default function UserManagement() {
             </motion.div>
 
             {/* Stats */}
-            <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 2 }}>
-                {roles.map((r) => (
-                    <GlassCard key={r.id} sx={{ flex: '1 1 150px', minWidth: 140 }}>
-                        <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
-                            <Typography variant="h4" fontWeight={800} sx={{ color: r.color }}>
-                                {users.filter((u) => u.role?.id === r.id).length}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">{r.label}</Typography>
-                        </CardContent>
-                    </GlassCard>
-                ))}
-            </Stack>
+{isMultiOrgView ? (
+            <Box sx={{ mb: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: { xs: 1.5, sm: 2.5 }, minWidth: 0, justifyItems: 'center' }}>
+        {Object.entries(rolesByOrg).map(([key, group]) => {
+            const totalUsers = group.roles.reduce(
+                (sum, r) => sum + users.filter((u) => u.role?.id === r.id).length, 0
+            );
+            const isPlatform = key === 'platform';
+            return (
+                <GlassCard
+                    key={key}
+                    sx={{
+                        width: '100%',
+                        minWidth: 0,
+                        maxWidth: 320,
+                        overflow: 'hidden',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' },
+                    }}
+                >
+                    <Box
+                        sx={{
+                            px: { xs: 1.75, sm: 2.5 }, py: 1.75,
+                            background: isPlatform
+                                ? 'linear-gradient(135deg,#374151,#1f2937)'
+                                : 'linear-gradient(135deg,#667eea,#764ba2)',
+                            color: '#fff',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 1,
+                        }}
+                    >
+                        <Typography fontWeight={700} variant="subtitle1" sx={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
+                            {group.label}
+                        </Typography>
+                        <Chip
+                            label={totalUsers}
+                            size="small"
+                            sx={{
+                                bgcolor: 'rgba(255,255,255,0.25)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                height: 22,
+                            }}
+                        />
+                    </Box>
+                    <CardContent sx={{ px: { xs: 1.75, sm: 2.5 }, py: 2, minWidth: 0 }}>
+                        <Stack spacing={1.1} divider={<Box sx={{ borderBottom: '1px solid #f1f1f4' }} />}>
+                            {group.roles.map((r) => {
+                                const count = users.filter((u) => u.role?.id === r.id).length;
+                                return (
+                                    <Stack key={r.id} direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                                        <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0 }}>
+                                            <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: r.color, flexShrink: 0 }} />
+                                            <Typography variant="body2" color="text.secondary" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>{r.label}</Typography>
+                                        </Stack>
+                                        <Typography
+                                            variant="body2"
+                                            fontWeight={700}
+                                            sx={{
+                                                color: count > 0 ? r.color : '#c1c5cd',
+                                                minWidth: 20,
+                                                textAlign: 'right',
+                                            }}
+                                        >
+                                            {count}
+                                        </Typography>
+                                    </Stack>
+                                );
+                            })}
+                        </Stack>
+                    </CardContent>
+                </GlassCard>
+            );
+        })}
+    </Box>
+) : (
+    <Box sx={{ mb: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 2, minWidth: 0, justifyItems: 'center' }}>
+        {roles.map((r) => (
+            <GlassCard key={r.id} sx={{ width: '100%', minWidth: 0 }}>
+                <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
+                    <Typography variant="h4" fontWeight={800} sx={{ color: r.color }}>
+                        {users.filter((u) => u.role?.id === r.id).length}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{r.label}</Typography>
+                </CardContent>
+            </GlassCard>
+        ))}
+    </Box>
+)}
 
             {/* Filters + Add */}
             <GlassCard sx={{ mb: 3 }}>
                 <CardContent>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
                         <TextField
+                            fullWidth
                             size="small" placeholder="Search by name or email..."
                             value={search} onChange={(e) => setSearch(e.target.value)}
                             InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18 }} /></InputAdornment> }}
-                            sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                            sx={{ width: '100%', minWidth: 0, flex: { sm: 1 }, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
                         />
-                        <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <FormControl fullWidth size="small" sx={{ minWidth: { sm: 160 }, width: { sm: 'auto' } }}>
                             <InputLabel>Filter by Role</InputLabel>
                             <Select value={roleFilter} label="Filter by Role"
                                 onChange={(e) => setRoleFilter(e.target.value)}
                                 sx={{ borderRadius: '10px' }}>
                                 <MenuItem value="">All Roles</MenuItem>
                                 {roles.map((r) => (
-                                    <MenuItem key={r.id} value={r.id}>{r.label}</MenuItem>
+                                    <MenuItem key={r.id} value={r.id}>
+                                        {r.label}{r.org_name ? ` — ${r.org_name}` : ''}
+                                    </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                         {can('users.create') && (
-                            <GradientButton startIcon={<AddIcon />} onClick={handleOpenCreate}>
+                            <GradientButton startIcon={<AddIcon />} onClick={handleOpenCreate} sx={{ width: { xs: '100%', sm: 'auto' }, flexShrink: 0 }}>
                                 Add User
                             </GradientButton>
                         )}
@@ -246,9 +355,9 @@ export default function UserManagement() {
                                         No users found
                                     </TableCell>
                                 </TableRow>
-                            ) : filtered.map((user, i) => (
+                            ) : paginatedUsers.map((user, i) => (
                                 <TableRow key={user.id} hover>
-                                    <TableCell>{i + 1}</TableCell>
+                                    <TableCell>{page * rowsPerPage + i + 1}</TableCell>
                                     <TableCell>
                                         <Stack direction="row" spacing={1.5} alignItems="center">
                                             <Avatar sx={{ bgcolor: user.role?.color || '#6366f1', width: 36, height: 36, fontSize: 14 }}>
@@ -315,6 +424,23 @@ export default function UserManagement() {
                         </TableBody>
                     </Table>
                 </TableContainer>
+                <TablePagination
+                    component="div"
+                    count={filtered.length}
+                    page={page}
+                    onPageChange={(_, nextPage) => setPage(nextPage)}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={(event) => {
+                        setRowsPerPage(Number(event.target.value));
+                        setPage(0);
+                    }}
+                    rowsPerPageOptions={[10, 25, 50, 100]}
+                    labelRowsPerPage="Per page:"
+                    sx={{
+                        borderTop: '1px solid rgba(0,0,0,0.08)',
+                        '.MuiTablePagination-toolbar': { px: { xs: 1, sm: 2 }, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-end' } },
+                    }}
+                />
             </GlassCard>
 
             {/* Add/Edit Dialog */}
@@ -356,7 +482,7 @@ export default function UserManagement() {
                                         <MenuItem key={r.id} value={r.id}>
                                             <Stack direction="row" spacing={1} alignItems="center">
                                                 <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: r.color }} />
-                                                <span>{r.label}</span>
+                                                <span>{r.label}{r.org_name ? ` — ${r.org_name}` : ''}</span>
                                             </Stack>
                                         </MenuItem>
                                     ))}
@@ -389,7 +515,7 @@ export default function UserManagement() {
                 <DialogTitle fontWeight={700}>Delete User?</DialogTitle>
                 <DialogContent>
                     <Typography color="text.secondary">
-                        Yeh user permanently delete ho jaayega. Kya aap sure hain?
+                        This user will be permanently deleted. Are you sure?
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>

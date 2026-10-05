@@ -1,14 +1,15 @@
-import { LinearProgress, Paper, Stack, Typography } from "@mui/material";
+import { LinearProgress, Paper, Stack, Typography, useTheme } from "@mui/material";
 import { fmtAmt } from "./dashboardUtils";
 
 export default function ExpenseHealthBar({ dashboardSummary }) {
+  const theme = useTheme();
   const expPct = dashboardSummary.totalIncome > 0
     ? Math.min(100, (dashboardSummary.totalExpense / dashboardSummary.totalIncome) * 100)
     : 0;
   const color = expPct > 90 ? "#dc2626" : expPct > 70 ? "#f59e0b" : "#16a34a";
 
   return (
-    <Paper elevation={0} sx={{ p: 2, borderRadius: "16px", mb: 3, border: "1px solid #e2e8f0" }}>
+    <Paper elevation={0} sx={{ p: 2, borderRadius: "16px", mb: 3, border: `1px solid ${theme.palette.divider}` }}>
       <Stack direction="row" justifyContent="space-between" mb={1}>
         <Typography variant="body2" fontWeight={600} color="text.secondary">
           Expense vs Income Utilization
@@ -23,7 +24,7 @@ export default function ExpenseHealthBar({ dashboardSummary }) {
         sx={{
           height: 10,
           borderRadius: 5,
-          bgcolor: "#f1f5f9",
+          bgcolor: theme.palette.action.selected,
           "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 5 },
         }}
       />

@@ -15,9 +15,13 @@ export default function AnalyticsSection({
 }) {
   return (
     <>
-      <Box mb={2}>
-        <Typography variant="h6" fontWeight={700}>Analytics Overview</Typography>
-        <Typography variant="body2" color="text.secondary">Distribution, category mix, trends, and comparisons</Typography>
+      <Box mb={2} className="dashboard-section-heading">
+        <Typography className="dashboard-section-heading__title" variant="h6" fontWeight={700}>
+          Analytics Overview
+        </Typography>
+        <Typography className="dashboard-section-heading__description" variant="body2" sx={{ lineHeight: 1.6 }}>
+          Distribution, category mix, trends, and comparisons
+        </Typography>
       </Box>
       <Grid container spacing={3} mb={3}>
         <Suspense

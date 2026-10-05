@@ -174,6 +174,34 @@
   background-color: #4caf50;
 }
 
+[data-color-mode="dark"] .loan-page__summary {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background-color: #182235;
+}
+
+[data-color-mode="dark"] .loan-page__accordion {
+  color: #e5eef9;
+  background-color: #111827;
+  background-image: none;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-color-mode="dark"] .loan-page__accordion-summary--pending {
+  background-color: rgba(245, 158, 11, 0.12);
+}
+
+[data-color-mode="dark"] .loan-page__accordion-summary--cleared {
+  background-color: #182235;
+}
+
+[data-color-mode="dark"] .loan-page__accordion .MuiAccordionSummary-expandIconWrapper {
+  color: #ffffff;
+}
+
+[data-color-mode="dark"] .loan-page__accordion .MuiAccordionDetails-root {
+  background-color: #111827;
+}
+
 @media (max-width: 768px) {
   .loan-page__summary-layout {
     align-items: stretch;

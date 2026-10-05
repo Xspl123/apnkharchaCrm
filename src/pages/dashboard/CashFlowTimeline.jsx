@@ -1,12 +1,13 @@
-import { Box, Paper, Stack, Typography } from "@mui/material";
+import { Box, Paper, Stack, Typography, useTheme } from "@mui/material";
 import { Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtAmt } from "./dashboardUtils";
 
 const tooltipFormatter = (value, name) => [fmtAmt(value), name];
 
 export default function CashFlowTimeline({ cashFlowData, dashboardSummary }) {
+  const theme = useTheme();
   return (
-    <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "0 14px 30px rgba(15, 23, 42, 0.05)" }}>
+    <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderRadius: "16px", border: `1px solid ${theme.palette.divider}`, boxShadow: theme.palette.mode === "dark" ? "0 14px 30px rgba(0, 0, 0, 0.2)" : "0 14px 30px rgba(15, 23, 42, 0.05)" }}>
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1.5} mb={2}>
         <Box>
           <Typography variant="h6" fontWeight={800}>Cash Flow Timeline</Typography>
@@ -14,7 +15,7 @@ export default function CashFlowTimeline({ cashFlowData, dashboardSummary }) {
         </Box>
         <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
           <Typography variant="caption" color="text.secondary">Closing Balance</Typography>
-          <Typography variant="h6" fontWeight={800} sx={{ color: dashboardSummary.closingBalance < 0 ? "#dc2626" : "#0f766e" }}>
+          <Typography variant="h6" fontWeight={800} sx={{ color: dashboardSummary.closingBalance < 0 ? "#dc2626" : theme.palette.mode === "dark" ? "#5eead4" : "#0f766e" }}>
             {fmtAmt(dashboardSummary.closingBalance)}
           </Typography>
         </Box>
@@ -25,11 +26,11 @@ export default function CashFlowTimeline({ cashFlowData, dashboardSummary }) {
           <Box sx={{ height: { xs: 260, sm: 300 }, minWidth: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={cashFlowData} margin={{ top: 8, right: 28, left: 0, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={24} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(value) => `₹${Number(value).toLocaleString("en-IN", { notation: "compact" })}`} />
-                <Tooltip formatter={tooltipFormatter} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: theme.palette.text.secondary }} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis tick={{ fontSize: 11, fill: theme.palette.text.secondary }} tickFormatter={(value) => `₹${Number(value).toLocaleString("en-IN", { notation: "compact" })}`} />
+                <Tooltip formatter={tooltipFormatter} contentStyle={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, borderColor: theme.palette.divider }} labelStyle={{ color: theme.palette.text.primary }} />
+                <Legend wrapperStyle={{ color: theme.palette.text.secondary }} />
                 <Line type="monotone" dataKey="Income" stroke="#16a34a" strokeWidth={2.4} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="Expense" stroke="#dc2626" strokeWidth={2.4} dot={{ r: 3 }} />
               </LineChart>
@@ -44,17 +45,17 @@ export default function CashFlowTimeline({ cashFlowData, dashboardSummary }) {
                     <stop offset="95%" stopColor="#0f766e" stopOpacity={0.03} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={24} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(value) => `₹${Number(value).toLocaleString("en-IN", { notation: "compact" })}`} />
-                <Tooltip formatter={tooltipFormatter} />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: theme.palette.text.secondary }} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis tick={{ fontSize: 11, fill: theme.palette.text.secondary }} tickFormatter={(value) => `₹${Number(value).toLocaleString("en-IN", { notation: "compact" })}`} />
+                <Tooltip formatter={tooltipFormatter} contentStyle={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, borderColor: theme.palette.divider }} labelStyle={{ color: theme.palette.text.primary }} />
                 <Area type="monotone" dataKey="Closing" stroke="#0f766e" strokeWidth={2.4} fill="url(#closingBalanceFill)" dot={{ r: 3 }} />
               </AreaChart>
             </ResponsiveContainer>
           </Box>
         </Box>
       ) : (
-        <Box sx={{ py: 7, textAlign: "center", bgcolor: "#f8fafc", borderRadius: "12px", color: "#94a3b8" }}>
+        <Box sx={{ py: 7, textAlign: "center", bgcolor: theme.palette.background.default, borderRadius: "12px", color: theme.palette.text.secondary }}>
           <Typography variant="body2">No cash-flow movement available for this period</Typography>
         </Box>
       )}

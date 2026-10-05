@@ -127,7 +127,7 @@ const OutwardSuppliesSection = ({ data }) => {
                 <SectionHeader
                     number="3.1"
                     title="Details of Outward Supplies and Inward Supplies liable to Reverse Charge"
-                    subtitle="Is period mein aapne jo becha uski GST detail"
+                    subtitle="For this period aapne jo becha uski GST detail"
                     color="primary.main"
                 />
                 <TableContainer>
@@ -217,7 +217,7 @@ const InterStateSection = ({ data }) => {
                 <SectionHeader
                     number="3.2"
                     title="Inter-state Supplies — State-wise Breakup"
-                    subtitle="Alag alag states ko ki gayi supply ka detail"
+                    subtitle="Supply details by state"
                     color="warning.main"
                 />
                 <TableContainer>
@@ -279,12 +279,12 @@ const ITCSection = () => (
             <SectionHeader
                 number="4"
                 title="Eligible ITC (Input Tax Credit)"
-                subtitle="Purchase bills se milne wala ITC — manually enter karo"
+                subtitle="ITC from purchase bills — enter manually"
                 color="success.main"
             />
             <Alert severity="info" icon={<Info />}>
-                ITC details aapke purchase bills se aati hain. Yeh section abhi manually fill karna hoga.
-                M8 (Vendors & Purchase Orders) module complete hone ke baad automatically calculate hoga.
+                ITC details come from your purchase bills. Enter this section manually for now.
+                This will be calculated automatically when the Vendors & Purchase Orders module is complete.
             </Alert>
             <Grid container spacing={2} mt={1}>
                 {[
@@ -338,7 +338,7 @@ const TaxLiabilitySection = ({ data }) => {
                 <SectionHeader
                     number="6"
                     title="Tax Liability Summary"
-                    subtitle="Is period mein total GST pay karna hai"
+                    subtitle="Total GST payable for this period"
                     color="error.main"
                 />
                 <Grid container spacing={2}>
@@ -471,7 +471,7 @@ const Gstr3bPage = () => {
                         }
                     </Button>
                     {gstr3b && (
-                        <Tooltip title="Draft ke taur pe save karo">
+                        <Tooltip title="Save as draft">
                             <Button
                                 variant="outlined"
                                 startIcon={<SaveAlt />}
@@ -487,8 +487,8 @@ const Gstr3bPage = () => {
 
             {/* ── GSTR-1 vs 3B info ── */}
             <Alert severity="info" sx={{ mb: 3 }} icon={<Info />}>
-                <strong>GSTR-3B</strong> mein sirf totals jaate hain (invoice-wise detail nahi).
-                20 tarikh tak file karna hota hai. Tax liability yahan pay karni hoti hai.
+                <strong>GSTR-3B</strong> reports totals only (not invoice-level details).
+                File by the 20th. Pay the tax liability here.
             </Alert>
 
             {/* ── Error ── */}
@@ -532,7 +532,7 @@ const Gstr3bPage = () => {
             {!gstr3bLoading && !gstr3b && !error && (
                 <Box textAlign="center" py={8}>
                     <Typography color="text.secondary">
-                        Period select karo aur Fetch karo
+                        Select a period and fetch the data
                     </Typography>
                 </Box>
             )}

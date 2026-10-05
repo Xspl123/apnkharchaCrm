@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { getLeads, updateLeadStatus } from '../state/leadSlice';
-import { Box, Typography, Button, Chip, Stack, Avatar, Paper, Grid, Divider, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from '@mui/material';
+import { Box, Typography, Button, Chip, Stack, Avatar, Paper, Grid, Divider, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, useTheme } from '@mui/material';
 import { ArrowBack as BackIcon, Business as BusinessIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
@@ -21,32 +21,34 @@ const PIPELINE_STAGES = [
     { key: 'closed_lost',            label: 'Closed Lost',             color: '#dc2626', bg: '#fee2e2' },
 ];
 
-const Column = styled(Paper)(({ stagecolor }) => ({
+const Column = styled(Paper)(({ theme, stagecolor }) => ({
     minWidth: 260,
     maxWidth: 280,
     minHeight: 560,
-    background: '#f8fafc',
+    background: theme.palette.background.default,
     border: `1px solid ${stagecolor}28`,
     borderRadius: '12px',
     padding: '12px',
     flex: '0 0 auto',
 }));
 
-const LeadCard = styled(motion.div)(({ stagecolor }) => ({
-    background: '#fff',
-    border: '1px solid #e5e7eb',
+const LeadCard = styled(motion.div)(({ theme, stagecolor }) => ({
+    background: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${theme.palette.divider}`,
     borderTop: `3px solid ${stagecolor}`,
     borderRadius: '10px',
     padding: '12px',
     marginBottom: '10px',
     cursor: 'grab',
-    boxShadow: '0 6px 18px rgba(15,23,42,0.04)',
+    boxShadow: theme.palette.mode === 'dark' ? '0 6px 18px rgba(0,0,0,0.2)' : '0 6px 18px rgba(15,23,42,0.04)',
     '&:hover': { boxShadow: `0 10px 24px ${stagecolor}18`, transform: 'translateY(-1px)' },
     transition: 'all 0.2s',
 }));
 
 const DroppableColumn = ({ stage, children }) => {
     const { isOver, setNodeRef } = useDroppable({ id: stage.key });
+    const theme = useTheme();
 
     return (
         <Column
@@ -54,7 +56,7 @@ const DroppableColumn = ({ stage, children }) => {
             stagecolor={stage.color}
             elevation={0}
             sx={{
-                bgcolor: isOver ? stage.bg : '#f8fafc',
+                bgcolor: isOver ? `${stage.color}20` : theme.palette.background.default,
                 boxShadow: isOver ? `0 0 0 2px ${stage.color}55 inset` : 'none',
                 transition: 'background 0.15s, box-shadow 0.15s',
             }}
@@ -94,15 +96,21 @@ const DraggableLeadCard = ({ lead, stage, children, onOpen }) => {
 };
 
 const LeadDragPreview = ({ lead, stage }) => (
-    <Paper
+    <LeadDragPreviewCard lead={lead} stage={stage} />
+);
+
+const LeadDragPreviewCard = ({ lead, stage }) => {
+    const theme = useTheme();
+    return (
+      <Paper
         elevation={8}
         sx={{
             width: 252,
             p: 1.5,
             borderRadius: '10px',
-            border: '1px solid #e5e7eb',
+            border: `1px solid ${theme.palette.divider}`,
             borderTop: `3px solid ${stage?.color || '#6366f1'}`,
-            bgcolor: '#fff',
+            bgcolor: theme.palette.background.paper,
             cursor: 'grabbing',
         }}
     >
@@ -121,7 +129,8 @@ const LeadDragPreview = ({ lead, stage }) => (
             </Box>
         </Stack>
     </Paper>
-);
+    );
+};
 
 const formatMoney = (amount, currency = 'INR') => {
     if (!amount) return '-';
@@ -131,6 +140,7 @@ const formatMoney = (amount, currency = 'INR') => {
 export default function LeadPipeline() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const theme = useTheme();
     const { leads, actionLoading } = useSelector((s) => s.leads);
     const [dropTarget, setDropTarget] = useState(null);
     const [lostReason, setLostReason] = useState('');
@@ -197,7 +207,7 @@ export default function LeadPipeline() {
             setTimeout(() => setMsg(''), 2500);
             return true;
         } catch (err) {
-            setPageError(err || 'Lead status update nahi ho paya. Please try again.');
+            setPageError(err || 'Could not update the lead status. Please try again.');
             return false;
         }
     };
@@ -236,7 +246,7 @@ export default function LeadPipeline() {
 
     const handleConfirmLost = async () => {
         if (!lostReason.trim()) {
-            setStatusError('Closed lost ke liye lost reason required hai');
+            setStatusError('A loss reason is required to mark a lead as Closed Lost.');
             return;
         }
         const moved = await moveLeadToStage(dropTarget.lead, dropTarget.status, lostReason.trim());
@@ -247,14 +257,14 @@ export default function LeadPipeline() {
     };
 
     return (
-        <Box sx={{ p: 3, bgcolor: '#f8fafc', minHeight: '100vh' }}>
+        <Box sx={{ p: 3, bgcolor: theme.palette.background.default, minHeight: '100vh' }}>
             {msg && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMsg('')}>{msg}</Alert>}
             {pageError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPageError('')}>{pageError}</Alert>}
             <Paper elevation={0} sx={{ p: 2.5, mb: 2.5, borderRadius: '14px', border: '1px solid #e5e7eb', bgcolor: '#fff' }}>
                 <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} spacing={2}>
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button startIcon={<BackIcon />} onClick={() => navigate('/crm/leads')}
-                            sx={{ textTransform: 'none', color: '#475569' }}>Back</Button>
+                            sx={{ textTransform: 'none', color: theme.palette.text.secondary }}>Back</Button>
                         <Box>
                             <Typography variant="h5" fontWeight={800}>Lead Pipeline</Typography>
                             <Typography variant="body2" color="text.secondary">Drag leads between columns or use the next-stage button</Typography>
@@ -288,7 +298,7 @@ export default function LeadPipeline() {
             <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
             <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2,
                 '&::-webkit-scrollbar': { height: 6 },
-                '&::-webkit-scrollbar-thumb': { bgcolor: '#d1d5db', borderRadius: 3 } }}>
+                '&::-webkit-scrollbar-thumb': { bgcolor: theme.palette.divider, borderRadius: 3 } }}>
                 {PIPELINE_STAGES.map((stage, stageIndex) => {
                     const stageLeads = grouped[stage.key] || [];
                     return (
@@ -298,7 +308,7 @@ export default function LeadPipeline() {
                                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: stage.color }} />
-                                        <Typography fontWeight={800} variant="body2" sx={{ color: '#0f172a' }}>
+                                        <Typography fontWeight={800} variant="body2" sx={{ color: theme.palette.text.primary }}>
                                             {stage.label}
                                         </Typography>
                                     </Stack>
@@ -351,7 +361,7 @@ export default function LeadPipeline() {
                                                     <Chip
                                                         label={`Aging ${signal.stageAging || 0}d`}
                                                         size="small"
-                                                        sx={{ fontSize: 10, height: 18, bgcolor: '#f8fafc', color: '#475569' }}
+                                                        sx={{ fontSize: 10, height: 18, bgcolor: theme.palette.action.selected, color: theme.palette.text.secondary }}
                                                     />
                                                     <Chip
                                                         label={signal.priority?.label || 'Normal'}
@@ -404,7 +414,7 @@ export default function LeadPipeline() {
                 <DialogContent>
                     {statusError && <Alert severity="error" sx={{ mb: 2 }}>{statusError}</Alert>}
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {dropTarget?.lead?.company_name || 'Lead'} ko Closed Lost me move karne ke liye reason add karo.
+                        {dropTarget?.lead?.company_name || 'Lead'} Add a reason to move this lead to Closed Lost.
                     </Typography>
                     <TextField fullWidth size="small" label="Lost Reason *" value={lostReason}
                         onChange={(e) => setLostReason(e.target.value)}

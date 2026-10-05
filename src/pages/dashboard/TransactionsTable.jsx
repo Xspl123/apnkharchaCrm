@@ -1,4 +1,4 @@
-import { Box, Chip, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { Box, Chip, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, useTheme } from "@mui/material";
 import TablePagination from "@mui/material/TablePagination";
 
 import { fmtAmt, getCategoryForTransaction, getTransactionDateValue } from "./dashboardUtils";
@@ -17,8 +17,9 @@ export default function TransactionsTable({
   setRowsPerPage,
   setSearch,
 }) {
+  const theme = useTheme();
   return (
-    <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+    <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderRadius: "16px", border: `1px solid ${theme.palette.divider}` }}>
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} mb={2} gap={1}>
         <Box>
           <Typography variant="h6" fontWeight={700}>Transactions</Typography>
@@ -32,12 +33,12 @@ export default function TransactionsTable({
           sx={{ width: { xs: "100%", sm: 280 }, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
         />
       </Stack>
-      <TableContainer sx={{ maxHeight: 400, borderRadius: "10px", bgcolor: "#ffffff", border: "1px solid #e5e7eb" }}>
+      <TableContainer sx={{ maxHeight: 400, borderRadius: "10px", bgcolor: theme.palette.background.paper, border: `1px solid ${theme.palette.divider}` }}>
         <Table size="small" stickyHeader sx={{ minWidth: 760 }}>
           <TableHead>
             <TableRow>
               {["Date", "Description", "Account", "Amount", "Type", "Category"].map((h) => (
-                <TableCell key={h} sx={{ fontWeight: 800, color: "#374151", bgcolor: "#ffffff", borderBottom: "1px solid #e5e7eb", whiteSpace: "nowrap", fontSize: 12 }}>{h}</TableCell>
+                <TableCell key={h} sx={{ fontWeight: 800, color: theme.palette.mode === "dark" ? theme.palette.background.paper : theme.palette.text.primary, bgcolor: theme.palette.mode === "dark" ? theme.palette.primary.main : theme.palette.background.default, borderBottom: `1px solid ${theme.palette.divider}`, whiteSpace: "nowrap", fontSize: 12 }}>{h}</TableCell>
               ))}
             </TableRow>
           </TableHead>
@@ -52,7 +53,7 @@ export default function TransactionsTable({
               const date = getTransactionDateValue(t.transaction_date);
 
               return (
-                <TableRow key={t.id ?? i} hover sx={{ bgcolor: i % 2 === 0 ? "#fff" : "#fafafa", "&:hover": { bgcolor: "#f8fafc" }, "& td": { borderBottomColor: "#eef2f7" } }}>
+                <TableRow key={t.id ?? i} hover sx={{ bgcolor: i % 2 === 0 ? theme.palette.background.paper : theme.palette.background.default, "&:hover": { bgcolor: theme.palette.action.hover }, "& td": { borderBottomColor: theme.palette.divider } }}>
                   <TableCell>{date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-IN") : "-"}</TableCell>
                   <TableCell>{t.description || "-"}</TableCell>
                   <TableCell>

@@ -19,7 +19,7 @@ const CategoriesTab = ({ categories, setCatForm, setCatEdit, setCatDialog, setCa
             {categories.length === 0 ? (
                 <Grid item xs={12}>
                     <Paper sx={{ p: 6, textAlign: 'center', borderRadius: '16px' }} elevation={1}>
-                        <Typography variant="h6" color="text.secondary">Koi category nahi hai abhi</Typography>
+                        <Typography variant="h6" color="text.secondary">No categories yet.</Typography>
                     </Paper>
                 </Grid>
             ) : categories.map((cat) => (

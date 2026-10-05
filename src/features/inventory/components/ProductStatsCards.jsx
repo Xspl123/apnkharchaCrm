@@ -12,11 +12,11 @@ const ProductStatsCards = ({ stats, categoriesCount }) => (
             { label: 'Out Stock', value: stats.outStock, color: '#ef4444' },
             { label: 'Categories', value: categoriesCount, color: '#9c27b0' },
         ].map((s, i) => (
-            <Grid item xs key={i}>
+            <Grid item xs={6} sm={4} md key={i}>
                 <motion.div whileHover={{ y: -2 }}>
                     <GlassCard>
-                        <CardContent sx={{ p: 2, textAlign: 'center' }}>
-                            <Typography variant="h4" fontWeight={800} color={s.color}>
+                        <CardContent sx={{ p: { xs: 1.25, sm: 2 }, textAlign: 'center' }}>
+                            <Typography variant="h4" fontWeight={800} color={s.color} sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                                 {s.value}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>

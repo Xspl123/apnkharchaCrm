@@ -48,10 +48,10 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
-const GlassCard = styled(Card)(() => ({
-    background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)',
-    borderRadius: '16px', border: '1px solid rgba(255,255,255,0.3)',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+const GlassCard = styled(Card)(({ theme }) => ({
+    background: theme.palette.background.paper, backdropFilter: 'blur(12px)',
+    borderRadius: '16px', border: `1px solid ${theme.palette.divider}`,
+    boxShadow: theme.palette.mode === 'dark' ? '0 4px 24px rgba(0,0,0,0.2)' : '0 4px 24px rgba(0,0,0,0.06)',
 }));
 
 const GradientButton = styled(Button)(({ gradient }) => ({
@@ -142,26 +142,28 @@ const STAGE_ORDER = [
     'closed_lost',
 ];
 
-const EnterpriseCard = styled(Card)(() => ({
-    background: '#fff',
+const EnterpriseCard = styled(Card)(({ theme }) => ({
+    background: theme.palette.background.paper,
     borderRadius: '18px',
-    border: '1px solid rgba(148,163,184,0.18)',
-    boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: theme.palette.mode === 'dark' ? '0 12px 32px rgba(0,0,0,0.24)' : '0 12px 32px rgba(15,23,42,0.06)',
 }));
 
-const MetricCard = styled(Box)(() => ({
+const MetricCard = styled(Box)(({ theme }) => ({
     padding: '16px',
     borderRadius: '14px',
-    background: 'linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)',
-    border: '1px solid rgba(148,163,184,0.14)',
+    background: theme.palette.mode === 'dark'
+        ? 'linear-gradient(180deg,#182235 0%,#111827 100%)'
+        : 'linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)',
+    border: `1px solid ${theme.palette.divider}`,
     height: '100%',
 }));
 
-const ActionCard = styled(Box)(() => ({
+const ActionCard = styled(Box)(({ theme }) => ({
     padding: '14px 16px',
     borderRadius: '14px',
-    border: '1px solid rgba(148,163,184,0.16)',
-    background: '#fff',
+    border: `1px solid ${theme.palette.divider}`,
+    background: theme.palette.background.paper,
 }));
 
 const getUserLabel = (user) => {
@@ -346,7 +348,7 @@ export default function LeadDetail() {
 
     const handleStatusUpdate = async () => {
         if (newStatus === 'closed_lost' && !lostReason.trim()) {
-            setStatusError('Closed lost ke liye lost reason required hai');
+            setStatusError('A loss reason is required to mark a lead as Closed Lost.');
             return;
         }
         await dispatch(updateLeadStatus({ id: lead.id, status: newStatus, lost_reason: lostReason.trim() }));
@@ -370,11 +372,11 @@ export default function LeadDetail() {
     const handleSendEmail = async () => {
         setEmailError('');
         if (!emailForm.to.trim()) {
-            setEmailError('To address zaroori hai (lead ka email save nahi hai)');
+            setEmailError('A recipient address is required (this lead has no saved email address).');
             return;
         }
         if (!emailForm.subject.trim() || !emailForm.body.trim()) {
-            setEmailError('Subject aur message dono zaroori hain');
+            setEmailError('Both the subject and message are required.');
             return;
         }
         setEmailSending(true);
@@ -390,9 +392,9 @@ export default function LeadDetail() {
             })).unwrap();
             setEmailDialog(false);
             dispatch(getLeadById(lead.id)); // refresh activity timeline so the sent email shows up
-            setMsg('Email bhej diya gaya!'); setTimeout(() => setMsg(''), 3000);
+            setMsg('Email sent.'); setTimeout(() => setMsg(''), 3000);
         } catch (err) {
-            setEmailError(err || 'Email bhejne mein dikkat hui');
+            setEmailError(err || 'There was a problem sending the email.');
         } finally {
             setEmailSending(false);
         }
@@ -520,17 +522,17 @@ export default function LeadDetail() {
     const handleSubmitQuotation = async () => {
         setQuotationError('');
         if (!quotationForm.quotation_date) {
-            setQuotationError('Quotation date zaroori hai');
+            setQuotationError('Quotation date is required.');
             return;
         }
         const validItems = quotationForm.items.filter((item) => item.item_name.trim());
         if (validItems.length === 0) {
-            setQuotationError('Kam se kam ek item (naam ke saath) zaroori hai');
+            setQuotationError('At least one item with a name is required.');
             return;
         }
         for (const item of validItems) {
             if (!item.qty || Number(item.qty) <= 0 || item.rate === '' || Number(item.rate) < 0) {
-                setQuotationError(`"${item.item_name}" ke liye valid qty aur rate daalein`);
+                setQuotationError(`""${item.item_name}" needs a valid quantity and rate.`);
                 return;
             }
         }
@@ -555,19 +557,19 @@ export default function LeadDetail() {
         try {
             if (quotationReviseSourceId) {
                 await dispatch(reviseQuotation({ id: quotationReviseSourceId, data: payload })).unwrap();
-                setMsg('Nayi version ban gayi!');
+                setMsg('New version created.');
             } else if (quotationEditId) {
                 await dispatch(updateQuotation({ id: quotationEditId, data: payload })).unwrap();
-                setMsg('Quotation update ho gayi!');
+                setMsg('Quotation updated.');
             } else {
                 await dispatch(createQuotationFromLead({ leadId: lead.id, data: payload })).unwrap();
                 dispatch(getLeadById(lead.id)); // status may have auto-advanced to "quotation_sent"
-                setMsg('Quotation ban gayi!');
+                setMsg('Quotation created.');
             }
             setTimeout(() => setMsg(''), 3000);
             setQuotationDialog(false);
         } catch (err) {
-            setQuotationError(err || 'Quotation save nahi ho payi');
+            setQuotationError(err || 'Could not save the quotation.');
         }
     };
 
@@ -600,7 +602,7 @@ export default function LeadDetail() {
             ]);
             await QuotationPrintPDF.handleExportPDF(full, () => {}, quotationPdfSnackbar, html2pdf);
         } catch (err) {
-            quotationPdfSnackbar(err || 'PDF download nahi ho paya', 'error');
+            quotationPdfSnackbar(err || 'Could not download the PDF.', 'error');
         } finally {
             setPdfLoadingId(null);
         }
@@ -621,11 +623,11 @@ export default function LeadDetail() {
         if (!sendQuotationDialog) return;
         setSendQuotationError('');
         if (!sendQuotationForm.to.trim()) {
-            setSendQuotationError('To address zaroori hai');
+            setSendQuotationError('A recipient address is required.');
             return;
         }
         if (!sendQuotationForm.subject.trim() || !sendQuotationForm.body.trim()) {
-            setSendQuotationError('Subject aur message dono zaroori hain');
+            setSendQuotationError('Both the subject and message are required.');
             return;
         }
         setSendQuotationSaving(true);
@@ -649,10 +651,10 @@ export default function LeadDetail() {
             setSendQuotationDialog(null);
             dispatch(getQuotations({ lead_id: lead.id })); // reflect the auto Draft→Sent status change
             dispatch(getLeadById(lead.id)); // reflect the new activity-log entry
-            setMsg('Quotation email bhej di gayi!');
+            setMsg('Quotation email sent.');
             setTimeout(() => setMsg(''), 3000);
         } catch (err) {
-            setSendQuotationError(err || 'Email bhejne mein dikkat hui');
+            setSendQuotationError(err || 'There was a problem sending the email.');
         } finally {
             setSendQuotationSaving(false);
         }
@@ -677,7 +679,7 @@ export default function LeadDetail() {
 
     const handleAttachCampaigns = async () => {
         if (selectedCampaignIds.length === 0) {
-            setCampaignError('At least one campaign select karo');
+            setCampaignError('Select at least one campaign.');
             return;
         }
 
@@ -695,7 +697,7 @@ export default function LeadDetail() {
             setMsg('Campaign linked!');
             setTimeout(() => setMsg(''), 3000);
         } catch (err) {
-            setCampaignError(err || 'Campaign attach nahi ho paya');
+            setCampaignError(err || 'Could not attach the campaign.');
         }
     };
 
@@ -707,18 +709,18 @@ export default function LeadDetail() {
             setMsg('Campaign removed!');
             setTimeout(() => setMsg(''), 3000);
         } catch (err) {
-            setCampaignError(err || 'Campaign detach nahi ho paya');
+            setCampaignError(err || 'Could not detach the campaign.');
         }
     };
 
     return (
-        <Box sx={{ p: 3, bgcolor: '#f8fafc', minHeight: '100vh' }}>
+        <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, bgcolor: 'background.default', minHeight: '100vh' }}>
             {msg && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMsg('')}>{msg}</Alert>}
 
             {/* Header Card */}
             <GlassCard sx={{ mb: 3, border: '1px solid #e5e7eb', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
                 <CardContent sx={{ p: 2.5 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, pb: 2, borderBottom: '1px solid #e5e7eb' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
                         <Button startIcon={<BackIcon />} onClick={() => navigate('/crm/leads')}
                             sx={{ textTransform: 'none', color: '#475569' }}>
                             Back to Leads
@@ -793,11 +795,11 @@ export default function LeadDetail() {
                     { label: 'Assigned To',      value: getLeadOwnerLabel(lead) },
                     { label: 'Created',          value: lead.created_at },
                 ].map((item) => (
-                    <Grid item xs={12} sm={6} md={2} key={item.label}>
-                        <GlassCard sx={{ height: '100%', border: '1px solid #e5e7eb' }}>
+                    <Grid item xs={12} sm={6} md={4} xl={2} key={item.label}>
+                        <GlassCard sx={{ height: '100%', borderColor: 'divider' }}>
                             <CardContent sx={{ py: 1.5, px: 2 }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={700}>{item.label}</Typography>
-                                <Typography fontWeight={700} variant="body2" sx={{ mt: 0.25 }} noWrap>{item.value}</Typography>
+                                <Typography fontWeight={700} variant="body2" sx={{ mt: 0.25, overflowWrap: 'anywhere' }}>{item.value}</Typography>
                             </CardContent>
                         </GlassCard>
                     </Grid>
@@ -834,7 +836,7 @@ export default function LeadDetail() {
                                 <Box sx={{ minWidth: 0 }}>
                                     <Typography variant="h6" fontWeight={700} mb={0.5}>Connected Modules</Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Lead ko business flow ke saath connect karo, isolated record mat rakho.
+                                        Connect this lead to your business workflow instead of leaving it as an isolated record.
                                     </Typography>
                                 </Box>
                                 <Button
@@ -866,7 +868,7 @@ export default function LeadDetail() {
                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
                                     {linkedCampaigns.length === 0 ? (
                                         <Typography variant="body2" color="text.secondary">
-                                            Koi campaign linked nahi hai.
+                                            No campaigns are linked.
                                         </Typography>
                                     ) : linkedCampaigns.map((campaign) => (
                                         <Chip
@@ -879,7 +881,7 @@ export default function LeadDetail() {
                                     ))}
                                 </Stack>
                             </Box>
-                            <Box sx={{ mt: 2, p: 1.5, borderRadius: '12px', bgcolor: '#f8fafc' }}>
+                            <Box sx={{ mt: 2, p: 1.5, borderRadius: '12px', bgcolor: 'action.hover' }}>
                                 <Typography variant="caption" color="text.secondary">Last touch</Typography>
                                 <Typography variant="body2" fontWeight={600}>
                                     {lastTouchDays === null ? 'No activity logged yet' : `${lastTouchDays} day(s) ago`}
@@ -891,8 +893,8 @@ export default function LeadDetail() {
             </Grid>
 
             {/* Tabs */}
-            <GlassCard sx={{ border: '1px solid #e5e7eb' }}>
-                <Box sx={{ borderBottom: '1px solid #e5e7eb', bgcolor: '#fff', position: 'sticky', top: 0, zIndex: 1 }}>
+            <GlassCard sx={{ borderColor: 'divider' }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', position: 'sticky', top: 0, zIndex: 1 }}>
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ px: 2, minHeight: 48 }}>
                         <Tab label={`Activities (${lead.activities?.length || 0})`} />
                         <Tab label={`Follow-ups (${lead.follow_ups?.length || 0})`} />
@@ -1058,7 +1060,7 @@ export default function LeadDetail() {
 
                                     {quotations.length === 0 ? (
                                         <Typography variant="body2" color="text.secondary">
-                                            Abhi tak is lead ke liye koi quotation nahi banayi gayi.
+                                            No quotations have been created for this lead yet.
                                         </Typography>
                                     ) : (
                                         <TableContainer>
@@ -1301,7 +1303,7 @@ export default function LeadDetail() {
                     )}
                     {quotationReviseSourceId && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            Yeh naya version banayega — purani quotation waisi hi (Sent/whatever status) rahegi, history mein.
+                            This creates a new version. The previous quotation and its status will remain in the history.
                         </Alert>
                     )}
 
@@ -1426,7 +1428,7 @@ export default function LeadDetail() {
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle fontWeight={700}>Delete Quotation?</DialogTitle>
                 <DialogContent>
-                    <Alert severity="warning">Yeh quotation permanently delete ho jaayegi.</Alert>
+                    <Alert severity="warning">This quotation will be permanently deleted.</Alert>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setQuotationDeleteId(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>
@@ -1458,7 +1460,7 @@ export default function LeadDetail() {
                             value={sendQuotationForm.body} onChange={(e) => setSendQuotationForm((p) => ({ ...p, body: e.target.value }))}
                             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
                         <Typography variant="caption" color="text.secondary">
-                            Quotation PDF automatically attach ho jaayegi. Reply seedha aapke email pe aayegi.
+                            The quotation PDF will be attached automatically. Replies will go directly to your email.
                         </Typography>
                     </Stack>
                 </DialogContent>
@@ -1513,7 +1515,7 @@ export default function LeadDetail() {
                 <DialogContent>
                     {campaignError && <Alert severity="error" sx={{ mb: 2 }}>{campaignError}</Alert>}
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {lead.company_name} ko campaign ke saath attach karo.
+                        {lead.company_name} to attach it to the campaign.
                     </Typography>
                     <FormControl fullWidth size="small">
                         <InputLabel>Select Campaigns</InputLabel>

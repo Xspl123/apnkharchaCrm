@@ -16,7 +16,7 @@ import { GlassCard, GradientButton, FormSection, UNITS } from './shared';
 const ProductForm = ({
     showForm, editMode, selectedProduct, formData, setFormData,
     handleChange, handleSubmit, handleCancel,
-    categories, hsnCodes, actionLoading, appendSpeech,
+    categories, hsnCodes, actionLoading, appendSpeech, onAttributeValuesChange,
 }) => (
     <AnimatePresence>
         {showForm && (
@@ -37,7 +37,7 @@ const ProductForm = ({
                                     {editMode ? `Edit — ${selectedProduct?.name}` : 'New Product'}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    {editMode ? 'Product details update karo' : 'Naya product add karo'}
+                                    {editMode ? 'Update product details' : 'Add a new product'}
                                 </Typography>
                             </Box>
                         </Stack>
@@ -62,6 +62,11 @@ const ProductForm = ({
                                     <TextField fullWidth size="small"
                                         label="SKU" name="sku"
                                         value={formData.sku} onChange={handleChange}
+                                        helperText={formData.sku
+                                            ? 'Product code (editable)'
+                                            : editMode
+                                                ? 'Blank SKU will be generated when you save.'
+                                                : 'Leave blank to generate a SKU automatically.'}
                                         InputProps={{
                                             endAdornment: <InputAdornment position="end"><SpeechFieldButton onTranscript={(text) => setFormData((prev) => ({ ...prev, sku: appendSpeech(prev.sku, text) }))} /></InputAdornment>,
                                         }}
@@ -123,7 +128,7 @@ const ProductForm = ({
                                         )}
                                         renderInput={(params) => (
                                             <TextField {...params} label="HSN Code"
-                                                placeholder="Type ya select karo..."
+                                                placeholder="Type or select..."
                                                 InputProps={{
                                                     ...params.InputProps,
                                                     endAdornment: (
@@ -138,7 +143,7 @@ const ProductForm = ({
                                         )}
                                         noOptionsText={
                                             <Typography variant="body2" color="text.secondary">
-                                                Koi HSN code nahi mila — manually type kar sakte ho
+                                                No HSN code found. You can enter it manually.
                                             </Typography>
                                         }
                                     />
@@ -252,15 +257,15 @@ const ProductForm = ({
                                 </Grid>
 
                                 {/* ✅ Product Attributes — category select hone ke baad load hoge */}
-                                {(formData.product_category_id || editMode) && (
-                                    <Grid item xs={12}>
-                                        <Divider sx={{ mb: 2 }} />
-                                        <ProductAttributeForm
-                                            productId={editMode ? selectedProduct?.id : null}
-                                            categoryId={formData.product_category_id || null}
-                                        />
-                                    </Grid>
-                                )}
+                                <Grid item xs={12}>
+                                    <Divider sx={{ mb: 2 }} />
+                                    <ProductAttributeForm
+                                        productId={editMode ? selectedProduct?.id : null}
+                                        categoryId={formData.product_category_id || null}
+                                        initialValues={selectedProduct?.attribute_values}
+                                        onValuesChange={onAttributeValuesChange}
+                                    />
+                                </Grid>
 
                                 <Grid item xs={12}>
                                     <Divider sx={{ mb: 2 }} />
@@ -298,6 +303,7 @@ ProductForm.propTypes = {
     hsnCodes: PropTypes.array.isRequired,
     actionLoading: PropTypes.bool,
     appendSpeech: PropTypes.func.isRequired,
+    onAttributeValuesChange: PropTypes.func,
 };
 
 export default ProductForm;

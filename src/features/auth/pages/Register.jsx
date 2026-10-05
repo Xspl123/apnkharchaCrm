@@ -10,12 +10,13 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Box,
   Grid,
   InputAdornment,
   IconButton,
+  useTheme,
 } from "@mui/material";
 import {
-  AccountBalanceWallet,
   Visibility,
   VisibilityOff,
   Person as PersonIcon,
@@ -24,6 +25,16 @@ import {
 } from "@mui/icons-material";
 
 const Register = () => {
+  const theme = useTheme();
+  const inputSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: theme.palette.background.default,
+      color: theme.palette.text.primary,
+      "& fieldset": { borderColor: theme.palette.divider },
+      "&:hover fieldset": { borderColor: theme.palette.primary.main },
+    },
+    "& .MuiInputLabel-root": { color: theme.palette.text.secondary },
+  };
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
@@ -73,8 +84,9 @@ const Register = () => {
       alignItems="center"
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(45deg, #ff9a9e, #fad0c4, #fbc2eb, #a8e063, #f8ff00, #ff0000, #89cff0)",
+        background: theme.palette.mode === "dark"
+          ? "linear-gradient(135deg, #0b1220, #111827 55%, #172554)"
+          : "linear-gradient(135deg, #eff6ff, #f5f3ff 55%, #f8fafc)",
         backgroundSize: "400% 400%",
         animation: "gradientAnimation 10s ease infinite",
         padding: "20px",
@@ -98,7 +110,8 @@ const Register = () => {
             borderRadius: "16px",
             textAlign: "center",
             margin: "auto",
-            background: "rgba(255, 255, 255, 0.95)",
+            background: theme.palette.background.paper,
+            color: theme.palette.text.primary,
             boxShadow: "0px 6px 30px rgba(0, 0, 0, 0.3)",
             transform: "scale(1)",
             transition: "transform 0.3s ease",
@@ -106,12 +119,18 @@ const Register = () => {
           onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.02)")}
           onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
         >
-          <AccountBalanceWallet
-            style={{
-              fontSize: 60,
-              color: "#764ba2",
-              marginBottom: "20px",
-              animation: "bounce 2s infinite",
+          <Box
+            component="img"
+            src="/pwa/icon-512.png"
+            alt="Kharcha logo"
+            sx={{
+              display: "block",
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
+              objectFit: "contain",
+              borderRadius: 2,
+              mx: "auto",
+              mb: 2,
             }}
           />
           <Typography
@@ -119,11 +138,10 @@ const Register = () => {
             fontWeight="bold"
             gutterBottom
             style={{
-              color: "#333",
+              color: theme.palette.text.primary,
               fontFamily: "'Pacifico', cursive",
               textAlign: "center",
               fontSize: "2em",
-              animation: "colorAnimation 5s infinite",
             }}
           >
             Kharcha
@@ -131,7 +149,7 @@ const Register = () => {
           <Typography
             variant="body1"
             style={{
-              color: "#555",
+              color: theme.palette.text.secondary,
               marginBottom: "20px",
             }}
           >
@@ -161,11 +179,12 @@ const Register = () => {
               margin="normal"
               value={form.name}
               onChange={handleChange}
+              sx={inputSx}
               InputProps={{
                 style: { fontSize: "16px" },
                 startAdornment: (
                   <InputAdornment position="start">
-                    <PersonIcon sx={{ color: "#764ba2", fontSize: 18 }} />
+                    <PersonIcon sx={{ color: theme.palette.primary.main, fontSize: 18 }} />
                   </InputAdornment>
                 ),
               }}
@@ -184,11 +203,12 @@ const Register = () => {
               margin="normal"
               value={form.email}
               onChange={handleChange}
+              sx={inputSx}
               InputProps={{
                 style: { fontSize: "16px" },
                 startAdornment: (
                   <InputAdornment position="start">
-                    <EmailIcon sx={{ color: "#764ba2", fontSize: 18 }} />
+                    <EmailIcon sx={{ color: theme.palette.primary.main, fontSize: 18 }} />
                   </InputAdornment>
                 ),
               }}
@@ -206,11 +226,12 @@ const Register = () => {
               margin="normal"
               value={form.phone}
               onChange={handleChange}
+              sx={inputSx}
               InputProps={{
                 style: { fontSize: "16px" },
                 startAdornment: (
                   <InputAdornment position="start">
-                    <PhoneIcon sx={{ color: "#764ba2", fontSize: 18 }} />
+                    <PhoneIcon sx={{ color: theme.palette.primary.main, fontSize: 18 }} />
                   </InputAdornment>
                 ),
               }}
@@ -229,6 +250,7 @@ const Register = () => {
               margin="normal"
               value={form.password}
               onChange={handleChange}
+              sx={inputSx}
               InputProps={{
                 style: { fontSize: "16px" },
                 endAdornment: (
@@ -237,7 +259,7 @@ const Register = () => {
                       onClick={() => setShowPassword((prev) => !prev)}
                       edge="end"
                       size="small"
-                      sx={{ color: "#764ba2" }}
+                      sx={{ color: theme.palette.primary.main }}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -261,11 +283,11 @@ const Register = () => {
                 fontSize: "16px",
                 fontWeight: "bold",
                 textTransform: "none",
-                background: "#764ba2",
+                background: theme.palette.primary.main,
                 transition: "background 0.3s ease",
               }}
-              onMouseOver={(e) => (e.target.style.background = "#5a3d8a")}
-              onMouseOut={(e) => (e.target.style.background = "#764ba2")}
+              onMouseOver={(e) => (e.target.style.background = theme.palette.primary.dark)}
+              onMouseOut={(e) => (e.target.style.background = theme.palette.primary.main)}
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : "Register"}
             </Button>
@@ -276,7 +298,7 @@ const Register = () => {
             align="center"
             style={{
               marginTop: "20px",
-              color: "#555",
+              color: theme.palette.text.secondary,
             }}
           >
             Already have an account?{" "}
@@ -284,7 +306,7 @@ const Register = () => {
               to="/"
               style={{
                 textDecoration: "none",
-                color: "#764ba2",
+                color: theme.palette.primary.main,
                 fontWeight: "bold",
                 transition: "color 0.3s ease",
               }}

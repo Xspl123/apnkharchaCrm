@@ -7,8 +7,25 @@ export const getUsers = createAsyncThunk(
     'users/getAll',
     async (params = {}, { rejectWithValue }) => {
         try {
-            const { data } = await axiosClient.get('/users', { params });
-            return data.data;
+            const pageSize = 100;
+            const firstResponse = await axiosClient.get('/users', {
+                params: { ...params, page: 1, per_page: pageSize },
+            });
+            const firstPage = firstResponse.data;
+            const users = Array.isArray(firstPage?.data)
+                ? [...firstPage.data]
+                : Array.isArray(firstPage) ? [...firstPage] : [];
+            const lastPage = Number(firstPage?.last_page ?? firstPage?.meta?.last_page ?? 1);
+
+            for (let page = 2; page <= lastPage; page += 1) {
+                const { data } = await axiosClient.get('/users', {
+                    params: { ...params, page, per_page: pageSize },
+                });
+                const pageUsers = Array.isArray(data?.data) ? data.data : [];
+                users.push(...pageUsers);
+            }
+
+            return users;
         } catch (err) {
             return rejectWithValue(err.response?.data?.message || 'Failed');
         }

@@ -75,10 +75,10 @@ const StockMovementDialog = ({ movDialog, setMovDialog, movForm, setMovForm, mov
                         onChange={(e) => setMovForm((p) => ({ ...p, qty: e.target.value }))}
                         helperText={
                             movForm.type === 'adjustment'
-                                ? `⚠️ Actual physical count daalo — system ${movProduct?.current_stock ?? 0} se adjust karega`
+                                ? `⚠️ Enter the actual physical count. The system will adjust the stock from ${movProduct?.current_stock ?? 0}.`
                                 : movForm.type === 'manual_in'
-                                    ? '✅ Yeh qty current stock mein add hogi'
-                                    : '❌ Yeh qty current stock se minus hogi'
+                                    ? '✅ This quantity will be added to current stock.'
+                                    : '❌ This quantity will be deducted from current stock.'
                         }
                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
                     />

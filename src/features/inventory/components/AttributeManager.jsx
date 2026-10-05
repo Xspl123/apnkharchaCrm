@@ -191,7 +191,7 @@ const AttributeManager = ({ categories = [] }) => {
                 <Box>
                     <Typography variant="h6" fontWeight={700}>🎛️ Attribute Groups</Typography>
                     <Typography variant="caption" color="text.secondary">
-                        Category-wise product attributes manage karo
+                        Manage product attributes by category
                     </Typography>
                 </Box>
                 <GradientButton startIcon={<AddIcon />}
@@ -208,13 +208,13 @@ const AttributeManager = ({ categories = [] }) => {
                         <AttrIcon sx={{ fontSize: 40, color: '#667eea' }} />
                     </Avatar>
                     <Typography variant="h6" color="text.secondary" gutterBottom>
-                        Koi attribute group nahi hai
+                        No attribute groups found
                     </Typography>
                     <Typography variant="body2" color="text.secondary" mb={3}>
-                        Electronics ke liye RAM/Storage/Brand, General ke liye Color/Weight add karo
+                        Add RAM, storage, and brand attributes for Electronics, or color and weight for General products.
                     </Typography>
                     <GradientButton startIcon={<AddIcon />} onClick={() => handleOpenGroup()}>
-                        Pehla Group Banao
+                        Create Your First Group
                     </GradientButton>
                 </Paper>
             ) : (
@@ -290,7 +290,7 @@ const AttributeManager = ({ categories = [] }) => {
                                         {!group.attributes?.length ? (
                                             <Box sx={{ py: 2, textAlign: 'center' }}>
                                                 <Typography variant="body2" color="text.secondary">
-                                                    Koi attribute nahi — + button se add karo
+                                                    No attributes yet. Use the + button to add one.
                                                 </Typography>
                                             </Box>
                                         ) : (
@@ -466,11 +466,11 @@ const AttributeManager = ({ categories = [] }) => {
                                 <Box>
                                     <Typography variant="caption" fontWeight={600} color="text.secondary"
                                         display="block" mb={1}>
-                                        Options (Enter dabaao ya + click karo)
+                                        Options (press Enter or click +)
                                     </Typography>
                                     <Stack direction="row" spacing={1} mb={1}>
                                         <TextField fullWidth size="small"
-                                            placeholder="Option add karo..."
+                                            placeholder="Add an option..."
                                             value={optionInput}
                                             onChange={(e) => setOptionInput(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
@@ -490,7 +490,7 @@ const AttributeManager = ({ categories = [] }) => {
                                         ))}
                                         {attrForm.options.length === 0 && (
                                             <Typography variant="caption" color="text.disabled">
-                                                Koi option nahi — upar se add karo
+                                                No options yet. Add one above.
                                             </Typography>
                                         )}
                                     </Stack>

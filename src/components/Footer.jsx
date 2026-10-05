@@ -1,16 +1,14 @@
-import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import "./Footer.css";
 
 const Footer = () => {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
     return (
         <Box
             component="footer"
             className="app-footer"
             style={{
-                "--footer-left": isMobile ? "0" : "auto",
                 "--footer-border": theme.palette.divider,
                 "--footer-bg":
                     theme.palette.mode === "dark"

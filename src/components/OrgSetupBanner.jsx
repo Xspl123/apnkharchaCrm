@@ -45,10 +45,10 @@ export default function OrgSetupBanner() {
                 </Box>
                 <Box>
                     <Typography fontWeight={700} variant="body1">
-                        🚀 Organisation Setup Karein
+                        🚀 Set Up Your Organization
                     </Typography>
                     <Typography variant="body2" sx={{ opacity: 0.85 }}>
-                        Inventory, Invoices, CRM aur ERP modules use karne ke liye organisation banayein
+                        Create an organization to use the Inventory, Invoices, CRM, and ERP modules.
                     </Typography>
                 </Box>
             </Stack>
@@ -65,7 +65,7 @@ export default function OrgSetupBanner() {
                     '&:hover': { bgcolor: '#f3f0ff' },
                     whiteSpace: 'nowrap',
                 }}>
-                Setup Karein
+                Set Up
             </Button>
         </Box>
     );

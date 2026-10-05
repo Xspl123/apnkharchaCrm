@@ -1,4 +1,4 @@
-import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Paper, Stack, Typography, useTheme } from "@mui/material";
 import { Add, CallMade, Download, SwapHoriz } from "@mui/icons-material";
 
 const actions = [
@@ -8,12 +8,13 @@ const actions = [
 ];
 
 export default function QuickActionsPanel({ handleDownloadReport, navigate }) {
+  const theme = useTheme();
   return (
-    <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: "16px", border: "1px solid #e2e8f0", bgcolor: "#fff" }}>
+    <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: "16px", border: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
       <Stack direction={{ xs: "column", md: "row" }} alignItems={{ md: "center" }} justifyContent="space-between" gap={2}>
         <Box>
           <Typography variant="h6" fontWeight={800}>Quick Actions</Typography>
-          <Typography variant="body2" color="text.secondary">Dashboard se direct daily finance entries start karo</Typography>
+          <Typography variant="body2" color="text.secondary">Start recording daily finances directly from the dashboard.</Typography>
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} gap={1} flexWrap="wrap">
           {actions.map((action) => (
@@ -24,12 +25,12 @@ export default function QuickActionsPanel({ handleDownloadReport, navigate }) {
               variant="outlined"
               sx={{
                 borderRadius: "10px",
-                borderColor: `${action.color}55`,
+                borderColor: `${action.color}88`,
                 color: action.color,
                 fontWeight: 800,
                 textTransform: "none",
                 minHeight: 40,
-                "&:hover": { borderColor: action.color, bgcolor: `${action.color}0f` },
+                "&:hover": { borderColor: action.color, bgcolor: theme.palette.action.hover },
               }}
             >
               {action.label}
@@ -39,7 +40,7 @@ export default function QuickActionsPanel({ handleDownloadReport, navigate }) {
             startIcon={<Download />}
             onClick={handleDownloadReport}
             variant="contained"
-            sx={{ borderRadius: "10px", bgcolor: "#0f172a", fontWeight: 800, textTransform: "none", minHeight: 40, "&:hover": { bgcolor: "#1e293b" } }}
+            sx={{ borderRadius: "10px", bgcolor: theme.palette.primary.main, color: theme.palette.mode === "dark" ? "#0b1220" : "#fff", fontWeight: 800, textTransform: "none", minHeight: 40, "&:hover": { bgcolor: theme.palette.primary.dark } }}
           >
             Download Report
           </Button>

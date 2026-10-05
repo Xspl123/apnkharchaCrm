@@ -29,10 +29,10 @@ const formatRelativeTime = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
     const minutes = Math.round((Date.now() - date.getTime()) / 60000);
-    if (minutes < 1) return 'abhi abhi';
-    if (minutes < 60) return `${minutes} min pehle`;
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} min ago`;
     const hours = Math.round(minutes / 60);
-    if (hours < 24) return `${hours} ghante pehle`;
+    if (hours < 24) return `${hours} hr ago`;
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 };
 
@@ -204,8 +204,8 @@ export default function FollowUpReminderBell() {
         <>
             <Tooltip title={
                 notifPermission === 'granted' ? 'Notifications' :
-                notifPermission === 'unsupported' ? 'Browser notifications supported nahi hain' :
-                'Browser notifications on karne ke liye click karo'
+                notifPermission === 'unsupported' ? 'Browser notifications are not supported.' :
+                'Click to enable browser notifications.'
             }>
                 <IconButton
                     color="inherit"
@@ -232,12 +232,12 @@ export default function FollowUpReminderBell() {
                         <Typography variant="subtitle1" fontWeight={700}>Notifications</Typography>
                         {notifPermission !== 'granted' && notifPermission !== 'unsupported' && (
                             <Button size="small" onClick={requestNotifPermission} sx={{ textTransform: 'none', mt: 0.5, p: 0 }}>
-                                Browser notifications on karo
+                                Enable browser notifications
                             </Button>
                         )}
                         {notifPermission === 'denied' && (
                             <Typography variant="caption" color="error" display="block">
-                                Notifications block hain — browser settings me manually allow karna hoga.
+                                Notifications are blocked. Allow them in your browser settings.
                             </Typography>
                         )}
                     </Box>

@@ -30,17 +30,17 @@ const TEMPLATES = [
   {
     emoji: '🪔', title: 'Diwali Sale', campaign: 'diwali_sale_2026',
     source: 'facebook', medium: 'cpc',
-    message: 'Diwali special offers live hain! Hamare latest deals dekhne aur enquiry bhejne ke liye niche diye gaye link par click karein.',
+    message: 'Our Diwali special offers are live! Click the link below to explore our latest deals and send us an inquiry.',
   },
   {
     emoji: '🌺', title: 'Navratri Offer', campaign: 'navratri_offer',
     source: 'whatsapp', medium: 'status',
-    message: 'Namaste! Hamare latest products dekhne aur enquiry bhejne ke liye niche diye gaye link par click karein.',
+    message: 'Hello! Click the link below to explore our latest products and send us an inquiry.',
   },
   {
     emoji: '🎄', title: 'New Year', campaign: 'new_year_offer',
     source: 'instagram', medium: 'organic',
-    message: 'New Year, naye offers! Hamare latest catalog dekhne ke liye niche diye gaye link par click karein.',
+    message: 'New Year, new offers! Click the link below to explore our latest catalog.',
   },
 ];
 
@@ -128,16 +128,16 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
     setTemplateTitle(`${tpl.emoji} ${tpl.title}`);
     setTemplateMsg(tpl.message);
     setTab(0);
-    showSnack(`"${tpl.title}" template laga diya`, 'info');
+    showSnack(`"${tpl.title}" template applied`, 'info');
   };
 
   const handleGenerateLink = () => {
     if (!link) {
-      showSnack('Organisation load nahi hui, thodi der baad try karein', 'error');
+      showSnack('Organization could not be loaded. Please try again later.', 'error');
       return;
     }
     if (!campaignName.trim()) {
-      showSnack('Campaign Name bharna zaroori hai', 'error');
+      showSnack('Campaign name is required.', 'error');
       return;
     }
     const entry = {
@@ -149,7 +149,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
     const updated = [entry, ...history.filter((h) => h.link !== link)];
     setHistory(updated);
     saveHistory(updated);
-    showSnack('Campaign link generate ho gaya aur history me save ho gaya!', 'success');
+    showSnack('Campaign link generated and saved to history.', 'success');
   };
 
   const handleCopy = async () => {
@@ -158,7 +158,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
       await navigator.clipboard.writeText(link);
       showSnack('Campaign link copied successfully!', 'success');
     } catch {
-      showSnack('Copy nahi ho paya, manually copy karein', 'error');
+      showSnack('Could not copy. Please copy it manually.', 'error');
     }
   };
 
@@ -167,7 +167,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
       await navigator.clipboard.writeText(l);
       showSnack('Link copied successfully!', 'success');
     } catch {
-      showSnack('Copy nahi ho paya', 'error');
+      showSnack('Could not copy.', 'error');
     }
   };
 
@@ -181,7 +181,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
     a.download = `${slugify(campaignName) || 'utm'}_qr.png`;
     a.click();
     URL.revokeObjectURL(url);
-    showSnack('QR code download ho gaya', 'success');
+    showSnack('QR code downloaded.', 'success');
   };
 
   const handleCopyQr = async () => {
@@ -190,9 +190,9 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
       const res = await fetch(qrUrl);
       const blob = await res.blob();
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-      showSnack('QR code copy ho gaya', 'success');
+      showSnack('QR code copied.', 'success');
     } catch {
-      showSnack('QR copy is browser me support nahi hai', 'error');
+      showSnack('QR code copying is not supported by this browser.', 'error');
     }
   };
 
@@ -216,7 +216,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
   const handleShareWhatsApp = () => {
     if (!link) return;
     const heading = templateTitle || '🔗 Campaign Link';
-    const body = templateMsg || 'Namaste! Hamare latest products dekhne aur enquiry bhejne ke liye niche diye gaye link par click karein.';
+    const body = templateMsg || 'Hello! Click the link below to explore our latest products and send us an inquiry.';
     const message = `${heading}\n${body}\n👉 ${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -300,7 +300,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
                   multiline
                   minRows={2}
                   sx={{ mt: 0.5 }}
-                  value={link || 'Organisation load ho rahi hai...'}
+                  value={link || 'Loading organization...'}
                   InputProps={{
                     readOnly: true,
                     sx: { fontSize: 13, bgcolor: '#f8fafc', borderRadius: '10px' },
@@ -363,7 +363,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
                   </Stack>
                 </>
               ) : (
-                <Typography color="text.secondary">Pehle campaign name aur source fill karein</Typography>
+                <Typography color="text.secondary">Enter a campaign name and source first.</Typography>
               )}
             </Stack>
           )}
@@ -412,7 +412,7 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
                   {history.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                        Abhi tak koi link generate nahi hua
+                        No links have been generated yet.
                       </TableCell>
                     </TableRow>
                   ) : history.map((row) => {

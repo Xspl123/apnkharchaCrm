@@ -1,4 +1,4 @@
-import { Box, Grid, Paper, Stack, Typography } from "@mui/material";
+import { Box, Grid, Paper, Stack, Typography, useTheme } from "@mui/material";
 import { AccountBalanceWallet, CreditCard, Moving, ReceiptLong, TrendingDown, TrendingUp } from "@mui/icons-material";
 import { calcDelta, fmtAmt } from "./dashboardUtils";
 
@@ -12,6 +12,7 @@ const items = [
 ];
 
 export default function KpiSection({ dashboardSummary, previousPeriodSummary }) {
+  const theme = useTheme();
   return (
     <Grid container spacing={1.5} mb={3}>
       {items.map((item) => {
@@ -31,20 +32,22 @@ export default function KpiSection({ dashboardSummary, previousPeriodSummary }) 
                 p: 2,
                 height: "100%",
                 borderRadius: "14px",
-                border: "1px solid #e2e8f0",
-                background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-                boxShadow: "0 12px 26px rgba(15, 23, 42, 0.06)",
+                border: `1px solid ${theme.palette.divider}`,
+                background: theme.palette.mode === "dark"
+                  ? `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+                  : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+                boxShadow: theme.palette.mode === "dark" ? "0 12px 26px rgba(0, 0, 0, 0.2)" : "0 12px 26px rgba(15, 23, 42, 0.06)",
               }}
             >
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1.5}>
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="caption" fontWeight={700} sx={{ color: "#64748b", textTransform: "uppercase" }}>
+                  <Typography variant="caption" fontWeight={700} sx={{ color: theme.palette.text.secondary, textTransform: "uppercase" }}>
                     {item.title}
                   </Typography>
-                  <Typography variant="h6" fontWeight={800} sx={{ color: value < 0 ? "#dc2626" : "#0f172a", mt: 0.5 }} noWrap>
+                  <Typography variant="h6" fontWeight={800} sx={{ color: value < 0 ? "#dc2626" : theme.palette.text.primary, mt: 0.5 }} noWrap>
                     {fmtAmt(value)}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: item.key === "card" && dashboardSummary.creditCardLimit > 0 ? "#92400e" : "#94a3b8", fontWeight: item.key === "card" ? 700 : 400 }}>
+                  <Typography variant="caption" sx={{ color: item.key === "card" && dashboardSummary.creditCardLimit > 0 ? (theme.palette.mode === "dark" ? "#fbbf24" : "#92400e") : theme.palette.text.secondary, fontWeight: item.key === "card" ? 700 : 400 }}>
                     {item.key === "card" && dashboardSummary.creditCardLimit > 0
                       ? `${((dashboardSummary.creditCardOutstanding / dashboardSummary.creditCardLimit) * 100).toFixed(1)}% used | Available ${fmtAmt(dashboardSummary.creditCardAvailableLimit)}`
                       : delta !== undefined ? `${Math.abs(delta).toFixed(1)}% vs last month` : item.subtitle}

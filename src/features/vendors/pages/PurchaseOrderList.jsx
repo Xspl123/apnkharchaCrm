@@ -30,7 +30,7 @@ import {
     DateRange as DateRangeIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import SpeechFieldButton from '../../../components/SpeechFieldButton';
 
 // ── Styled Components ─────────────────────────────────────
@@ -157,6 +157,8 @@ const StatusChip = ({ status }) => {
 
 const PurchaseOrderList = () => {
     const dispatch = useDispatch();
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const { purchaseOrders, vendors, payments, isLoading, actionLoading } =
         useSelector((s) => s.vendors);
     const { products, categories } = useSelector((s) => s.inventory);
@@ -307,7 +309,7 @@ const PurchaseOrderList = () => {
 
     const handleRemoveItem = (index) => {
         if (formData.items.length === 1) {
-            showSnackbar('Kam se kam ek item required hai', 'warning');
+            showSnackbar('Add at least one item.', 'warning');
             return;
         }
         setFormData((p) => ({ ...p, items: p.items.filter((_, i) => i !== index) }));
@@ -323,20 +325,20 @@ const PurchaseOrderList = () => {
         e.preventDefault();
 
         if (!formData.vendor_id) {
-            showSnackbar('Vendor select karo!', 'error'); return;
+            showSnackbar('Select a vendor.', 'error'); return;
         }
 
         for (let i = 0; i < formData.items.length; i++) {
             const item = formData.items[i];
             const num  = i + 1;
             if (!item.item_name?.trim()) {
-                showSnackbar(`Item ${num}: Product naam daalo!`, 'error'); return;
+                showSnackbar(`Item ${num}: Enter a product name.`, 'error'); return;
             }
             if (!item.qty || parseFloat(item.qty) <= 0) {
-                showSnackbar(`Item ${num} (${item.item_name}): Qty daalo!`, 'error'); return;
+                showSnackbar(`Item ${num} (${item.item_name}): Enter a quantity.`, 'error'); return;
             }
             if (!item.rate || parseFloat(item.rate) <= 0) {
-                showSnackbar(`Item ${num} (${item.item_name}): Rate daalo — 0 nahi hona chahiye!`, 'error'); return;
+                showSnackbar(`Item ${num} (${item.item_name}): Enter a rate greater than 0.`, 'error'); return;
             }
         }
 
@@ -385,9 +387,9 @@ const PurchaseOrderList = () => {
             setLoading(true);
             await dispatch(updatePOStatus({ id: statusPO.id, status: newStatus })).unwrap();
             if (newStatus === 'received') {
-                showSnackbar('PO received! Inventory update ho raha hai... 📦', 'info');
+                showSnackbar('Purchase order received. Updating inventory... 📦', 'info');
                 await dispatch(getProducts());
-                showSnackbar('✅ Stock updated! Naaye products inventory mein add ho gaye.', 'success');
+                showSnackbar('✅ Stock updated. New products have been added to inventory.', 'success');
             } else {
                 showSnackbar(`PO marked as ${newStatus}!`);
             }
@@ -449,10 +451,10 @@ const PurchaseOrderList = () => {
         const maxBalance = parseFloat(paymentPO?.balance_amount) || 0;
 
         if (!amount || amount <= 0) {
-            showSnackbar('Valid amount daalo!', 'error'); return;
+            showSnackbar('Enter a valid amount.', 'error'); return;
         }
         if (maxBalance > 0 && amount > maxBalance) {
-            showSnackbar('Payment amount outstanding balance se zyada nahi ho sakta.', 'error'); return;
+            showSnackbar('Payment amount cannot exceed the outstanding balance.', 'error'); return;
         }
         try {
             setLoading(true);
@@ -535,15 +537,16 @@ const PurchaseOrderList = () => {
             }}>
 
                 {/* # */}
-                <TableCell sx={{ color: '#94a3b8', fontWeight: 600, width: 40, pt: 1.5 }}>
+                <TableCell data-label="Item #" sx={{ color: '#94a3b8', fontWeight: 600, width: 40, pt: 1.5 }}>
                     {String(index + 1).padStart(2, '0')}
                 </TableCell>
 
                 {/* ✅ Product / Item — freeSolo Autocomplete (FIXED) */}
-                <TableCell sx={{ minWidth: 220 }}>
+                <TableCell data-label="Product / Item" sx={{ minWidth: 220 }}>
                     <Autocomplete
                         freeSolo
                         size="small"
+                        sx={{ width: '100%', minWidth: 0 }}
                         options={products || []}
                         getOptionLabel={(opt) =>
                             typeof opt === 'string' ? opt : opt.name || ''
@@ -614,7 +617,7 @@ const PurchaseOrderList = () => {
                         renderInput={(params) => (
                             <TextField
                                 {...params}
-                                placeholder="Search ya naya naam type karo..."
+                                placeholder="Search or enter a new name..."
                                 error={nameError}
                                 helperText={nameError ? 'Product naam required hai' : ''}
                                 InputProps={{
@@ -634,7 +637,7 @@ const PurchaseOrderList = () => {
                                 }}
                             />
                         )}
-                        noOptionsText="Inventory mein nahi mila — PO receive hone par auto add hoga 🆕"
+                        noOptionsText="No inventory match found. It will be added automatically when the purchase order is received. 🆕"
                     />
                     {/* Badges */}
                     <Stack direction="row" spacing={0.5} mt={0.3} flexWrap="wrap">
@@ -646,10 +649,18 @@ const PurchaseOrderList = () => {
                                 sx={{ height: 18, fontSize: 10, bgcolor: 'rgba(17,153,142,0.1)', color: '#11998e', fontWeight: 700 }}
                             />
                         )}
+                        {linkedProduct?.sku && (
+                            <Chip
+                                label={`SKU: ${linkedProduct.sku}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 18, fontSize: 10 }}
+                            />
+                        )}
                         {isNew && (
                             <Chip
                                 icon={<AutoIcon sx={{ fontSize: '11px !important' }} />}
-                                label="Auto Create Hoga"
+                                label="Will Be Created Automatically"
                                 size="small"
                                 sx={{ height: 18, fontSize: 10, bgcolor: 'rgba(102,126,234,0.1)', color: '#667eea', fontWeight: 700 }}
                             />
@@ -658,9 +669,10 @@ const PurchaseOrderList = () => {
                 </TableCell>
 
                 {/* HSN */}
-                <TableCell sx={{ minWidth: 140 }}>
+                <TableCell data-label="HSN" sx={{ minWidth: 140 }}>
                     <Autocomplete
                         freeSolo size="small"
+                        sx={{ width: '100%', minWidth: 0 }}
                         options={hsnCodes}
                         getOptionLabel={(opt) =>
                             typeof opt === 'string' ? opt : opt.hsn_code || ''
@@ -711,12 +723,12 @@ const PurchaseOrderList = () => {
                             <TextField {...params} placeholder="HSN..."
                                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }} />
                         )}
-                        noOptionsText="Type karo..."
+                        noOptionsText="Type..."
                     />
                 </TableCell>
 
                 {/* Category ✅ NEW */}
-                <TableCell sx={{ minWidth: 130 }}>
+                <TableCell data-label="Category" sx={{ minWidth: 130 }}>
                     <Select fullWidth size="small"
                         value={item.category_id || ''}
                         onChange={(e) => handleItemChange(index, 'category_id', e.target.value || null)}
@@ -730,7 +742,7 @@ const PurchaseOrderList = () => {
                 </TableCell>
 
                 {/* Qty */}
-                <TableCell sx={{ minWidth: 80 }}>
+                <TableCell data-label="Quantity" sx={{ minWidth: 80 }}>
                     <TextField fullWidth size="small" type="number"
                         inputProps={{ min: 0.01, step: 'any' }}
                         value={item.qty}
@@ -741,7 +753,7 @@ const PurchaseOrderList = () => {
                 </TableCell>
 
                 {/* Unit */}
-                <TableCell sx={{ minWidth: 80 }}>
+                <TableCell data-label="Unit" sx={{ minWidth: 80 }}>
                     <Select fullWidth size="small" value={item.unit}
                         onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
                         sx={{ borderRadius: '8px' }}>
@@ -752,7 +764,7 @@ const PurchaseOrderList = () => {
                 </TableCell>
 
                 {/* Rate ✅ — placeholder 0.00, error shown */}
-                <TableCell sx={{ minWidth: 110 }}>
+                <TableCell data-label="Rate" sx={{ minWidth: 110 }}>
                     <TextField fullWidth size="small" type="number"
                         inputProps={{ min: 0.01, step: 'any' }}
                         placeholder="0.00"
@@ -768,7 +780,7 @@ const PurchaseOrderList = () => {
                 </TableCell>
 
                 {/* Tax */}
-                <TableCell sx={{ minWidth: 80 }}>
+                <TableCell data-label="Tax" sx={{ minWidth: 80 }}>
                     <Select fullWidth size="small" value={item.tax_rate}
                         onChange={(e) => handleItemChange(index, 'tax_rate', e.target.value)}
                         sx={{ borderRadius: '8px' }}>
@@ -779,14 +791,14 @@ const PurchaseOrderList = () => {
                 </TableCell>
 
                 {/* Amount */}
-                <TableCell>
+                <TableCell data-label="Amount">
                     <Typography variant="body2" fontWeight={700} color="#667eea">
                         {fmt(item.amount)}
                     </Typography>
                 </TableCell>
 
                 {/* Remove */}
-                <TableCell>
+                <TableCell data-label="Remove" sx={{ textAlign: { xs: 'right', sm: 'left' } }}>
                     <IconButton size="small" color="error"
                         onClick={() => handleRemoveItem(index)}
                         sx={{ bgcolor: 'rgba(239,68,68,0.08)' }}>
@@ -818,19 +830,32 @@ const PurchaseOrderList = () => {
                         background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
                         color: 'white',
                     }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                                <Typography variant="h5" fontWeight={700}>🛒 Purchase Orders</Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.3 }}>
-                                    PO create karo — naaye products auto inventory mein add ho jaate hain
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            justifyContent="space-between"
+                            alignItems={{ xs: 'stretch', sm: 'center' }}
+                            spacing={{ xs: 1.5, sm: 2 }}
+                        >
+                            <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
+                                    🛒 Purchase Orders
+                                </Typography>
+                                <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.3, lineHeight: 1.4 }}>
+                                    Create purchase orders. New products are added to inventory automatically.
                                 </Typography>
                             </Box>
-                            <Stack direction="row" spacing={1} flexWrap="wrap">
-                                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                            <Stack
+                                direction="row"
+                                useFlexGap
+                                flexWrap="wrap"
+                                justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
+                                sx={{ gap: 0.75, maxWidth: { xs: '100%', sm: '60%' } }}
+                            >
+                                {Object.entries(STATUS_CONFIG).filter(([key]) => key !== 'returned').map(([key, cfg]) => (
                                     <Chip key={key}
                                         label={`${stats[key]} ${cfg.label}`}
                                         size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }}
+                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, flexShrink: 0 }}
                                     />
                                 ))}
                             </Stack>
@@ -840,8 +865,8 @@ const PurchaseOrderList = () => {
 
                 {/* ── Info Banner ── */}
                 <Alert severity="info" icon={<AutoIcon />} sx={{ mb: 3, borderRadius: '12px', fontWeight: 500 }}>
-                    <strong>Auto Inventory:</strong> Naya item type karo → PO received karne par
-                    <strong> automatically product create</strong> hoga aur stock update ho jaayega!
+                    <strong>Automatic inventory update:</strong> Enter a new item. When the purchase order is received,
+                    <strong> a product will be created automatically</strong> and stock will be updated!
                 </Alert>
 
                 {/* ══ STATS ══ */}
@@ -854,7 +879,7 @@ const PurchaseOrderList = () => {
                         { label: 'Received',  value: stats.received,  color: '#2e7d32' },
                         { label: 'Cancelled', value: stats.cancelled, color: '#ef4444' },
                     ].map((s, i) => (
-                        <Grid item xs key={i}>
+                        <Grid item xs={4} sm={4} md={2} key={i}>
                             <motion.div whileHover={{ y: -2 }}>
                                 <GlassCard>
                                     <CardContent sx={{ p: 2, textAlign: 'center' }}>
@@ -946,7 +971,7 @@ const PurchaseOrderList = () => {
                                         <Box>
                                             <Typography variant="h6" fontWeight={700}>New Purchase Order</Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                Existing product select karo ya naya naam type karo — PO receive hone par auto inventory mein add hoga
+                                                Select an existing product or enter a new name. New products are added to inventory when the purchase order is received.
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -1060,13 +1085,81 @@ const PurchaseOrderList = () => {
 
                                             {/* Items */}
                                             <Grid item xs={12}>
-                                                <FormSection title="Items — Inventory se select karo ya naya naam type karo"
+                                                <FormSection title="Items — select from inventory or enter a new name"
                                                     icon={<AddIcon sx={{ fontSize: 14 }} />} />
                                             </Grid>
                                             <Grid item xs={12}>
                                                 <TableContainer component={Paper} elevation={0}
-                                                    sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'visible' }}>
-                                                    <Table size="small">
+                                                    sx={{
+                                                        border: '1px solid #e2e8f0',
+                                                        borderRadius: '12px',
+                                                        overflowX: { xs: 'hidden', sm: 'auto' },
+                                                        overflowY: 'visible',
+                                                        '@media (max-width:599.95px)': {
+                                                            border: 'none',
+                                                            boxShadow: 'none',
+                                                            background: 'transparent',
+                                                        },
+                                                    }}>
+                                                    <Table size="small" sx={{
+                                                        '@media (max-width:599.95px)': {
+                                                            display: 'block',
+                                                            width: '100%',
+                                                            '& thead': { display: 'none' },
+                                                            '& tbody': { display: 'grid', gap: 1.5 },
+                                                            '& tbody tr': {
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                width: '100%',
+                                                                boxSizing: 'border-box',
+                                                                border: '1px solid #e2e8f0',
+                                                                borderRadius: '12px',
+                                                                overflow: 'hidden',
+                                                                backgroundColor: 'background.paper',
+                                                            },
+                                                            '& tbody td': {
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 1,
+                                                                width: '100%',
+                                                                minWidth: 0,
+                                                                boxSizing: 'border-box',
+                                                                py: 1,
+                                                                px: 1.5,
+                                                                borderBottom: '1px solid',
+                                                                borderColor: 'divider',
+                                                                '&:last-of-type': { borderBottom: 0 },
+                                                                '&::before': {
+                                                                    content: 'attr(data-label)',
+                                                                    width: '82px',
+                                                                    flex: '0 0 82px',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 700,
+                                                                    color: 'text.secondary',
+                                                                },
+                                                            },
+                                                            '& tbody td:first-of-type': {
+                                                                justifyContent: 'flex-start',
+                                                                minHeight: 36,
+                                                                bgcolor: 'action.hover',
+                                                            },
+                                                            '& tbody td:last-of-type': { justifyContent: 'space-between' },
+                                                            '& .MuiAutocomplete-root': { flex: 1, minWidth: 0 },
+                                                            '& .MuiFormControl-root, & .MuiInputBase-root': {
+                                                                flex: 1,
+                                                                width: 'auto',
+                                                                minWidth: 0,
+                                                            },
+                                                            '& tbody td:nth-of-type(2)': { flexWrap: 'wrap' },
+                                                            '& tbody td:nth-of-type(2) .MuiAutocomplete-root': {
+                                                                flex: '0 0 calc(100% - 90px)',
+                                                            },
+                                                            '& tbody td:nth-of-type(2) > .MuiStack-root': {
+                                                                width: 'calc(100% - 90px)',
+                                                                ml: '90px',
+                                                            },
+                                                        },
+                                                    }}>
                                                         <TableHead>
                                                             <TableRow sx={{ bgcolor: '#f8fafc' }}>
                                                                 {['#', 'Product / Item *', 'HSN', 'Category', 'Qty *', 'Unit', 'Rate *', 'Tax %', 'Amount', ''].map((h) => (
@@ -1084,7 +1177,7 @@ const PurchaseOrderList = () => {
 
                                                 <Button startIcon={<AddIcon />} onClick={handleAddItem}
                                                     size="small" sx={{ mt: 1.5, borderRadius: '8px', textTransform: 'none' }}>
-                                                    Item Add Karo
+                                                    Add Item
                                                 </Button>
                                             </Grid>
 
@@ -1168,12 +1261,12 @@ const PurchaseOrderList = () => {
                                                         <POIcon sx={{ fontSize: 40, color: '#94a3b8' }} />
                                                     </Avatar>
                                                     <Typography variant="h6" color="text.secondary">
-                                                        Koi Purchase Order nahi mila
+                                                        No purchase orders found.
                                                     </Typography>
                                                     <GradientButton startIcon={<AddIcon />}
                                                         onClick={() => setShowForm(true)}
                                                         gradient="linear-gradient(135deg, #11998e, #38ef7d)">
-                                                        Pehla PO Create Karo
+                                                        Create Your First Purchase Order
                                                     </GradientButton>
                                                 </Stack>
                                             </TableCell>
@@ -1308,6 +1401,8 @@ const PurchaseOrderList = () => {
                     PaperProps={{
                         sx: {
                             borderRadius: '16px',
+                            bgcolor: theme.palette.background.paper,
+                            color: theme.palette.text.primary,
                             overflow: 'hidden',
                             maxHeight: '90vh',
                             boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
@@ -1320,7 +1415,7 @@ const PurchaseOrderList = () => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        bgcolor: 'rgba(255,255,255,0.92)',
+                        bgcolor: isDark ? theme.palette.background.paper : 'rgba(255,255,255,0.92)',
                         backdropFilter: 'blur(10px)',
                     }}>
                         <Stack direction="row" alignItems="center" spacing={2}>
@@ -1333,10 +1428,10 @@ const PurchaseOrderList = () => {
                                 <POIcon sx={{ fontSize: 22 }} />
                             </Avatar>
                             <Box>
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.3px' }}>
+                                <Typography variant="h6" sx={{ fontWeight: 700, color: (isDark ? '#f1f5f9' : '#1e293b'), letterSpacing: '-0.3px' }}>
                                     Purchase Order {viewPO?.po_number}
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Typography variant="caption" sx={{ color: (isDark ? '#94a3b8' : '#64748b'), display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                     <DateRangeIcon sx={{ fontSize: 14 }} />
                                     {fmtDate(viewPO?.po_date)}
                                 </Typography>
@@ -1351,18 +1446,18 @@ const PurchaseOrderList = () => {
                                     dispatch(clearVendorPayments());
                                 }}
                                 sx={{
-                                    color: '#64748b',
-                                    bgcolor: '#f1f5f9',
-                                    '&:hover': { bgcolor: '#e2e8f0' }
+                                    color: (isDark ? '#94a3b8' : '#64748b'),
+                                    bgcolor: (isDark ? '#334155' : '#f1f5f9'),
+                                    '&:hover': { bgcolor: (isDark ? '#475569' : '#e2e8f0') }
                                 }}
                             >
                                 <CloseIcon fontSize="small" />
                             </IconButton>
                         </Stack>
                     </Box>
-                    <DialogContent sx={{ p: 0, bgcolor: '#ffffff' }}>
+                    <DialogContent sx={{ p: 0, bgcolor: (isDark ? '#1e293b' : '#ffffff') }}>
                         {viewPO && (
-                            <Box sx={{ p: 4, maxWidth: '100%' }}>
+                                    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: '100%' }}>
                                 <Grid container spacing={3} sx={{ mb: 4 }}>
                                     <Grid item xs={12} md={7}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
@@ -1384,18 +1479,18 @@ const PurchaseOrderList = () => {
                                             <Box>
                                                 <Typography variant="h5" sx={{
                                                     fontWeight: 800,
-                                                    color: '#0f172a',
+                                                    color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                     mb: 0.8,
                                                     letterSpacing: '-0.5px',
                                                     fontSize: '26px'
                                                 }}>
                                                     {viewPO?.vendor?.company_name || viewPO?.vendor?.vendor_name || 'Vendor'}
                                                 </Typography>
-                                                <Typography variant="body2" sx={{ color: '#64748b' }}>
+                                                <Typography variant="body2" sx={{ color: (isDark ? '#94a3b8' : '#64748b') }}>
                                                     {viewPO?.vendor?.vendor_name && viewPO?.vendor?.company_name ? viewPO.vendor.vendor_name : 'Vendor Details'}
                                                 </Typography>
                                                 {viewPO?.vendor?.address && (
-                                                    <Typography variant="body2" sx={{ color: '#64748b', mt: 0.8 }}>
+                                                    <Typography variant="body2" sx={{ color: (isDark ? '#94a3b8' : '#64748b'), mt: 0.8 }}>
                                                         📍 {viewPO.vendor.address}
                                                     </Typography>
                                                 )}
@@ -1415,14 +1510,14 @@ const PurchaseOrderList = () => {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: 0.5,
-                                                    bgcolor: '#f8fafc',
+                                                    bgcolor: (isDark ? '#1e293b' : '#f8fafc'),
                                                     px: 1.5,
                                                     py: 0.8,
                                                     borderRadius: '30px',
                                                     border: '1px solid #e2e8f0'
                                                 }}>
                                                     📞
-                                                    <Typography variant="caption" sx={{ fontWeight: 500, color: '#334155' }}>
+                                                    <Typography variant="caption" sx={{ fontWeight: 500, color: (isDark ? '#cbd5e1' : '#334155') }}>
                                                         {viewPO.vendor.phone}
                                                     </Typography>
                                                 </Box>
@@ -1432,14 +1527,14 @@ const PurchaseOrderList = () => {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: 0.5,
-                                                    bgcolor: '#f8fafc',
+                                                    bgcolor: (isDark ? '#1e293b' : '#f8fafc'),
                                                     px: 1.5,
                                                     py: 0.8,
                                                     borderRadius: '30px',
                                                     border: '1px solid #e2e8f0'
                                                 }}>
                                                     ✉️
-                                                    <Typography variant="caption" sx={{ fontWeight: 500, color: '#334155' }}>
+                                                    <Typography variant="caption" sx={{ fontWeight: 500, color: (isDark ? '#cbd5e1' : '#334155') }}>
                                                         {viewPO.vendor.email}
                                                     </Typography>
                                                 </Box>
@@ -1467,7 +1562,7 @@ const PurchaseOrderList = () => {
                                     <Grid item xs={12} md={5} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
                                         <Typography variant="h2" sx={{
                                             fontWeight: 800,
-                                            color: '#0f172a',
+                                            color: (isDark ? '#f1f5f9' : '#0f172a'),
                                             mb: 1.5,
                                             fontSize: '34px',
                                             letterSpacing: '2px',
@@ -1478,7 +1573,7 @@ const PurchaseOrderList = () => {
                                         <Box sx={{
                                             display: 'inline-block',
                                             textAlign: 'left',
-                                            bgcolor: '#f8fafc',
+                                            bgcolor: (isDark ? '#1e293b' : '#f8fafc'),
                                             p: 2.5,
                                             borderRadius: '12px',
                                             width: '100%',
@@ -1491,15 +1586,15 @@ const PurchaseOrderList = () => {
                                                 ['Expected Delivery', fmtDate(viewPO?.expected_delivery_date)],
                                             ].map(([label, value]) => (
                                                 <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>{label}</Typography>
-                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>{value || '—'}</Typography>
+                                                    <Typography variant="body2" sx={{ color: (isDark ? '#94a3b8' : '#64748b'), fontWeight: 500 }}>{label}</Typography>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: (isDark ? '#f1f5f9' : '#0f172a') }}>{value || '—'}</Typography>
                                                 </Box>
                                             ))}
                                         </Box>
                                     </Grid>
                                 </Grid>
 
-                                <Divider sx={{ my: 3.5, borderColor: '#e2e8f0', borderWidth: '1.5px', opacity: 0.7 }} />
+                                <Divider sx={{ my: 3.5, borderColor: (isDark ? '#475569' : '#e2e8f0'), borderWidth: '1.5px', opacity: 0.7 }} />
 
                                 <Grid container spacing={3} sx={{ mb: 4 }}>
                                     <Grid item xs={12}>
@@ -1514,7 +1609,7 @@ const PurchaseOrderList = () => {
                                             <Box sx={{ flex: 1 }}>
                                                 <Typography variant="subtitle1" sx={{
                                                     fontWeight: 700,
-                                                    color: '#0f172a',
+                                                    color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                     mb: 1.5,
                                                     fontSize: '15px',
                                                     textTransform: 'uppercase',
@@ -1528,7 +1623,7 @@ const PurchaseOrderList = () => {
                                                 </Typography>
 
                                                 <Box sx={{
-                                                    bgcolor: '#ffffff',
+                                                    bgcolor: (isDark ? '#1e293b' : '#ffffff'),
                                                     p: 3,
                                                     borderRadius: '16px',
                                                     border: '1px solid #e2e8f0',
@@ -1540,39 +1635,39 @@ const PurchaseOrderList = () => {
                                                     <Box>
                                                         <Typography variant="h6" sx={{
                                                             fontWeight: 700,
-                                                            color: '#0f172a',
+                                                            color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                             mb: 1.5,
                                                             fontSize: '18px'
                                                         }}>
                                                             {viewPO?.vendor?.vendor_name || 'Vendor'}
                                                         </Typography>
                                                         {viewPO?.vendor?.company_name && (
-                                                            <Typography variant="body2" sx={{ color: '#475569', mb: 1, fontSize: '14px' }}>
-                                                                <span style={{ color: '#64748b' }}>Company:</span> {viewPO.vendor.company_name}
+                                                            <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), mb: 1, fontSize: '14px' }}>
+                                                                <span style={{ color: (isDark ? '#94a3b8' : '#64748b') }}>Company:</span> {viewPO.vendor.company_name}
                                                             </Typography>
                                                         )}
-                                                        <Typography variant="body2" sx={{ color: '#475569', mb: 0.8, fontSize: '14px' }}>
-                                                            <span style={{ color: '#64748b' }}>Address:</span> {viewPO?.vendor?.address || '—'}
+                                                        <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), mb: 0.8, fontSize: '14px' }}>
+                                                            <span style={{ color: (isDark ? '#94a3b8' : '#64748b') }}>Address:</span> {viewPO?.vendor?.address || '—'}
                                                         </Typography>
-                                                        <Typography variant="body2" sx={{ color: '#475569', mb: 0.8, fontSize: '14px' }}>
-                                                            <span style={{ color: '#64748b' }}>City/State:</span>{' '}
+                                                        <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), mb: 0.8, fontSize: '14px' }}>
+                                                            <span style={{ color: (isDark ? '#94a3b8' : '#64748b') }}>City/State:</span>{' '}
                                                             {[viewPO?.vendor?.city, viewPO?.vendor?.state, viewPO?.vendor?.pincode].filter(Boolean).join(', ') || '—'}
                                                         </Typography>
                                                     </Box>
 
                                                     <Box>
-                                                        <Typography variant="body2" sx={{ color: '#475569', mb: 1, fontSize: '14px' }}>
-                                                            <span style={{ color: '#64748b' }}>Phone:</span> {viewPO?.vendor?.phone || '—'}
+                                                        <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), mb: 1, fontSize: '14px' }}>
+                                                            <span style={{ color: (isDark ? '#94a3b8' : '#64748b') }}>Phone:</span> {viewPO?.vendor?.phone || '—'}
                                                         </Typography>
-                                                        <Typography variant="body2" sx={{ color: '#475569', mb: 1, fontSize: '14px' }}>
-                                                            <span style={{ color: '#64748b' }}>Email:</span> {viewPO?.vendor?.email || '—'}
+                                                        <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), mb: 1, fontSize: '14px' }}>
+                                                            <span style={{ color: (isDark ? '#94a3b8' : '#64748b') }}>Email:</span> {viewPO?.vendor?.email || '—'}
                                                         </Typography>
-                                                        <Typography variant="body2" sx={{ color: '#475569', mb: 1, fontSize: '14px' }}>
-                                                            <span style={{ color: '#64748b' }}>Supply Type:</span>{' '}
+                                                        <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), mb: 1, fontSize: '14px' }}>
+                                                            <span style={{ color: (isDark ? '#94a3b8' : '#64748b') }}>Supply Type:</span>{' '}
                                                             {viewPO?.supply_type === 'intra' ? 'Intra-state' : 'Inter-state'}
                                                         </Typography>
-                                                        <Typography variant="body2" sx={{ color: '#475569', fontSize: '14px' }}>
-                                                            <span style={{ color: '#64748b' }}>Place of Supply:</span> {viewPO?.place_of_supply || '—'}
+                                                        <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), fontSize: '14px' }}>
+                                                            <span style={{ color: (isDark ? '#94a3b8' : '#64748b') }}>Place of Supply:</span> {viewPO?.place_of_supply || '—'}
                                                         </Typography>
                                                     </Box>
                                                 </Box>
@@ -1583,7 +1678,7 @@ const PurchaseOrderList = () => {
 
                                 <Typography variant="subtitle1" sx={{
                                     fontWeight: 700,
-                                    color: '#0f172a',
+                                    color: (isDark ? '#f1f5f9' : '#0f172a'),
                                     mb: 2,
                                     fontSize: '15px',
                                     textTransform: 'uppercase',
@@ -1596,23 +1691,90 @@ const PurchaseOrderList = () => {
                                     PO Items
                                 </Typography>
 
+                                <Stack spacing={1.5} sx={{ display: { xs: 'flex', sm: 'none' }, mb: 3 }}>
+                                    {(viewPO.items || []).map((item, index) => (
+                                        <Paper
+                                            key={index}
+                                            elevation={0}
+                                            sx={{
+                                                p: 2,
+                                                borderRadius: '12px',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                bgcolor: isDark ? '#111827' : '#fff',
+                                            }}
+                                        >
+                                            <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
+                                                <Box sx={{ minWidth: 0 }}>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: isDark ? '#f1f5f9' : '#0f172a', overflowWrap: 'anywhere' }}>
+                                                        {String(index + 1).padStart(2, '0')}. {item.item_name}
+                                                    </Typography>
+                                                    {item.description && (
+                                                        <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', display: 'block', mt: 0.5, overflowWrap: 'anywhere' }}>
+                                                            {item.description}
+                                                        </Typography>
+                                                    )}
+                                                    {item.sku && (
+                                                        <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', display: 'block', mt: 0.4 }}>
+                                                            SKU: {item.sku}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                                <Typography variant="subtitle2" sx={{ flexShrink: 0, fontWeight: 800, color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                                                    {fmt(item.amount)}
+                                                </Typography>
+                                            </Stack>
+                                            <Stack direction="row" spacing={1} mt={1}>
+                                                <Chip
+                                                    label={item.product_id ? 'Linked' : 'Auto Created'}
+                                                    size="small"
+                                                    sx={{
+                                                        height: 20,
+                                                        fontSize: 10,
+                                                        bgcolor: item.product_id ? 'rgba(17,153,142,0.12)' : 'rgba(102,126,234,0.12)',
+                                                        color: item.product_id ? (isDark ? '#5eead4' : '#11998e') : (isDark ? '#c4b5fd' : '#667eea'),
+                                                    }}
+                                                />
+                                            </Stack>
+                                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.25, mt: 1.5 }}>
+                                                {[
+                                                    ['HSN', item.hsn_code || '—'],
+                                                    ['Quantity', `${item.qty} ${item.unit || ''}`],
+                                                    ['Rate', fmt(item.rate)],
+                                                    ['Tax', `${item.tax_rate}%`],
+                                                ].map(([label, value]) => (
+                                                    <Box key={label} sx={{ minWidth: 0 }}>
+                                                        <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', display: 'block' }}>
+                                                            {label}
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ color: isDark ? '#e2e8f0' : '#334155', fontWeight: 600, overflowWrap: 'anywhere' }}>
+                                                            {value}
+                                                        </Typography>
+                                                    </Box>
+                                                ))}
+                                            </Box>
+                                        </Paper>
+                                    ))}
+                                </Stack>
+
                                 <TableContainer sx={{
+                                    display: { xs: 'none', sm: 'block' },
                                     mb: 3,
                                     border: '1px solid #e2e8f0',
                                     borderRadius: '16px',
-                                    overflow: 'hidden',
+                                    overflowX: 'auto',
                                     boxShadow: '0 8px 20px rgba(0,0,0,0.02)'
                                 }}>
-                                    <Table size="small">
+                                    <Table size="small" sx={{ minWidth: 760 }}>
                                         <TableHead>
-                                            <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '2px solid #11998e' }}>
+                                            <TableRow sx={{ bgcolor: (isDark ? '#1e293b' : '#f8fafc'), borderBottom: '2px solid #11998e' }}>
                                                 {['#', 'Item Description', 'HSN', 'Qty', 'Rate (₹)', 'Tax %', 'Amount (₹)'].map((h, index) => (
                                                     <TableCell
                                                         key={h}
                                                         align={index >= 4 ? 'right' : index === 3 ? 'center' : 'left'}
                                                         sx={{
                                                             fontWeight: 700,
-                                                            color: '#0f172a',
+                                                            color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                             fontSize: '13px',
                                                             py: 2,
                                                             borderBottom: 'none'
@@ -1625,17 +1787,22 @@ const PurchaseOrderList = () => {
                                         </TableHead>
                                         <TableBody>
                                             {(viewPO.items || []).map((item, index) => (
-                                                <TableRow key={index} sx={{ '&:last-child td': { borderBottom: 'none' }, '&:hover': { bgcolor: '#f8fafc' } }}>
-                                                    <TableCell sx={{ color: '#64748b', py: 2, fontSize: '14px', fontWeight: 600 }}>
+                                                <TableRow key={index} sx={{ '&:last-child td': { borderBottom: 'none' }, '&:hover': { bgcolor: (isDark ? '#1e293b' : '#f8fafc') } }}>
+                                                    <TableCell sx={{ color: (isDark ? '#94a3b8' : '#64748b'), py: 2, fontSize: '14px', fontWeight: 600 }}>
                                                         {String(index + 1).padStart(2, '0')}
                                                     </TableCell>
                                                     <TableCell sx={{ py: 2 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a', fontSize: '14px', mb: 0.3 }}>
+                                                        <Typography variant="body2" sx={{ fontWeight: 700, color: (isDark ? '#f1f5f9' : '#0f172a'), fontSize: '14px', mb: 0.3 }}>
                                                             {item.item_name}
                                                         </Typography>
                                                         {item.description && (
-                                                            <Typography variant="caption" sx={{ color: '#64748b', display: 'block', fontSize: '12px', lineHeight: 1.5 }}>
+                                                            <Typography variant="caption" sx={{ color: (isDark ? '#94a3b8' : '#64748b'), display: 'block', fontSize: '12px', lineHeight: 1.5 }}>
                                                                 {item.description}
+                                                            </Typography>
+                                                        )}
+                                                        {item.sku && (
+                                                            <Typography variant="caption" sx={{ color: (isDark ? '#94a3b8' : '#64748b'), display: 'block', mt: 0.4 }}>
+                                                                SKU: {item.sku}
                                                             </Typography>
                                                         )}
                                                         <Stack direction="row" spacing={1} mt={0.8}>
@@ -1656,19 +1823,19 @@ const PurchaseOrderList = () => {
                                                             )}
                                                         </Stack>
                                                     </TableCell>
-                                                    <TableCell sx={{ color: '#475569', py: 2, fontSize: '13px', fontWeight: 500 }}>
+                                                    <TableCell sx={{ color: (isDark ? '#cbd5e1' : '#475569'), py: 2, fontSize: '13px', fontWeight: 500 }}>
                                                         {item.hsn_code || '—'}
                                                     </TableCell>
-                                                    <TableCell align="center" sx={{ color: '#0f172a', py: 2, fontSize: '14px', fontWeight: 600 }}>
+                                                    <TableCell align="center" sx={{ color: (isDark ? '#f1f5f9' : '#0f172a'), py: 2, fontSize: '14px', fontWeight: 600 }}>
                                                         {item.qty} {item.unit}
                                                     </TableCell>
-                                                    <TableCell align="right" sx={{ color: '#475569', py: 2, fontSize: '14px', fontWeight: 500 }}>
+                                                    <TableCell align="right" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), py: 2, fontSize: '14px', fontWeight: 500 }}>
                                                         {fmt(item.rate)}
                                                     </TableCell>
-                                                    <TableCell align="right" sx={{ color: '#475569', py: 2, fontSize: '14px', fontWeight: 500 }}>
+                                                    <TableCell align="right" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), py: 2, fontSize: '14px', fontWeight: 500 }}>
                                                         {item.tax_rate}%
                                                     </TableCell>
-                                                    <TableCell align="right" sx={{ fontWeight: 700, color: '#0f172a', py: 2, fontSize: '15px', bgcolor: '#f8fafc' }}>
+                                                    <TableCell align="right" sx={{ fontWeight: 700, color: (isDark ? '#f1f5f9' : '#0f172a'), py: 2, fontSize: '15px', bgcolor: (isDark ? '#1e293b' : '#f8fafc') }}>
                                                         {fmt(item.amount)}
                                                     </TableCell>
                                                 </TableRow>
@@ -1683,12 +1850,12 @@ const PurchaseOrderList = () => {
                                             p: 3,
                                             border: '1px solid #e2e8f0',
                                             borderRadius: '16px',
-                                            bgcolor: '#ffffff',
+                                            bgcolor: (isDark ? '#1e293b' : '#ffffff'),
                                             boxShadow: '0 8px 20px rgba(0,0,0,0.02)'
                                         }}>
                                             <Typography variant="subtitle2" sx={{
                                                 fontWeight: 800,
-                                                color: '#0f172a',
+                                                color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                 mb: 1.2,
                                                 fontSize: '14px',
                                                 textTransform: 'uppercase',
@@ -1700,7 +1867,7 @@ const PurchaseOrderList = () => {
                                                 <DescriptionIcon sx={{ color: '#11998e', fontSize: 18 }} />
                                                 PO Notes / Terms
                                             </Typography>
-                                            <Typography variant="body2" sx={{ color: '#475569', whiteSpace: 'pre-line', fontSize: '14px', lineHeight: '1.7' }}>
+                                            <Typography variant="body2" sx={{ color: (isDark ? '#cbd5e1' : '#475569'), whiteSpace: 'pre-line', fontSize: '14px', lineHeight: '1.7' }}>
                                                 {viewPO?.notes || viewPO?.terms_conditions || 'No notes added.'}
                                             </Typography>
                                         </Box>
@@ -1712,7 +1879,7 @@ const PurchaseOrderList = () => {
                                             borderRadius: '16px',
                                             overflow: 'hidden',
                                             boxShadow: '0 8px 20px rgba(0,0,0,0.02)',
-                                            bgcolor: '#ffffff'
+                                            bgcolor: (isDark ? '#1e293b' : '#ffffff')
                                         }}>
                                             <Table size="small">
                                                 <TableBody>
@@ -1725,30 +1892,30 @@ const PurchaseOrderList = () => {
                                                         <TableRow key={label}>
                                                             <TableCell sx={{
                                                                 borderBottom: index === 3 ? '1px solid #e2e8f0' : '1px solid #e2e8f0',
-                                                                color: '#475569',
+                                                                color: (isDark ? '#cbd5e1' : '#475569'),
                                                                 py: 1.9,
                                                                 fontSize: '14px',
-                                                                bgcolor: index === 0 ? '#f8fafc' : 'transparent'
+                                                                bgcolor: index === 0 ? (isDark ? '#1e293b' : '#f8fafc') : 'transparent'
                                                             }}>
                                                                 {label}
                                                             </TableCell>
                                                             <TableCell align="right" sx={{
                                                                 borderBottom: '1px solid #e2e8f0',
                                                                 fontWeight: index === 0 ? 600 : 500,
-                                                                color: '#0f172a',
+                                                                color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                                 py: 1.9,
                                                                 fontSize: '14px',
-                                                                bgcolor: index === 0 ? '#f8fafc' : 'transparent'
+                                                                bgcolor: index === 0 ? (isDark ? '#1e293b' : '#f8fafc') : 'transparent'
                                                             }}>
                                                                 {value}
                                                             </TableCell>
                                                         </TableRow>
                                                     ))}
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 800, color: '#0f172a', py: 2.2, fontSize: '16px', bgcolor: '#f1f5f9' }}>
+                                                        <TableCell sx={{ fontWeight: 800, color: (isDark ? '#f1f5f9' : '#0f172a'), py: 2.2, fontSize: '16px', bgcolor: (isDark ? '#334155' : '#f1f5f9') }}>
                                                             Grand Total
                                                         </TableCell>
-                                                        <TableCell align="right" sx={{ fontWeight: 800, color: '#0f172a', py: 2.2, fontSize: '18px', bgcolor: '#f1f5f9' }}>
+                                                        <TableCell align="right" sx={{ fontWeight: 800, color: (isDark ? '#f1f5f9' : '#0f172a'), py: 2.2, fontSize: '18px', bgcolor: (isDark ? '#334155' : '#f1f5f9') }}>
                                                             {fmt(viewPO?.total_amount)}
                                                         </TableCell>
                                                     </TableRow>
@@ -1780,12 +1947,12 @@ const PurchaseOrderList = () => {
                                             p: 3,
                                             border: '1px solid #e2e8f0',
                                             borderRadius: '16px',
-                                            bgcolor: '#ffffff',
+                                            bgcolor: (isDark ? '#1e293b' : '#ffffff'),
                                             boxShadow: '0 8px 20px rgba(0,0,0,0.02)'
                                         }}>
                                             <Typography variant="subtitle2" sx={{
                                                 fontWeight: 800,
-                                                color: '#0f172a',
+                                                color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                 mb: 2,
                                                 fontSize: '14px',
                                                 textTransform: 'uppercase',
@@ -1818,7 +1985,7 @@ const PurchaseOrderList = () => {
                                         }}>
                                             <Typography variant="subtitle2" sx={{
                                                 fontWeight: 800,
-                                                color: '#0f172a',
+                                                color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                 mb: 1.5,
                                                 fontSize: '14px',
                                                 textTransform: 'uppercase',
@@ -1843,7 +2010,7 @@ const PurchaseOrderList = () => {
                                                     }}
                                                     sx={{ borderRadius: '8px', textTransform: 'none' }}
                                                 >
-                                                    Pay Karo
+                                                    Make Payment
                                                 </Button>
                                             )}
                                         </Box>
@@ -1853,7 +2020,7 @@ const PurchaseOrderList = () => {
                                 <Box sx={{ mt: 3 }}>
                                     <Typography variant="subtitle2" sx={{
                                         fontWeight: 800,
-                                        color: '#0f172a',
+                                        color: (isDark ? '#f1f5f9' : '#0f172a'),
                                         mb: 1.5,
                                         fontSize: '14px',
                                         textTransform: 'uppercase',
@@ -1862,9 +2029,9 @@ const PurchaseOrderList = () => {
                                         Payment History
                                     </Typography>
                                     {payments.length === 0 ? (
-                                        <Box sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: '16px', bgcolor: '#f8fafc' }}>
+                                        <Box sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: '16px', bgcolor: (isDark ? '#1e293b' : '#f8fafc') }}>
                                             <Typography variant="body2" color="text.secondary" textAlign="center">
-                                                Koi payment nahi mili abhi tak
+                                                No payments recorded yet.
                                             </Typography>
                                         </Box>
                                     ) : (
@@ -1961,22 +2128,22 @@ const PurchaseOrderList = () => {
                     </DialogTitle>
                     <DialogContent sx={{ textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary">
-                            Kya aap <b>{statusPO?.po_number}</b> ko <b>{newStatus}</b> karna chahte hain?
+                            Are you sure you want to mark <b>{statusPO?.po_number}</b> as <b>{newStatus}</b>?
                         </Typography>
                         {newStatus === 'received' && (
                             <Alert severity="success" icon={<AutoIcon />}
                                 sx={{ mt: 2, borderRadius: '10px', textAlign: 'left' }}>
                                 <strong>Auto Inventory Update:</strong>
                                 <ul style={{ margin: '4px 0 0 0', paddingLeft: 16 }}>
-                                    <li>Linked products ka <strong>stock increase</strong> hoga</li>
-                                    <li>Naaye items <strong>automatically inventory mein add</strong> ho jaayenge</li>
-                                    <li>Average cost recalculate hogi</li>
+                                    <li>Stock for linked products will <strong>increase</strong></li>
+                                    <li>New items will be <strong>added to inventory automatically</strong></li>
+                                    <li>The average cost will be recalculated.</li>
                                 </ul>
                             </Alert>
                         )}
                         {newStatus === 'cancelled' && (
                             <Alert severity="warning" sx={{ mt: 2, borderRadius: '10px', textAlign: 'left' }}>
-                                Cancelled PO dobara approve nahi ho sakta.
+                                A cancelled purchase order cannot be approved again.
                             </Alert>
                         )}
                     </DialogContent>
@@ -2077,7 +2244,7 @@ const PurchaseOrderList = () => {
                         <Typography variant="h6" fontWeight={700}>Delete PO?</Typography>
                     </DialogTitle>
                     <DialogContent sx={{ textAlign: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">Yeh action undo nahi ho sakta.</Typography>
+                        <Typography variant="body2" color="text.secondary">This action cannot be undone.</Typography>
                         <Typography variant="subtitle1" fontWeight={700} color="error.main" mt={1}>
                             {poToDelete?.po_number}
                         </Typography>

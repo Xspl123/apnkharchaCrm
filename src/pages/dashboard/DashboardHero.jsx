@@ -1,4 +1,4 @@
-import { Box, Button, Chip, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Chip, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography, useTheme } from "@mui/material";
 import {
   Add,
   Category as CategoryIcon,
@@ -37,6 +37,8 @@ export default function DashboardHero({
   supported,
   visibleCategories,
 }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const yearOptions = [...Array(5)].map((_, i) => {
     const y = new Date().getFullYear() - i;
     return { value: y, label: y };
@@ -47,20 +49,22 @@ export default function DashboardHero({
       p: "28px 32px",
       borderRadius: "20px",
       mb: 3,
-      background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 58%, #eef6ff 100%)",
-      color: "#0f172a",
-      border: "1px solid #e2e8f0",
-      boxShadow: "0 14px 36px rgba(15,23,42,0.07)",
+      background: isDark
+        ? "linear-gradient(135deg, #111827 0%, #182235 58%, #0f172a 100%)"
+        : "linear-gradient(135deg, #ffffff 0%, #f8fafc 58%, #eef6ff 100%)",
+      color: theme.palette.text.primary,
+      border: `1px solid ${theme.palette.divider}`,
+      boxShadow: isDark ? "0 14px 36px rgba(0,0,0,0.24)" : "0 14px 36px rgba(15,23,42,0.07)",
     }}>
       <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ md: "center" }} gap={3}>
         <Box>
-          <Typography variant="overline" sx={{ color: "#64748b", letterSpacing: "0.15em", fontWeight: 800 }}>
+          <Typography variant="overline" sx={{ color: theme.palette.text.secondary, letterSpacing: "0.15em", fontWeight: 800 }}>
             Financial Command Center
           </Typography>
           <Typography variant="h4" fontWeight={800} mt={0.5}>
             {months[selectedMonth].name} {selectedYear}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#64748b", mt: 0.5, mb: 2 }}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.5, mb: 2 }}>
             {activeFilterLabel} · {dashboardSummary.transactionCount} transactions
           </Typography>
 
@@ -76,12 +80,12 @@ export default function DashboardHero({
                 onClick={() => handleQuickPeriod(b.period)}
                 size="small"
                 sx={{
-                  bgcolor: "#ffffff",
-                  color: "#334155",
+                  bgcolor: theme.palette.background.paper,
+                  color: theme.palette.text.primary,
                   cursor: "pointer",
                   fontWeight: 700,
-                  "&:hover": { bgcolor: "#f1f5f9" },
-                  border: "1px solid #e2e8f0",
+                  "&:hover": { bgcolor: theme.palette.action.hover },
+                  border: `1px solid ${theme.palette.divider}`,
                 }}
               />
             ))}
@@ -101,17 +105,17 @@ export default function DashboardHero({
             </Button>
           </Tooltip>
           <Tooltip title="Export CSV">
-            <IconButton onClick={exportToCSV} size="small" sx={heroIconButtonSx}>
+            <IconButton onClick={exportToCSV} size="small" sx={heroIconButtonSx(theme)}>
               <ExportIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Export PDF">
-            <IconButton onClick={handleExportSummaryPDF} size="small" sx={heroIconButtonSx}>
+            <IconButton onClick={handleExportSummaryPDF} size="small" sx={heroIconButtonSx(theme)}>
               <PdfIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Category Details">
-            <IconButton onClick={() => setIsPopupOpen(true)} size="small" sx={heroIconButtonSx}>
+            <IconButton onClick={() => setIsPopupOpen(true)} size="small" sx={heroIconButtonSx(theme)}>
               <CategoryIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -120,7 +124,7 @@ export default function DashboardHero({
               onClick={handleAskMe}
               disabled={!supported || isListening}
               size="small"
-              sx={{ ...heroIconButtonSx, bgcolor: isListening ? "#ede9fe" : "#fff", color: isListening ? "#7c3aed" : "#334155" }}
+              sx={{ ...heroIconButtonSx(theme), bgcolor: isListening ? theme.palette.action.selected : theme.palette.background.paper, color: isListening ? theme.palette.secondary.main : theme.palette.text.primary }}
             >
               <MicIcon fontSize="small" />
             </IconButton>
@@ -129,7 +133,7 @@ export default function DashboardHero({
             <IconButton
               onClick={() => setFilterOpen(!filterOpen)}
               size="small"
-              sx={{ ...heroIconButtonSx, bgcolor: filterOpen ? "#e0f2fe" : "#fff", color: filterOpen ? "#0369a1" : "#334155" }}
+              sx={{ ...heroIconButtonSx(theme), bgcolor: filterOpen ? theme.palette.action.selected : theme.palette.background.paper, color: filterOpen ? theme.palette.primary.main : theme.palette.text.primary }}
             >
               <FilterIcon fontSize="small" />
             </IconButton>
@@ -138,7 +142,7 @@ export default function DashboardHero({
       </Stack>
 
       {filterOpen && (
-        <Box mt={2.5} pt={2.5} sx={{ borderTop: "1px solid #e2e8f0" }}>
+        <Box mt={2.5} pt={2.5} sx={{ borderTop: `1px solid ${theme.palette.divider}` }}>
           <Stack direction={{ xs: "column", sm: "row" }} flexWrap="wrap" gap={1.5}>
             {[
               {
@@ -168,7 +172,7 @@ export default function DashboardHero({
                 value={f.value}
                 size="small"
                 onChange={(e) => f.onChange(e.target.value)}
-                sx={filterFieldSx}
+                sx={filterFieldSx(theme)}
               >
                 {f.options.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
               </TextField>
@@ -180,7 +184,7 @@ export default function DashboardHero({
               size="small"
               onChange={(e) => setStartDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              sx={dateFieldSx}
+              sx={dateFieldSx(theme)}
             />
             <TextField
               label="End Date"
@@ -189,7 +193,7 @@ export default function DashboardHero({
               size="small"
               onChange={(e) => setEndDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              sx={dateFieldSx}
+              sx={dateFieldSx(theme)}
             />
           </Stack>
         </Box>
@@ -198,36 +202,36 @@ export default function DashboardHero({
   );
 }
 
-const heroIconButtonSx = {
-  bgcolor: "#fff",
-  color: "#334155",
-  border: "1px solid #e2e8f0",
+const heroIconButtonSx = (theme) => ({
+  bgcolor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
   borderRadius: "10px",
-  "&:hover": { bgcolor: "#f8fafc", borderColor: "#cbd5e1" },
-};
+  "&:hover": { bgcolor: theme.palette.action.hover, borderColor: theme.palette.primary.main },
+});
 
-const filterFieldSx = {
+const filterFieldSx = (theme) => ({
   minWidth: 160,
   "& .MuiOutlinedInput-root": {
-    bgcolor: "#fff",
-    color: "#0f172a",
+    bgcolor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
     borderRadius: "10px",
-    "& fieldset": { borderColor: "#cbd5e1" },
-    "&:hover fieldset": { borderColor: "#94a3b8" },
+    "& fieldset": { borderColor: theme.palette.divider },
+    "&:hover fieldset": { borderColor: theme.palette.primary.main },
   },
-  "& .MuiInputLabel-root": { color: "#64748b" },
-  "& .MuiSelect-select": { color: "#0f172a" },
-  "& .MuiSvgIcon-root": { color: "#64748b" },
-};
+  "& .MuiInputLabel-root": { color: theme.palette.text.secondary },
+  "& .MuiSelect-select": { color: theme.palette.text.primary },
+  "& .MuiSvgIcon-root": { color: theme.palette.text.secondary },
+});
 
-const dateFieldSx = {
+const dateFieldSx = (theme) => ({
   minWidth: 160,
   "& .MuiOutlinedInput-root": {
-    bgcolor: "#fff",
-    color: "#0f172a",
+    bgcolor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
     borderRadius: "10px",
-    "& fieldset": { borderColor: "#cbd5e1" },
+    "& fieldset": { borderColor: theme.palette.divider },
   },
-  "& .MuiInputLabel-root": { color: "#64748b" },
-  "& input": { color: "#0f172a", colorScheme: "light" },
-};
+  "& .MuiInputLabel-root": { color: theme.palette.text.secondary },
+  "& input": { color: theme.palette.text.primary, colorScheme: theme.palette.mode },
+});

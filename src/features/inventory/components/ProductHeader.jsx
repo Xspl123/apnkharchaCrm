@@ -6,20 +6,20 @@ import { motion } from 'framer-motion';
 const ProductHeader = ({ stats }) => (
     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <Paper elevation={0} sx={{
-            p: 2.5, mb: 3, borderRadius: '16px',
+            p: { xs: 2, sm: 2.5 }, mb: 3, borderRadius: '16px',
             background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
             color: 'white',
         }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Box>
-                    <Typography variant="h5" fontWeight={700}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                         📦 Products & Categories
                     </Typography>
                     <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.3 }}>
                         Product master, categories aur stock management
                     </Typography>
                 </Box>
-                <Stack direction="row" spacing={1}>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Chip label={`${stats.total} Products`}
                         sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
                     {stats.lowStock > 0 && (

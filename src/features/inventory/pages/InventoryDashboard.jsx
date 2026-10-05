@@ -130,25 +130,25 @@ const InventoryDashboard = () => {
     const reportProducts = inventoryReport?.products || [];
 
     return (
-        <Box p={3}>
+        <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, minWidth: 0, overflowX: 'hidden' }}>
 
             {/* ══ HEADER ══ */}
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                 <Paper elevation={0} sx={{
-                    p: 3, mb: 4, borderRadius: '20px',
+                    p: { xs: 2, sm: 3 }, mb: { xs: 2.5, sm: 4 }, borderRadius: '20px',
                     background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                     color: 'white',
                 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Box>
-                            <Typography variant="h5" fontWeight={700}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                        <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                                 📦 Inventory Dashboard
                             </Typography>
                             <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
                                 Products, Stock aur Valuation ka poora overview
                             </Typography>
                         </Box>
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                             <Chip label={`${totalProducts} Products`}
                                 sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
                             <Chip label={`${categories.length} Categories`}
@@ -187,7 +187,7 @@ const InventoryDashboard = () => {
                     >
                         <strong>{lowStock} products</strong> ka stock low hai aur{' '}
                         <strong>{outOfStock} products</strong> out of stock hain!
-                        Neeche list dekho.
+                        See the list below.
                     </Alert>
                 </motion.div>
             )}
@@ -286,8 +286,8 @@ const InventoryDashboard = () => {
                                         </Typography>
                                     </Box>
                                 ) : (
-                                    <TableContainer>
-                                        <Table size="small">
+                                    <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+                                        <Table size="small" sx={{ minWidth: { xs: 520, sm: 0 } }}>
                                             <TableHead>
                                                 <TableRow sx={{ bgcolor: 'grey.50' }}>
                                                     {['Product', 'Stock', 'Alert', 'Status'].map((h) => (
@@ -386,7 +386,7 @@ const InventoryDashboard = () => {
                                 {categories.length === 0 ? (
                                     <Typography variant="body2" color="text.secondary"
                                         textAlign="center" py={4}>
-                                        Koi category nahi hai abhi
+                                        No categories yet.
                                     </Typography>
                                 ) : (
                                     <Stack spacing={1.5}>
@@ -464,8 +464,8 @@ const InventoryDashboard = () => {
                                 </Stack>
                                 <Divider sx={{ mt: 2 }} />
 
-                                <TableContainer>
-                                    <Table size="small">
+                                <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+                                    <Table size="small" sx={{ minWidth: { xs: 620, sm: 0 } }}>
                                         <TableHead>
                                             <TableRow sx={{ bgcolor: 'grey.50' }}>
                                                 {['#', 'Product', 'Category', 'Stock',
@@ -558,7 +558,7 @@ const InventoryDashboard = () => {
                                                 <TableRow>
                                                     <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                                                         <Typography color="text.secondary">
-                                                            Koi product nahi hai abhi
+                                                            No products yet.
                                                         </Typography>
                                                     </TableCell>
                                                 </TableRow>

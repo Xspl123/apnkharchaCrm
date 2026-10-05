@@ -4,7 +4,7 @@ import KeyboardVoiceIcon from "@mui/icons-material/KeyboardVoice";
 import StopIcon from "@mui/icons-material/Stop";
 import useSpeechToText from "../hooks/useSpeechToText";
 
-const SpeechFieldButton = ({ onTranscript, tooltip = "Bolkar fill karo", size = "small" }) => {
+const SpeechFieldButton = ({ onTranscript, tooltip = "Fill by speaking", size = "small" }) => {
   const { supported, isListening, startListening, stopListening } = useSpeechToText();
 
   if (!supported) {

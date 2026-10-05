@@ -5,7 +5,7 @@ import {
     Alert, Box, Card, CardContent, Typography, Button, Chip, Stack, Avatar,
     Dialog, DialogActions, DialogContent, DialogTitle, TextField,
     Grid, LinearProgress, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Paper, Divider, CircularProgress,
+    TableHead, TableRow, Paper, Divider, CircularProgress, useTheme,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -194,6 +194,7 @@ const getLeadScore = (lead, rules) => {
 export default function LeadDashboard() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const theme = useTheme();
     const { leads, summary, isLoading, scoreRules: remoteScoreRules, upcomingFollowUps: remoteUpcomingFollowUps } = useSelector((s) => s.leads);
     const organisation = useSelector((s) => s.orgs?.organisation);
     const [pageMsg, setPageMsg] = useState('');
@@ -380,9 +381,9 @@ export default function LeadDashboard() {
         try {
             await dispatch(saveScoreRules(mergeScoreRules(scoreForm))).unwrap();
             setScoreDialog(false);
-            setPageMsg('Lead scoring rules update ho gaye (poori team ke liye)');
+            setPageMsg('Lead scoring rules updated for the entire team.');
         } catch (err) {
-            setPageMsg(err || 'Score rules save nahi ho paye');
+            setPageMsg(err || 'Could not save the scoring rules.');
         } finally {
             setScoreSaving(false);
         }
@@ -394,7 +395,7 @@ export default function LeadDashboard() {
             await dispatch(saveScoreRules(DEFAULT_SCORE_RULES)).unwrap();
             setScoreForm(DEFAULT_SCORE_RULES);
         } catch (err) {
-            setPageMsg(err || 'Reset nahi ho paya');
+            setPageMsg(err || 'Could not reset.');
         } finally {
             setScoreSaving(false);
         }
@@ -402,15 +403,15 @@ export default function LeadDashboard() {
 
     const handleCopyFormLink = async () => {
         if (!organisation?.slug) {
-            setPageMsg('Organisation abhi load nahi hui, thodi der baad try karein');
+            setPageMsg('Organization has not loaded yet. Please try again shortly.');
             return;
         }
         const formUrl = `${window.location.origin}/lead-form/${organisation.slug}`;
         try {
             await navigator.clipboard.writeText(formUrl);
-            setPageMsg(`Form link copy ho gaya: ${formUrl}`);
+            setPageMsg(`Form link copied: ${formUrl}`);
         } catch {
-            setPageMsg(`Copy nahi ho paya. Manually copy karein: ${formUrl}`);
+            setPageMsg(`Could not copy. Please copy this link manually: ${formUrl}`);
         }
     };
 
@@ -424,7 +425,7 @@ export default function LeadDashboard() {
     ];
 
     return (
-        <Box sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: '#f8fafc', minHeight: '100%' }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: theme.palette.background.default, minHeight: '100%' }}>
             <GlassCard sx={{ mb: 3, background: 'linear-gradient(135deg,#0f172a,#1e3a8a)', color: '#fff' }}>
                 <CardContent>
                     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={2}>
@@ -748,7 +749,7 @@ export default function LeadDashboard() {
                             <Divider sx={{ my: 1.5 }} />
                             <Stack spacing={1.25}>
                                 {upcomingFollowUps.length === 0 ? (
-                                    <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>Koi upcoming follow-up nahi hai</Typography>
+                                    <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>No upcoming follow-ups.</Typography>
                                 ) : upcomingFollowUps.map(({ lead, followUp, days }) => (
                                     <Stack key={followUp.id} direction="row" spacing={1.25} alignItems="center"
                                         onClick={() => navigate(`/crm/leads/${lead.id}`)}

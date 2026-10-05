@@ -14,7 +14,7 @@ export const DeleteProductDialog = ({ open, onClose, toDelete, onConfirm, loadin
             <Typography variant="h6" fontWeight={700}>Delete Product?</Typography>
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">Yeh action undo nahi ho sakta.</Typography>
+            <Typography variant="body2" color="text.secondary">This action cannot be undone.</Typography>
             <Typography variant="subtitle1" fontWeight={700} color="error.main" mt={1}>{toDelete?.name}</Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 2 }}>

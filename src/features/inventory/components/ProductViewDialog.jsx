@@ -16,8 +16,8 @@ const ProductViewDialog = ({
         maxWidth="md" fullWidth
         PaperProps={{ sx: { borderRadius: '20px' } }}>
         <DialogTitle sx={{ pb: 0 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Stack direction="row" spacing={1.5} alignItems="center">
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
                     <Avatar sx={{ bgcolor: viewProduct?.category?.color || '#f093fb', width: 44, height: 44 }}>
                         {viewProduct?.name?.charAt(0)?.toUpperCase()}
                     </Avatar>
@@ -35,7 +35,8 @@ const ProductViewDialog = ({
                     <IconButton onClick={() => setViewDialog(false)}><CloseIcon /></IconButton>
                 </Stack>
             </Stack>
-            <Tabs value={viewTab} onChange={(_, v) => setViewTab(v)} sx={{ mt: 1 }}>
+            <Tabs value={viewTab} onChange={(_, v) => setViewTab(v)} variant="scrollable" scrollButtons="auto"
+                allowScrollButtonsMobile sx={{ mt: 1 }}>
                 <Tab label="Details" />
                 <Tab label={`Stock Movements (${productMovements.length})`} />
                 <Tab label="Attributes" />
@@ -69,7 +70,7 @@ const ProductViewDialog = ({
                         <Box mt={1}>
                             {productMovements.length === 0 ? (
                                 <Typography color="text.secondary" textAlign="center" py={4}>
-                                    Koi movement nahi hai abhi
+                                    No stock movements yet.
                                 </Typography>
                             ) : (
                                 <TableContainer component={Paper} elevation={0}
@@ -124,6 +125,7 @@ const ProductViewDialog = ({
                             <ProductAttributeForm
                                 productId={viewProduct?.id}
                                 categoryId={viewProduct?.product_category_id}
+                                initialValues={viewProduct?.attribute_values}
                             />
                         </Box>
                     )}

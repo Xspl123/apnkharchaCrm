@@ -94,7 +94,17 @@ export const getProductAttributes = createAsyncThunk(
     async (productId, { rejectWithValue }) => {
         try {
             const { data } = await axiosClient.get(`/products/${productId}/attributes`);
-            return { productId, values: data.data };
+            const responseValues = data?.data?.attribute_values ?? data?.data?.attributes ?? data?.data?.values ??
+                data?.attribute_values ?? data?.attributes ?? data?.values ?? data?.data ??
+                (Array.isArray(data) ? data : []);
+            const values = Array.isArray(responseValues)
+                ? responseValues
+                : Object.entries(responseValues || {}).map(([attributeId, entry]) => (
+                    entry && typeof entry === 'object'
+                        ? { attribute_id: attributeId, ...entry }
+                        : { attribute_id: attributeId, value: entry }
+                ));
+            return { productId, values };
         } catch (err) {
             return rejectWithValue(getErrorMessage(err));
         }

@@ -16,8 +16,8 @@ const ProductsTable = ({
 }) => (
     <GlassCard>
         <CardContent sx={{ p: 0 }}>
-            <TableContainer>
-                <Table>
+            <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+                <Table sx={{ minWidth: { xs: 900, md: 0 } }}>
                     <TableHead>
                         <TableRow sx={{ bgcolor: 'grey.50' }}>
                             {['#', 'Product', 'Category', 'Unit', 'Purchase', 'Selling',
@@ -41,12 +41,12 @@ const ProductsTable = ({
                                             <InventoryIcon sx={{ fontSize: 40, color: '#f093fb' }} />
                                         </Avatar>
                                         <Typography variant="h6" color="text.secondary">
-                                            Koi product nahi mila
+                                            No products found.
                                         </Typography>
                                         <GradientButton startIcon={<AddIcon />}
                                             onClick={handleOpenCreate}
                                             gradient="linear-gradient(135deg,#f093fb,#f5576c)">
-                                            Pehla Product Add Karo
+                                            Add Your First Product
                                         </GradientButton>
                                     </Stack>
                                 </TableCell>

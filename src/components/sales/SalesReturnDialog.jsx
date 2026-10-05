@@ -95,7 +95,7 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
 
     const handleSubmit = async () => {
         if (selectedItems.length === 0) {
-            setSnackMsg('Kam se kam ek item ki qty daalo!');
+            setSnackMsg('Enter a quantity for at least one item.');
             return;
         }
 
@@ -106,7 +106,7 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
                 return;
             }
             if (!item.reason?.trim()) {
-                setSnackMsg(`${item.item_name}: Reason daalo!`);
+                setSnackMsg(`${item.item_name}: Enter a reason.`);
                 return;
             }
         }
@@ -197,7 +197,7 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
 
                 {/* Info */}
                 <Alert severity="info" icon={<WarnIcon />} sx={{ mb: 2, borderRadius: '10px' }}>
-                    Jo items return karne hain unki qty daalo. Stock automatically update ho jayega.
+                    Enter the quantity for each item to return. Stock will update automatically.
                 </Alert>
 
                 {/* Items Table */}
@@ -323,10 +323,10 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Box>
                                     <Typography variant="body2" color="text.secondary">
-                                        {selectedItems.length} item(s) return ho rahi hain
+                                        {selectedItems.length} item(s) will be returned
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        Stock inventory mein wapas aayega
+                                        Stock will be added back to inventory
                                     </Typography>
                                 </Box>
                                 <Box textAlign="right">

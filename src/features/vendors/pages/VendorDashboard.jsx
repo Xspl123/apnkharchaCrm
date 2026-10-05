@@ -232,7 +232,7 @@ const VendorDashboard = () => {
                     <SummaryCard
                         title="Total Paid"
                         value={fmt(totalPaid)}
-                        subtitle="Vendors ko diya gaya"
+                        subtitle="Paid to vendors"
                         icon={<Paid sx={{ fontSize: 26 }} />}
                         gradient="linear-gradient(135deg, #1976d2, #42a5f5)"
                         delay={0.2}
@@ -242,7 +242,7 @@ const VendorDashboard = () => {
                     <SummaryCard
                         title="Balance Due"
                         value={fmt(adjustedBalance)}
-                        subtitle={adjustedAdvance > 0 ? `Advance paid ${fmt(adjustedAdvance)}` : 'Vendors ko dena baaki'}
+                        subtitle={adjustedAdvance > 0 ? `Advance paid ${fmt(adjustedAdvance)}` : 'Outstanding to vendors'}
                         icon={<MoneyOff sx={{ fontSize: 26 }} />}
                         gradient="linear-gradient(135deg, #f43f5e, #fb7185)"
                         delay={0.3}
@@ -484,7 +484,7 @@ const VendorDashboard = () => {
                     <Grid container spacing={2}>
                         {[
                             {
-                                label: 'Vendors Manage Karo',
+                                label: 'Manage Vendors',
                                 sub: 'Add, edit ya delete vendors',
                                 icon: <Business />,
                                 href: '/vendors/list',
@@ -492,13 +492,13 @@ const VendorDashboard = () => {
                             },
                             {
                                 label: 'Purchase Orders',
-                                sub: 'New PO banao ya existing dekho',
+                                sub: 'Create or view purchase orders',
                                 icon: <ShoppingCart />,
                                 href: '/vendors/purchase-orders',
                                 gradient: 'linear-gradient(135deg, #11998e, #38ef7d)',
                             },
                             {
-                                label: 'Payments Track Karo',
+                                label: 'Track Payments',
                                 sub: 'Vendor payments ka record',
                                 icon: <AccountBalance />,
                                 href: '/vendors/payments',

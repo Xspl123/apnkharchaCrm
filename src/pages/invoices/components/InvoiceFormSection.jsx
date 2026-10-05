@@ -215,10 +215,10 @@ const InvoiceFormSection = ({
                                             <Grid item xs={12}>
                                                 <Paper elevation={0} sx={{ px: 2.5, py: 1.5, borderRadius: '10px', borderLeft: '4px solid', borderColor: { b2b: '#1976d2', b2cs: '#2e7d32', b2cl: '#ed6c02', export: '#9c27b0' }[formData.invoice_type], bgcolor: { b2b: 'rgba(25,118,210,0.05)', b2cs: 'rgba(46,125,50,0.05)', b2cl: 'rgba(237,108,2,0.05)', export: 'rgba(156,39,176,0.05)' }[formData.invoice_type] }}>
                                                     <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                                                        {formData.invoice_type === 'b2b'    && '✅ B2B: Client ka GSTIN GSTR-1 mein report hoga. Supply type ke hisaab se CGST+SGST (intra) ya IGST (inter) lagega.'}
-                                                        {formData.invoice_type === 'b2cs'   && '🟢 B2CS: Consumer invoice, amount 2.5L se kam, intra-state. State-wise grouped summary GSTR-1 mein jaayegi.'}
-                                                        {formData.invoice_type === 'b2cl'   && '🟡 B2CL: Consumer invoice, amount 2.5L ya zyada, inter-state. Invoice-wise detail GSTR-1 mein separately jaayegi.'}
-                                                        {formData.invoice_type === 'export' && '🟣 Export: Foreign client ko supply. Zero-rated ya IGST with refund claim. GSTR-1 mein Export section mein jaayega.'}
+                                                        {formData.invoice_type === 'b2b'    && '✅ B2B: The client GSTIN will be reported in GSTR-1. CGST+SGST applies to intra-state supplies; IGST applies to inter-state supplies.'}
+                                                        {formData.invoice_type === 'b2cs'   && '🟢 B2CS: Consumer invoice below ₹2.5 lakh for an intra-state supply. A state-wise summary will appear in GSTR-1.'}
+                                                        {formData.invoice_type === 'b2cl'   && '🟡 B2CL: Consumer invoice of ₹2.5 lakh or more for an inter-state supply. Invoice-level details will be reported separately in GSTR-1.'}
+                                                        {formData.invoice_type === 'export' && '🟣 Export: Supply to a foreign client. Zero-rated or IGST with a refund claim. It will appear in the Export section of GSTR-1.'}
                                                     </Typography>
                                                 </Paper>
                                             </Grid>

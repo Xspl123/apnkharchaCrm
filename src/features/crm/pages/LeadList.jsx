@@ -21,6 +21,7 @@ import {
     Grid, CircularProgress, Alert, Checkbox, TablePagination,
     Radio, RadioGroup, FormControlLabel, Divider,
     List, ListItem, ListItemText, ListItemSecondaryAction,
+    useTheme,
 } from '@mui/material';
 import {
     Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
@@ -461,7 +462,7 @@ function LastActivityCell({ lead, activitySignal }) {
     if (activitySignal?.notSynced) {
         return (
             <Box onMouseEnter={handleHoverSync}>
-                <Tooltip title={loading ? 'Syncing…' : 'Hover karo, activity load ho jayegi'}>
+                <Tooltip title={loading ? 'Syncing…' : 'Hover to load activity'}>
                     <Chip
                         label={loading ? 'Syncing…' : 'Hover to sync'}
                         size="small"
@@ -511,6 +512,7 @@ class ErrorBoundary extends React.Component {
 function LeadListComponent() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const theme = useTheme();
     const { leads = [], summary, isLoading, actionLoading, scoreRules: remoteScoreRules, customFields = [], workflowRules = [] } = useSelector((s) => s.leads || { leads: [] });
     const { can } = usePermission();
     const { user: currentUser } = useSelector((s) => s.auth || {});
@@ -785,7 +787,7 @@ function LeadListComponent() {
             dispatch(getLeads());
             dispatch(getLeadSummary());
         } catch (err) {
-            setMergeError(err || 'Merge nahi ho paya');
+            setMergeError(err || 'Could not merge leads.');
         } finally {
             setMergeLoading(false);
         }
@@ -820,7 +822,7 @@ function LeadListComponent() {
 
     const handleBulkAssign = async () => {
         if (!bulkOwnerId) {
-            setBulkError('Owner select karo');
+            setBulkError('Select an owner.');
             return;
         }
         try {
@@ -839,7 +841,7 @@ function LeadListComponent() {
 
     const handleBulkStatusUpdate = async () => {
         if (bulkStatus === 'closed_lost' && !bulkLostReason.trim()) {
-            setBulkError('Closed lost ke liye lost reason required hai');
+            setBulkError('A loss reason is required to mark a lead as Closed Lost.');
             return;
         }
         try {
@@ -876,12 +878,12 @@ function LeadListComponent() {
     const handleAutoAssignUnassigned = async () => {
         const unassignedLeads = (leads || []).filter((lead) => !getLeadOwnerId(lead));
         if (unassignedLeads.length === 0) {
-            setPageMsg('Koi unassigned lead nahi hai');
+            setPageMsg('No unassigned leads.');
             return;
         }
         const eligible = getEligibleAssignees(assignableUsers);
         if (eligible.length === 0) {
-            setPageMsg('Team me koi assignable member nahi mila');
+            setPageMsg('No assignable team members found.');
             return;
         }
         try {
@@ -913,9 +915,9 @@ function LeadListComponent() {
         try {
             await dispatch(saveScoreRules(mergeScoreRules(scoreForm))).unwrap();
             setScoreDialog(false);
-            setPageMsg('Lead scoring rules update ho gaye (poori team ke liye)');
+            setPageMsg('Lead scoring rules updated for the entire team.');
         } catch (err) {
-            setPageMsg(err || 'Score rules save nahi ho paye');
+            setPageMsg(err || 'Could not save the scoring rules.');
         } finally {
             setScoreSaving(false);
         }
@@ -927,7 +929,7 @@ function LeadListComponent() {
             await dispatch(saveScoreRules(DEFAULT_SCORE_RULES)).unwrap();
             setScoreForm(DEFAULT_SCORE_RULES);
         } catch (err) {
-            setPageMsg(err || 'Reset nahi ho paya');
+            setPageMsg(err || 'Could not reset.');
         } finally {
             setScoreSaving(false);
         }
@@ -1002,7 +1004,7 @@ function LeadListComponent() {
             }
 
             if (!payloads.length) {
-                setImportError('Import file me valid company_name rows nahi mile');
+                setImportError('No valid company_name rows found in the import file.');
                 return;
             }
 
@@ -1080,7 +1082,7 @@ function LeadListComponent() {
             return;
         }
         if (cfForm.field_type === 'select' && optionsStringToArray(cfForm.options).length === 0) {
-            setCfError('Select type ke liye kam se kam ek option required hai');
+            setCfError('At least one option is required for the selected field type.');
             return;
         }
         const payload = {
@@ -1221,7 +1223,7 @@ function LeadListComponent() {
         e.preventDefault();
         setFormError('');
         if (formData.status === 'closed_lost' && !formData.lost_reason.trim()) {
-            setFormError('Closed lost ke liye lost reason required hai');
+            setFormError('A loss reason is required to mark a lead as Closed Lost.');
             return;
         }
         const submitData = {
@@ -1314,7 +1316,7 @@ function LeadListComponent() {
                         <Grid container spacing={1.5}>
                             {sourceAttribution.map((item) => (
                                 <Grid item xs={12} sm={6} md={2.4} key={item.source}>
-                                    <Box sx={{ p: 1.5, border: '1px solid #e5e7eb', borderRadius: '12px', bgcolor: '#fff' }}>
+                                    <Box sx={{ p: 1.5, border: `1px solid ${theme.palette.divider}`, borderRadius: '12px', bgcolor: theme.palette.background.paper }}>
                                         <Typography fontWeight={800} variant="body2">{item.source.replace('_', ' ').toUpperCase()}</Typography>
                                         <Typography variant="caption" color="text.secondary">{item.leads} leads | {item.won} won</Typography>
                                         <Typography variant="body2" fontWeight={700} sx={{ mt: 1 }}>Won {formatMoney(item.revenue)}</Typography>
@@ -1340,7 +1342,7 @@ function LeadListComponent() {
                         <Grid container spacing={1.5}>
                             {campaignAttribution.map((item) => (
                                 <Grid item xs={12} sm={6} md={2.4} key={item.campaign}>
-                                    <Box sx={{ p: 1.5, border: '1px solid #e5e7eb', borderRadius: '12px', bgcolor: '#fff' }}>
+                                    <Box sx={{ p: 1.5, border: `1px solid ${theme.palette.divider}`, borderRadius: '12px', bgcolor: theme.palette.background.paper }}>
                                         <Typography fontWeight={800} variant="body2" noWrap title={item.campaign}>{item.campaign}</Typography>
                                         <Typography variant="caption" color="text.secondary" display="block">via {item.source}</Typography>
                                         <Typography variant="caption" color="text.secondary">{item.leads} leads | {item.won} won</Typography>
@@ -1375,11 +1377,11 @@ function LeadListComponent() {
                                 onClick={() => view.key === 'all' ? clearFilters() : applyQuickView(view.key)}
                                 clickable
                                 sx={{
-                                    bgcolor: '#ffffff',
-                                    border: '1px solid #e5e7eb',
-                                    color: '#334155',
+                                    bgcolor: theme.palette.background.paper,
+                                    border: `1px solid ${theme.palette.divider}`,
+                                    color: theme.palette.text.primary,
                                     fontWeight: 700,
-                                    '&:hover': { bgcolor: '#f8fafc' },
+                                    '&:hover': { bgcolor: theme.palette.action.hover },
                                 }}
                             />
                         ))}
@@ -1547,23 +1549,23 @@ function LeadListComponent() {
             </GlassCard>
 
             {selectedIds.length > 0 && (
-                <GlassCard sx={{ mb: 2, border: '1px solid #c7d2fe', bgcolor: '#eef2ff' }}>
+                <GlassCard sx={{ mb: 2, border: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
                     <CardContent sx={{ py: 1.5 }}>
                         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5}>
-                            <Typography fontWeight={800} color="#3730a3">
+                            <Typography fontWeight={800} sx={{ color: theme.palette.primary.main }}>
                                 {selectedIds.length} selected
                             </Typography>
                             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                 <Button size="small" variant="outlined" startIcon={<AssignIcon />} onClick={() => setBulkDialog('assign')}
-                                    sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#fff' }}>
+                                    sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: theme.palette.background.paper }}>
                                     Assign Owner
                                 </Button>
                                 <Button size="small" variant="outlined" onClick={() => setBulkDialog('status')}
-                                    sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#fff' }}>
+                                    sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: theme.palette.background.paper }}>
                                     Update Status
                                 </Button>
                                 <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => setBulkDialog('delete')}
-                                    sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#fff' }}>
+                                    sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: theme.palette.background.paper }}>
                                     Delete
                                 </Button>
                                 <Button size="small" onClick={() => setSelectedIds([])} sx={{ borderRadius: '10px', textTransform: 'none' }}>
@@ -1578,7 +1580,7 @@ function LeadListComponent() {
             {/* Table */}
             <GlassCard>
                 <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5}
-                    sx={{ px: 2.5, py: 2, borderBottom: '1px solid #e5e7eb' }}>
+                    sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
                     <Box>
                         <Typography variant="h6" fontWeight={800}>Lead Records</Typography>
                         <Typography variant="caption" color="text.secondary">
@@ -1591,9 +1593,9 @@ function LeadListComponent() {
                 <TableContainer sx={{ maxHeight: 620, overflowX: 'auto' }}>
                     <Table stickyHeader sx={{ minWidth: 1380 }}>
                         <TableHead>
-                            <TableRow sx={{ bgcolor: '#ffffff' }}>
-                                {['Select', '#', 'Company', 'Contact', 'Assigned To', 'Value', 'Source', 'Status', 'Health', 'Last Activity', 'Next Action', ...(customFields.length > 0 ? ['Custom Fields'] : []), 'Actions'].map((h) => (
-                                    <TableCell key={h} sx={{ fontWeight: 800, color: '#374151', bgcolor: '#ffffff', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap', fontSize: 12 }}>
+                    <TableRow sx={{ bgcolor: theme.palette.background.paper }}>
+                        {['Select', '#', 'Company', 'Contact', 'Assigned To', 'Value', 'Source', 'Status', 'Health', 'Last Activity', 'Next Action', ...(customFields.length > 0 ? ['Custom Fields'] : []), 'Actions'].map((h) => (
+                                    <TableCell key={h} sx={{ fontWeight: 800, color: theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.text.primary, bgcolor: theme.palette.mode === 'dark' ? theme.palette.primary.main : theme.palette.background.default, borderBottom: `1px solid ${theme.palette.divider}`, whiteSpace: 'nowrap', fontSize: 12 }}>
                                         {h === 'Select' ? (
                                             <Checkbox
                                                 size="small"
@@ -1623,7 +1625,7 @@ function LeadListComponent() {
                                 const activitySignal = activitySignals[lead.id] || getLeadActivitySignals(lead);
                                 const nextTone = getActivityTone(activitySignal.nextAction);
                                 return (
-                                    <TableRow key={lead.id} hover sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f8fafc' }, '& td': { borderBottomColor: '#eef2f7' } }}
+                                    <TableRow key={lead.id} hover sx={{ cursor: 'pointer', '&:hover': { bgcolor: theme.palette.action.hover }, '& td': { borderBottomColor: theme.palette.divider } }}
                                         onClick={() => navigate(`/crm/leads/${lead.id}`)}>
                                         <TableCell onClick={(e) => e.stopPropagation()}>
                                             <Checkbox size="small" checked={selectedIds.includes(lead.id)} onChange={() => toggleSelected(lead.id)} />
@@ -1992,7 +1994,7 @@ function LeadListComponent() {
                 <DialogContent>
                     {bulkError && <Alert severity="error" sx={{ mb: 2 }}>{bulkError}</Alert>}
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {selectedIds.length} selected lead(s) par action apply hoga.
+                        {selectedIds.length} selected lead(s) will be affected.
                     </Typography>
                     {bulkDialog === 'assign' && (
                         <FormControl fullWidth size="small">
@@ -2092,7 +2094,7 @@ function LeadListComponent() {
                     <List dense sx={{ mb: 2 }}>
                         {customFields.length === 0 && (
                             <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
-                                Abhi tak koi custom field nahi banaya gaya.
+                                No custom fields have been created yet.
                             </Typography>
                         )}
                         {customFields.map((f) => (
@@ -2181,7 +2183,7 @@ function LeadListComponent() {
                 <DialogTitle fontWeight={700}>Delete Custom Field?</DialogTitle>
                 <DialogContent>
                     <Alert severity="warning">
-                        Is field ki definition delete ho jaayegi. Leads par pehle se saved values database mein reh jaayengi lekin form/table mein nahi dikhengi.
+                        This field definition will be deleted. Existing values will remain in the database but will no longer appear in the form or table.
                     </Alert>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -2201,12 +2203,12 @@ function LeadListComponent() {
                 </DialogTitle>
                 <DialogContent sx={{ pt: 3 }}>
                     <Alert severity="info" sx={{ mb: 2 }}>
-                        Jab bhi kisi lead ka status change ho kar chuni hui stage tak pahunche, lead ke owner ko turant push notification chali jaayegi (Notifications bell wala hi channel — koi email/SMS nahi).
+                        When a lead reaches the selected stage, its owner will receive a push notification through the Notifications bell. No email or SMS will be sent.
                     </Alert>
                     <List dense sx={{ mb: 2 }}>
                         {workflowRules.length === 0 && (
                             <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
-                                Abhi tak koi workflow rule nahi banaya gaya.
+                                No workflow rules have been created yet.
                             </Typography>
                         )}
                         {workflowRules.map((rule) => (
@@ -2221,7 +2223,7 @@ function LeadListComponent() {
                                             )}
                                         </Stack>
                                     }
-                                    secondary={`Jab ${rule.trigger_type === 'quotation_status_change' ? 'quotation status' : 'lead status'} "${(rule.trigger_type === 'quotation_status_change' ? QUOTATION_STATUS_CONFIG : STATUS_CONFIG)[rule.trigger_status]?.label || rule.trigger_status}" ho → owner ko notify karo${rule.action_message ? `: "${rule.action_message}"` : ''}`}
+                                    secondary={`When the ${rule.trigger_type === 'quotation_status_change' ? 'quotation status' : 'lead status'} becomes "${(rule.trigger_type === 'quotation_status_change' ? QUOTATION_STATUS_CONFIG : STATUS_CONFIG)[rule.trigger_status]?.label || rule.trigger_status}", notify the owner${rule.action_message ? `: "${rule.action_message}"` : ''}`}
                                 />
                                 <ListItemSecondaryAction>
                                     <IconButton size="small" onClick={() => handleOpenWorkflowRuleEdit(rule)} sx={{ color: '#f59e0b' }}>
@@ -2314,7 +2316,7 @@ function LeadListComponent() {
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle fontWeight={700}>Delete Workflow Rule?</DialogTitle>
                 <DialogContent>
-                    <Alert severity="warning">Yeh rule delete ho jaayega — is status pe pahunchne wale leads ke liye ab automatic notification nahi jaayegi.</Alert>
+                    <Alert severity="warning">This rule will be deleted. Leads reaching this status will no longer trigger an automatic notification.</Alert>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setWfDeleteId(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>
@@ -2329,7 +2331,7 @@ function LeadListComponent() {
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle fontWeight={700}>Delete Lead?</DialogTitle>
                 <DialogContent>
-                    <Typography color="text.secondary">Yeh lead aur uski sari activities delete ho jaayengi.</Typography>
+                    <Typography color="text.secondary">This lead and all its activities will be deleted.</Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setDeleteDialog(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>
@@ -2343,9 +2345,9 @@ function LeadListComponent() {
                 <DialogContent>
                     {mergeError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setMergeError('')}>{mergeError}</Alert>}
                     <Alert severity="info" sx={{ mb: 2 }}>
-                        Jisko "Keep" select karoge, wahi lead bachega. Baaki leads se sirf khaali fields fill honge
+                        The lead marked "Keep" will remain. Only empty fields will be filled from the other leads.
                         (jaise phone/email missing ho), phir wo delete ho jaayenge. Un duplicate leads ki apni activities/follow-ups
-                        transfer nahi hoti (backend me abhi yeh support nahi hai) — is action ka summary primary lead pe ek note ke roop me save ho jaayega.
+                        Activities are not transferred (this is not currently supported). A summary of this action will be saved as a note on the primary lead.
                     </Alert>
                     {mergeGroup && (
                         <RadioGroup value={mergePrimaryId || ''} onChange={(e) => setMergePrimaryId(parseInt(e.target.value))}>

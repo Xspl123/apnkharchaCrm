@@ -30,14 +30,14 @@ const GlobalSpeechControl = () => {
 
     dictateToActiveElement({
       onSuccess: () =>
-        showSnackbar("Voice text field mein add ho gaya.", "success"),
+        showSnackbar("Voice text was added to the field.", "success"),
       onError: (message) => showSnackbar(message, "warning"),
     });
   };
 
   return (
     <>
-      <Tooltip title="Focus input karke mic dabao aur bolo">
+      <Tooltip title="Focus an input, then tap the microphone and speak">
         <Fab
           color={isListening ? "error" : "primary"}
           onClick={handleClick}

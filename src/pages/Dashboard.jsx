@@ -613,7 +613,7 @@ export default function Dashboard() {
           if (!topMonthEntry) {
             setShowVoiceResults(false);
             setVoiceQueryResults([]);
-            setVoiceError(`${year} ke liye expense data nahi mila.`);
+            setVoiceError(`No expense data found for ${year}.`);
             return;
           }
           const winningMonthIndex = parseInt(topMonthEntry[0], 10);
@@ -667,7 +667,7 @@ export default function Dashboard() {
           if (!topCategoryEntry) {
             setShowVoiceResults(false);
             setVoiceQueryResults([]);
-            setVoiceError(`${monthName} ${year} ke liye category expense data nahi mila.`);
+            setVoiceError(`No category expense data found for ${monthName} ${year}.`);
             return;
           }
           const winningCategory = topCategoryEntry[0];
@@ -693,7 +693,7 @@ export default function Dashboard() {
         if (!resultPayload) {
           setShowVoiceResults(false);
           setVoiceQueryResults([]);
-          setVoiceError("Query samajh nahi aayi. Example: March me sabse jyada kharcha kis category me hua.");
+          setVoiceError("I could not understand that query. For example: Which category had the highest expenses in March?");
           return;
         }
 

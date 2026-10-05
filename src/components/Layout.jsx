@@ -14,17 +14,23 @@ const Layout = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const themeColor = colorMode === "dark" ? "#0f172a" : "#3b82f6";
+  const mainBackground = theme.palette.mode === "dark"
+    ? theme.palette.background.default
+    : theme.palette.background.paper;
 
   return (
     <Box
       className="app-layout"
+      style={{
+        "--app-layout-background": theme.palette.background.default,
+        "--app-main-background": mainBackground,
+        "--app-main-text": theme.palette.text.primary,
+      }}
     >
       {/* ✅ Sidebar */}
       <Sidebar
         open={sidebarOpen}
         toggleSidebar={toggleSidebar}
-        themeColor={themeColor}
         isMobile={isMobile}
       />
 
@@ -37,7 +43,6 @@ const Layout = ({
           toggleSidebar={toggleSidebar}
           colorMode={colorMode}
           toggleColorMode={toggleColorMode}
-          themeColor={themeColor}
         />
 
         {/* ✅ Main Content */}
@@ -50,7 +55,7 @@ const Layout = ({
         </Box>
 
         {/* ✅ Footer */}
-        <Footer themeColor={themeColor} />
+        <Footer />
       </Box>
     </Box>
   );

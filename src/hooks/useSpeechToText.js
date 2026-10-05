@@ -128,7 +128,7 @@ const useSpeechToText = () => {
       const activeElement = document.activeElement;
 
       if (!isEditableElement(activeElement)) {
-        const message = "Voice typing ke liye pehle koi input ya search field focus karo.";
+        const message = "Focus an input or search field before using voice typing.";
         setError(message);
         onError?.(message);
         return;
@@ -140,7 +140,7 @@ const useSpeechToText = () => {
           const inserted = appendTranscriptToElement(activeElement, transcript);
 
           if (!inserted) {
-            const message = "Selected field voice input support nahi karta.";
+            const message = "The selected field does not support voice input.";
             setError(message);
             onError?.(message);
             return;

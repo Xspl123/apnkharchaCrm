@@ -90,7 +90,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
 
     const handleSubmit = async () => {
         if (selectedItems.length === 0) {
-            setSnackMsg('Kam se kam ek item ki qty daalo!');
+            setSnackMsg('Enter a quantity for at least one item.');
             return;
         }
 
@@ -101,7 +101,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                 return;
             }
             if (!item.reason?.trim()) {
-                setSnackMsg(`${item.item_name}: Reason daalo!`);
+                setSnackMsg(`${item.item_name}: Enter a reason.`);
                 return;
             }
         }
@@ -176,7 +176,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                 )}
 
                 <Alert severity="warning" icon={<WarnIcon />} sx={{ mb: 2, borderRadius: '10px' }}>
-                    Jo items vendor ko wapas karne hain unki qty daalo. Stock inventory se minus ho jayega.
+                    Enter the quantity for each item to return to the vendor. The quantity will be deducted from inventory.
                 </Alert>
 
                 <TableContainer component={Paper} elevation={0}
@@ -298,10 +298,10 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Box>
                                     <Typography variant="body2" color="text.secondary">
-                                        {selectedItems.length} item(s) return ho rahi hain
+                                        {selectedItems.length} item(s) will be returned
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        Inventory se stock minus hoga
+                                        Stock will be deducted from inventory
                                     </Typography>
                                 </Box>
                                 <Box textAlign="right">

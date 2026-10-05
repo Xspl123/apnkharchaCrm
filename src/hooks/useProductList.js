@@ -6,6 +6,7 @@ import {
     getMovementsByProduct, createMovement, reset,
 } from '../features/inventory/state/inventorySlice';
 import { getHsnCodes } from '../redux/features/hsnCodeSlice';
+import { saveProductAttributes } from '../redux/features/attributeSlice';
 import {
     emptyProduct,
     emptyCategory,
@@ -32,6 +33,7 @@ export const useProductList = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRows] = useState(10);
     const [formData, setFormData] = useState({ ...emptyProduct });
+    const [productAttributeValues, setProductAttributeValues] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [activeTab, setActiveTab] = useState(0);
 
@@ -90,10 +92,12 @@ export const useProductList = () => {
 
     const handleOpenCreate = () => {
         setFormData({ ...emptyProduct });
+        setProductAttributeValues([]);
         setEditMode(false); setSelected(null); setShowForm(true);
     };
 
     const handleEdit = (product) => {
+        setProductAttributeValues([]);
         setFormData({
             product_category_id: product.product_category_id || '',
             name: product.name || '',
@@ -115,6 +119,7 @@ export const useProductList = () => {
     const handleCancel = () => {
         setShowForm(false); setEditMode(false); setSelected(null);
         setFormData({ ...emptyProduct });
+        setProductAttributeValues([]);
     };
 
     const handleSubmit = async (e) => {
@@ -122,13 +127,36 @@ export const useProductList = () => {
         if (!formData.name.trim()) { showSnack('Product name required hai!', 'error'); return; }
         try {
             setLoading(true);
+            let productId;
             if (editMode && selectedProduct) {
                 await dispatch(updateProduct({ id: selectedProduct.id, data: formData })).unwrap();
-                showSnack('Product updated successfully!');
+                productId = selectedProduct.id;
             } else {
-                await dispatch(createProduct(formData)).unwrap();
-                showSnack('Product created successfully!');
+                const created = await dispatch(createProduct(formData)).unwrap();
+                const product = created?.data ?? created?.product ?? created;
+                productId = product?.id ?? product?.product?.id;
             }
+
+            let attributeSaveFailed = false;
+            if (productAttributeValues.length > 0) {
+                if (productId) {
+                    try {
+                        await dispatch(saveProductAttributes({
+                            productId,
+                            attributes: productAttributeValues,
+                        })).unwrap();
+                    } catch {
+                        attributeSaveFailed = true;
+                    }
+                } else {
+                    attributeSaveFailed = true;
+                }
+            }
+
+            showSnack(attributeSaveFailed
+                ? `Product ${editMode ? 'updated' : 'created'}, but its attributes could not be saved. Edit the product and try again.`
+                : `Product ${editMode ? 'updated' : 'created'} successfully!`,
+            attributeSaveFailed ? 'warning' : 'success');
             handleCancel();
             await dispatch(getProducts());
         } catch (err) {
@@ -193,7 +221,7 @@ export const useProductList = () => {
     // ✅ FIXED: adjustment type — physical count se difference nikalo
     const handleMovementSubmit = async (e) => {
         e.preventDefault();
-        if (!movForm.qty || movForm.qty === '') { showSnack('Valid qty daalo!', 'error'); return; }
+        if (!movForm.qty || movForm.qty === '') { showSnack('Enter a valid quantity.', 'error'); return; }
 
         let submitData = { ...movForm };
 
@@ -205,7 +233,7 @@ export const useProductList = () => {
             const diff = newStock - currentStock;
 
             if (diff === 0) {
-                showSnack('Stock same hai — koi change nahi!', 'info');
+                showSnack('The stock level is unchanged.', 'info');
                 return;
             }
 
@@ -218,7 +246,7 @@ export const useProductList = () => {
             };
         } else {
             const qty = parseFloat(movForm.qty);
-            if (qty <= 0) { showSnack('Qty 0 se zyada honi chahiye!', 'error'); return; }
+            if (qty <= 0) { showSnack('Quantity must be greater than 0.', 'error'); return; }
             submitData = { ...movForm, qty };
         }
 
@@ -250,6 +278,7 @@ export const useProductList = () => {
         // form / edit state
         showForm, setShowForm, editMode, selectedProduct, formData, setFormData,
         handleChange, handleOpenCreate, handleEdit, handleCancel, handleSubmit,
+        productAttributeValues, setProductAttributeValues,
 
         // loading / snackbar
         loading, snackbar, setSnackbar, showSnack,

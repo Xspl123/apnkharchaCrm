@@ -180,8 +180,8 @@ const StockMovement = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.product_id) { showSnack('Product select karo!', 'error'); return; }
-        if (!formData.qty || formData.qty <= 0) { showSnack('Valid qty daalo!', 'error'); return; }
+        if (!formData.product_id) { showSnack('Select a product.', 'error'); return; }
+        if (!formData.qty || formData.qty <= 0) { showSnack('Enter a valid quantity.', 'error'); return; }
 
         try {
             setLoading(true);
@@ -256,25 +256,25 @@ const StockMovement = () => {
                 </Box>
             )}
 
-            <Container maxWidth="xl" sx={{ py: 4 }}>
+            <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2 } }}>
 
                 {/* ══ HEADER ══ */}
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                     <Paper elevation={0} sx={{
-                        p: 2.5, mb: 3, borderRadius: '16px',
+                        p: { xs: 2, sm: 2.5 }, mb: 3, borderRadius: '16px',
                         background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                         color: 'white',
                     }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                                <Typography variant="h5" fontWeight={700}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                            <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                                     📊 Stock Movements
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.3 }}>
                                     Stock in, out aur adjustments ka poora record
                                 </Typography>
                             </Box>
-                            <Stack direction="row" spacing={1}>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                 <Chip label={`${stats.total} Total`}
                                     sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
                                 <Chip label={`${stats.inward} In`}
@@ -482,7 +482,7 @@ const StockMovement = () => {
                                                 New Stock Movement
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                Manual stock in, out ya adjustment karo
+                                                Record a manual stock-in, stock-out, or adjustment
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -694,9 +694,9 @@ const StockMovement = () => {
                     <CardContent sx={{ p: 0 }}>
 
                         {/* Table Header */}
-                        <Stack direction="row" justifyContent="space-between"
-                            alignItems="center" sx={{ p: 2.5, pb: 0 }}>
-                            <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"
+                            alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1} sx={{ p: { xs: 1.5, sm: 2.5 }, pb: 0 }}>
+                            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                                 <MovementIcon color="action" />
                                 <Typography variant="subtitle1" fontWeight={700}>
                                     Stock Movement Log
@@ -713,8 +713,8 @@ const StockMovement = () => {
 
                         <Divider sx={{ mt: 2 }} />
 
-                        <TableContainer>
-                            <Table>
+                        <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+                            <Table sx={{ minWidth: { xs: 850, md: 0 } }}>
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: 'grey.50' }}>
                                         {['Date','Product','Type','Qty','Rate',
@@ -740,13 +740,13 @@ const StockMovement = () => {
                                                         <MovementIcon sx={{ fontSize: 40, color: '#4facfe' }} />
                                                     </Avatar>
                                                     <Typography variant="h6" color="text.secondary">
-                                                        Koi movement nahi mila
+                                                        No stock movements found.
                                                     </Typography>
                                                     <GradientButton
                                                         startIcon={<AddIcon />}
                                                         onClick={() => setShowForm(true)}
                                                         gradient="linear-gradient(135deg,#4facfe,#00f2fe)">
-                                                        Pehla Movement Add Karo
+                                                        Add Your First Movement
                                                     </GradientButton>
                                                 </Stack>
                                             </TableCell>
@@ -851,7 +851,7 @@ const StockMovement = () => {
                                                             </IconButton>
                                                         </Tooltip>
                                                     ) : (
-                                                        <Tooltip title="Auto-generated — delete nahi ho sakta">
+                                                        <Tooltip title="Auto-generated — cannot be deleted">
                                                             <span>
                                                                 <IconButton size="small" disabled>
                                                                     <DeleteIcon fontSize="small" />
@@ -894,12 +894,12 @@ const StockMovement = () => {
                             <DeleteIcon sx={{ fontSize: 40 }} />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
-                            Movement Delete Karo?
+                            Delete Movement?
                         </Typography>
                     </DialogTitle>
                     <DialogContent sx={{ textAlign: 'center' }}>
                         <Alert severity="warning" sx={{ mb: 2, borderRadius: '10px', textAlign: 'left' }}>
-                            Delete karne par stock automatically reverse ho jayega!
+                            Deleting this movement will automatically reverse the stock change.
                         </Alert>
                         <Typography variant="body2" color="text.secondary">
                             Product: <b>{toDelete?.product?.name}</b>

@@ -203,7 +203,7 @@ const GstDashboard = () => {
                             <SummaryCard
                                 title="Total Invoices"
                                 value={summary.total_invoices}
-                                subtitle="Is period mein"
+                                subtitle="For this period"
                                 icon={<Receipt color="primary" />}
                                 color="primary.main"
                             />
@@ -212,7 +212,7 @@ const GstDashboard = () => {
                             <SummaryCard
                                 title="Taxable Value"
                                 value={fmt(summary.total_taxable_value)}
-                                subtitle="GST se pehle"
+                                subtitle="Before GST"
                                 icon={<TrendingUp color="success" />}
                                 color="success.main"
                             />
@@ -348,7 +348,7 @@ const GstDashboard = () => {
                                 href={`/gst/gstr1?period=${summary.period}`}
                                 fullWidth
                             >
-                                GSTR-1 Report Dekho
+                                View GSTR-1 Report
                             </Button>
                             <Button
                                 variant="outlined"
@@ -356,7 +356,7 @@ const GstDashboard = () => {
                                 href={`/gst/gstr3b?period=${summary.period}`}
                                 fullWidth
                             >
-                                GSTR-3B Report Dekho
+                                View GSTR-3B Report
                             </Button>
                             <Button
                                 variant="contained"
@@ -364,7 +364,7 @@ const GstDashboard = () => {
                                 href={`/gst/returns?period=${summary.period}`}
                                 fullWidth
                             >
-                                Return File Karo
+                                File Return
                             </Button>
                         </Stack>
                     </Paper>
@@ -375,7 +375,7 @@ const GstDashboard = () => {
             {!summaryLoading && !summary && !error && (
                 <Box textAlign="center" py={8}>
                     <Typography color="text.secondary">
-                        Period select karo aur Fetch karo
+                        Select a period and fetch the data
                     </Typography>
                 </Box>
             )}

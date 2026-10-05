@@ -106,7 +106,7 @@ export default function OrganisationSetup() {
                                 Setup Your Organisation
                             </Typography>
                             <Typography color="text.secondary">
-                                Namaskar <strong>{user?.name}</strong>! Apni organisation setup karo aur ERP shuru karo.
+                                Welcome, <strong>{user?.name}</strong>! Set up your organization to get started with the ERP.
                             </Typography>
                         </Box>
 
@@ -214,7 +214,7 @@ export default function OrganisationSetup() {
                                     </Grid>
                                 </Box>
                                 <Alert severity="info" sx={{ borderRadius: '10px' }}>
-                                    Aap <strong>Owner</strong> honge is organisation ke — baad mein team members add kar sakte ho.
+                                    You will be the <strong>owner</strong> of this organization and can add team members later.
                                 </Alert>
                             </motion.div>
                         )}
@@ -242,7 +242,7 @@ export default function OrganisationSetup() {
                         <Box textAlign="center" mt={2}>
                             <Button onClick={() => navigate('/dashboard')} size="small"
                                 sx={{ textTransform: 'none', color: 'text.secondary' }}>
-                                Skip — Personal account use karo
+                                Skip — use a personal account
                             </Button>
                         </Box>
                     </CardContent>

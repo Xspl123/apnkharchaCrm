@@ -114,7 +114,7 @@ const CreateDraftDialog = ({ open, onClose, onSubmit, loading }) => {
                                     <Box>
                                         <Typography variant="body2" fontWeight={600}>GSTR-1</Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            Outward supplies — 11 tarikh deadline
+                                            Outward supplies — due on the 11th
                                         </Typography>
                                     </Box>
                                 </Stack>
@@ -125,7 +125,7 @@ const CreateDraftDialog = ({ open, onClose, onSubmit, loading }) => {
                                     <Box>
                                         <Typography variant="body2" fontWeight={600}>GSTR-3B</Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            Tax payment summary — 20 tarikh deadline
+                                            Tax payment summary — due on the 20th
                                         </Typography>
                                     </Box>
                                 </Stack>
@@ -142,7 +142,7 @@ const CreateDraftDialog = ({ open, onClose, onSubmit, loading }) => {
                         inputProps={{ max: new Date().toISOString().slice(0, 7) }}
                     />
                     <Alert severity="info">
-                        Draft save hone ke baad aap review karke file kar sakte ho.
+                        After saving the draft, you can review and file it.
                     </Alert>
                 </Stack>
             </DialogContent>
@@ -171,14 +171,14 @@ const FileConfirmDialog = ({ open, onClose, onConfirm, returnData, loading }) =>
             <Stack direction="row" spacing={1} alignItems="center">
                 <WarningAmber color="warning" />
                 <Typography variant="h6" fontWeight={700}>
-                    Return File Karo
+                    File Return
                 </Typography>
             </Stack>
         </DialogTitle>
         <DialogContent>
             <DialogContentText>
-                Kya aap sure hain? Ek baar file hone ke baad yeh return
-                <strong> modify nahi ho sakta.</strong>
+                Are you sure? Once filed, this return
+                <strong> cannot be modified.</strong>
             </DialogContentText>
             {returnData && (
                 <Paper
@@ -222,7 +222,7 @@ const FileConfirmDialog = ({ open, onClose, onConfirm, returnData, loading }) =>
                 startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <FileUpload />}
                 disabled={loading}
             >
-                Haan, File Karo
+                Yes, File Return
             </Button>
         </DialogActions>
     </Dialog>
@@ -340,7 +340,7 @@ const GstReturnsPage = () => {
                         GST Returns
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        GSTR-1 aur GSTR-3B returns manage karo
+                        Manage GSTR-1 and GSTR-3B returns
                     </Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
@@ -453,14 +453,14 @@ const GstReturnsPage = () => {
                                         <Stack spacing={1} alignItems="center">
                                             <Receipt sx={{ fontSize: 48, color: 'text.disabled' }} />
                                             <Typography color="text.secondary">
-                                                Koi return nahi mila
+                                                No returns found.
                                             </Typography>
                                             <Button
                                                 size="small"
                                                 variant="outlined"
                                                 onClick={() => setCreateOpen(true)}
                                             >
-                                                Pehla Draft Banao
+                                                Create Your First Draft
                                             </Button>
                                         </Stack>
                                     </TableCell>
@@ -537,7 +537,7 @@ const GstReturnsPage = () => {
                                                 <Stack direction="row" spacing={1}>
                                                     {/* Re-generate Draft */}
                                                     {ret.status === 'draft' && (
-                                                        <Tooltip title="Draft update karo (latest data se)">
+                                                        <Tooltip title="Update draft with the latest data">
                                                             <Button
                                                                 size="small"
                                                                 variant="outlined"
@@ -556,7 +556,7 @@ const GstReturnsPage = () => {
                                                     )}
                                                     {/* File */}
                                                     {ret.status === 'draft' && (
-                                                        <Tooltip title="Filed mark karo">
+                                                        <Tooltip title="Mark as filed">
                                                             <Button
                                                                 size="small"
                                                                 variant="contained"

@@ -1,7 +1,7 @@
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  background: var(--app-layout-background, #f6f8fc);
 }
 
 .app-layout__content-wrap {
@@ -22,9 +22,10 @@
   align-items: stretch;
   width: 100%;
   box-sizing: border-box;
-  background-color: #ffffff;
+  background-color: var(--app-main-background, #ffffff);
+  color: var(--app-main-text, #0f172a);
   padding: 24px;
-  padding-bottom: 56px;
+  padding-bottom: 24px;
   overflow-x: hidden;
 }
 

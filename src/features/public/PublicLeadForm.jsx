@@ -63,11 +63,11 @@ export default function PublicLeadForm() {
                 if (cancelled) return;
                 const status = err.response?.status;
                 if (status === 404) {
-                    setOrgError('Yeh form link valid nahi hai.');
+                    setOrgError('This form link is invalid.');
                 } else if (status === 409) {
-                    setOrgError('Yeh form abhi available nahi hai. Baad me try karein.');
+                    setOrgError('This form is currently unavailable. Please try again later.');
                 } else {
-                    setOrgError('Form load nahi ho paya. Baad me try karein.');
+                    setOrgError('The form could not be loaded. Please try again later.');
                 }
             })
             .finally(() => {
@@ -87,11 +87,11 @@ export default function PublicLeadForm() {
         setSubmitError('');
 
         if (!form.company_name.trim()) {
-            setSubmitError('Company name daalna zaroori hai.');
+            setSubmitError('Company name is required.');
             return;
         }
         if (!form.phone.trim() && !form.email.trim()) {
-            setSubmitError('Phone ya email me se koi ek daalna zaroori hai.');
+            setSubmitError('Please provide either a phone number or an email address.');
             return;
         }
 
@@ -102,11 +102,11 @@ export default function PublicLeadForm() {
         } catch (err) {
             const status = err.response?.status;
             if (status === 429) {
-                setSubmitError('Bahut zyada submissions ho gaye. Thodi der baad try karein.');
+                setSubmitError('There have been too many submissions. Please try again later.');
             } else if (status === 422) {
-                setSubmitError(err.response?.data?.message || 'Kuch fields sahi nahi hain. Dobara check karein.');
+                setSubmitError(err.response?.data?.message || 'Some fields are invalid. Please review them and try again.');
             } else {
-                setSubmitError('Submit nahi ho paya. Dobara try karein.');
+                setSubmitError('Submission failed. Please try again.');
             }
         } finally {
             setSubmitting(false);
@@ -145,7 +145,7 @@ export default function PublicLeadForm() {
                             <CheckCircleIcon sx={{ fontSize: 56, color: '#16a34a' }} />
                             <Typography variant="h6" fontWeight={700}>Dhanyavaad!</Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Aapki details mil gayi hain. Hamari team jald hi aapse sampark karegi.
+                                We have received your details. Our team will contact you soon.
                             </Typography>
                         </Stack>
                     ) : (

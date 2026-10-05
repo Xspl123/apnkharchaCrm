@@ -266,7 +266,7 @@ const InvoiceList = () => {
             if (!linkedProduct) continue;
 
             if (linkedProduct.is_out_of_stock || linkedProduct.current_stock <= 0) {
-                showSnackbar(`❌ "${linkedProduct.name}" out of stock hai! Invoice create nahi ho sakta.`, "error");
+                showSnackbar(`❌ "${linkedProduct.name}" is out of stock. The invoice cannot be created.`, "error");
                 return;
             }
             if (Number(item.qty) > Number(linkedProduct.current_stock)) {

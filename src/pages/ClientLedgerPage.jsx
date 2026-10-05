@@ -99,9 +99,9 @@ const ClientLedgerPage = () => {
           top: 20, 
           left: 20, 
           zIndex: 10,
-          bgcolor: 'white',
+          bgcolor: 'background.paper',
           boxShadow: 1,
-          '&:hover': { bgcolor: '#f5f5f5' }
+          '&:hover': { bgcolor: 'action.hover' }
         }}
       >
         Back to Clients

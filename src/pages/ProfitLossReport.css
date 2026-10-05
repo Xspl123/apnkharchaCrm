@@ -135,6 +135,77 @@
   font-weight: 800;
 }
 
+[data-color-mode="dark"] .profit-loss-page {
+  color: #e5eef9;
+  background: transparent;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card,
+[data-color-mode="dark"] .profit-loss-page__metric-strip > div {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: #111827;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card .MuiTypography-caption-root,
+[data-color-mode="dark"] .profit-loss-page__metric-strip .MuiTypography-caption-root {
+  color: #cbd5e1;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card .MuiTypography-h5-root,
+[data-color-mode="dark"] .profit-loss-page__metric-strip strong {
+  color: #e5eef9;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--income {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: #103329;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--income .MuiTypography-h5-root {
+  color: #6ee7b7;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--nii {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: #162947;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--nii .MuiTypography-h5-root {
+  color: #93c5fd;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--operating {
+  border-color: rgba(45, 212, 191, 0.35);
+  background: #12312f;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--operating .MuiTypography-h5-root {
+  color: #5eead4;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--profit {
+  border-color: rgba(74, 222, 128, 0.35);
+  background: #143323;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--profit .MuiTypography-h5-root {
+  color: #86efac;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--loss {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: #341b22;
+}
+
+[data-color-mode="dark"] .profit-loss-page__summary-card--loss .MuiTypography-h5-root {
+  color: #fca5a5;
+}
+
+[data-color-mode="dark"] .profit-loss-page__opening-note {
+  border-color: rgba(125, 211, 252, 0.22);
+  background: #182235;
+}
+
 @media (max-width: 900px) {
   .profit-loss-page__summary-grid,
   .profit-loss-page__metric-strip {

@@ -208,7 +208,7 @@ export default function CampaignList() {
 
     const handleAttachLeads = async () => {
         if (!selectedCampaign || selectedLeadIds.length === 0) {
-            setAttachError('At least one lead select karo');
+            setAttachError('Select at least one lead.');
             return;
         }
 
@@ -237,7 +237,7 @@ export default function CampaignList() {
             setAttachDialog(false);
             setSelectedCampaign(null);
         } catch (err) {
-            setAttachError(err || 'Lead attach nahi ho paye');
+            setAttachError(err || 'Could not attach the lead(s).');
         }
     };
 
@@ -259,7 +259,7 @@ export default function CampaignList() {
                 return next;
             });
         } catch (err) {
-            setAttachError(err || 'Lead detach nahi ho paya');
+            setAttachError(err || 'Could not detach the lead.');
         }
     };
 
@@ -273,7 +273,7 @@ export default function CampaignList() {
     const availableLeads = leads.filter((lead) => !attachedLeadIds.includes(lead.id));
 
     return (
-        <Box sx={{ p: 3, bgcolor: '#f8fafc', minHeight: '100vh' }}>
+        <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
             {/* Header */}
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                 <GlassCard sx={{ mb: 3, border: '1px solid #e5e7eb', bgcolor: '#fff' }}>
@@ -394,7 +394,7 @@ export default function CampaignList() {
                                                     const perf = performanceCache[campaign.id];
                                                     return perf.total === 0 ? (
                                                         <Typography variant="caption" color="text.secondary">
-                                                            Koi lead attach nahi hai abhi
+                                                            No leads are attached yet.
                                                         </Typography>
                                                     ) : (
                                                         <Grid container spacing={1}>
@@ -428,7 +428,7 @@ export default function CampaignList() {
                                             ) : (
                                                 <Stack direction="row" alignItems="center" spacing={1}>
                                                     <CircularProgress size={14} />
-                                                    <Typography variant="caption" color="text.secondary">Performance load ho raha hai...</Typography>
+                                                    <Typography variant="caption" color="text.secondary">Loading performance...</Typography>
                                                 </Stack>
                                             )}
                                         </CardContent>
@@ -509,7 +509,7 @@ export default function CampaignList() {
                 <DialogContent sx={{ pt: 3 }}>
                     {attachError && <Alert severity="error" sx={{ mb: 2 }}>{attachError}</Alert>}
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {selectedCampaign ? `Campaign: ${selectedCampaign.name}` : 'Campaign select nahi hai'}
+                        {selectedCampaign ? `Campaign: ${selectedCampaign.name}` : 'No campaign selected'}
                     </Typography>
                     <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
@@ -518,8 +518,8 @@ export default function CampaignList() {
                         {attachedLeads.length === 0 ? (
                             <Typography variant="body2" color="text.secondary">
                                 {selectedCampaign?.leads_count
-                                    ? 'Leads attached hain, lekin detailed list response me nahi aa rahi.'
-                                    : 'Abhi koi lead attached nahi hai.'}
+                                    ? 'Leads are attached, but the detailed list is missing from the response.'
+                                    : 'No leads are attached yet.'}
                             </Typography>
                         ) : (
                             <Stack spacing={1}>
@@ -598,7 +598,7 @@ export default function CampaignList() {
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle fontWeight={700}>Delete Campaign?</DialogTitle>
                 <DialogContent>
-                    <Typography color="text.secondary">Yeh campaign delete ho jaayegi. Leads affect nahi honge.</Typography>
+                    <Typography color="text.secondary">This campaign will be deleted. Leads will not be affected.</Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setDeleteDialog(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>

@@ -1,9 +1,7 @@
 .app-footer {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: var(--footer-left, auto);
-  z-index: 1200;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
   padding: 9.6px 16px;
   text-align: center;
   border-top: 1px solid var(--footer-border, rgba(148, 163, 184, 0.24));
@@ -13,6 +11,6 @@
 
 @media (max-width: 900px) {
   .app-footer {
-    left: 0;
+    display: none;
   }
 }

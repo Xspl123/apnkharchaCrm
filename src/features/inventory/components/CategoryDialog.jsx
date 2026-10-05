@@ -40,7 +40,7 @@ const CategoryDialog = ({ catDialog, setCatDialog, catForm, setCatForm, catEdit,
                     />
                     <Box>
                         <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={1}>
-                            Color Select Karo
+                            Select a Color
                         </Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap">
                             {COLORS.map((color) => (

@@ -7,7 +7,7 @@ import { createAppTheme } from "./theme";
 
 function App() {
     const [colorMode, setColorMode] = useState(
-        () => localStorage.getItem("colorMode") || "light"
+        () => localStorage.getItem("colorMode") || "dark"
     );
     const theme = useMemo(() => createAppTheme(colorMode), [colorMode]);
 
@@ -53,6 +53,16 @@ function App() {
                     },
                     "[data-color-mode='dark'] .MuiPaper-root": {
                         color: `${theme.palette.text.primary} !important`,
+                    },
+                    "[data-color-mode='dark'] .app-layout__main .MuiPaper-root": {
+                        backgroundColor: `${theme.palette.background.paper} !important`,
+                    },
+                    "[data-color-mode='dark'] .app-layout__main .MuiTableContainer-root": {
+                        backgroundColor: `${theme.palette.background.paper} !important`,
+                    },
+                    "[data-color-mode='dark'] .app-layout__main .MuiTableHead-root .MuiTableCell-root": {
+                        backgroundColor: `${theme.palette.primary.main} !important`,
+                        color: `${theme.palette.background.paper} !important`,
                     },
                     "[data-color-mode='dark'] .MuiTableRow-hover:hover .MuiTableCell-root": {
                         color: `${theme.palette.text.primary} !important`,

@@ -1,17 +1,18 @@
 import PropTypes from "prop-types";
 import { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { logout, logoutUser } from "../features/auth/state/authSlice";
 import axiosClient from "../api/axiosClient";
 import {
     AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Avatar,
     ListItemIcon, List, ListItem, Collapse, useMediaQuery,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
-    Snackbar, Alert
+    Snackbar, Alert, Breadcrumbs, Link, useTheme
 } from "@mui/material";
-import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess, Visibility, VisibilityOff } from "@mui/icons-material";
+import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess, Visibility, VisibilityOff, ChevronRight, DashboardOutlined } from "@mui/icons-material";
 import FollowUpReminderBell from "../features/crm/components/FollowUpReminderBell";
+import { getBreadcrumbs, getMatchedRoute } from "../config/appRoutes";
 import "./Navbar.css";
 
 const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
@@ -31,11 +32,17 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
+    const theme = useTheme();
 
     const user = useSelector((state) => state.auth.user);
     const organisation = useSelector((state) => state.orgs?.organisation);
     const companies = useSelector((state) => state.companies?.companies || []);
     const brandName = companies[0]?.company_name || organisation?.name || "";
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+    const breadcrumbs = getBreadcrumbs(location.pathname, location.state);
+    const matchedRoute = getMatchedRoute(location.pathname);
+    const visibleBreadcrumbs = isMobile ? breadcrumbs.slice(-1) : breadcrumbs;
 
     const handleProfileMenuOpen = useCallback((event) => {
         setProfileAnchorEl(event.currentTarget);
@@ -95,15 +102,37 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
     }, [colorMode, toggleColorMode, handleProfileMenuClose]);
 
 
-    const isMobile = useMediaQuery("(max-width:600px)");
-
     const handleSnackbarClose = () => {
         setSnackbarOpen(false);
     };
 
     return (
         <>
-            <AppBar position="static" className="app-navbar" elevation={0}>
+            <AppBar
+                position="static"
+                className="app-navbar"
+                elevation={0}
+                style={{
+                    "--navbar-bg": theme.palette.background.paper,
+                    "--navbar-border": theme.palette.divider,
+                    "--navbar-text": theme.palette.text.primary,
+                    "--navbar-subtext": theme.palette.text.secondary,
+                    "--navbar-breadcrumb": theme.palette.mode === "dark"
+                        ? "#ffffff"
+                        : theme.palette.text.secondary,
+                    "--navbar-breadcrumb-current": theme.palette.mode === "dark"
+                        ? "#ffffff"
+                        : theme.palette.text.primary,
+                    "--navbar-separator": theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.72)"
+                        : theme.palette.text.secondary,
+                    "--navbar-accent": theme.palette.primary.main,
+                    "--navbar-secondary": theme.palette.secondary.main,
+                    "--navbar-shadow": theme.palette.mode === "dark"
+                        ? "0 4px 18px rgba(0, 0, 0, 0.2)"
+                        : "0 4px 18px rgba(15, 23, 42, 0.045)",
+                }}
+            >
                 <Toolbar>
                     {isMobile && (
                         <IconButton
@@ -116,16 +145,50 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                             <MenuIcon />
                         </IconButton>
                     )}
-                    {/* <div className="app-navbar__brand-block">
-                        <Typography variant="subtitle1" component="div" className="app-navbar__brand-title" noWrap>
-                            {brandName}
-                        </Typography>
-                        <Typography variant="caption" component="div" className="app-navbar__brand-subtitle" noWrap>
-                            Financial Workspace
-                        </Typography>
-                    </div> */}
-
-                    <div className="app-navbar__spacer" />
+                    <div className="app-navbar__page-identity">
+                        <div className="app-navbar__page-icon">
+                            {matchedRoute?.icon || <DashboardOutlined />}
+                        </div>
+                        <div className="app-navbar__page-copy">
+                            <Typography variant="caption" className="app-navbar__workspace" noWrap>
+                                {brandName || "WORKSPACE"}
+                            </Typography>
+                            <Breadcrumbs
+                                aria-label="Breadcrumb"
+                                className="app-navbar__breadcrumbs"
+                                separator={<ChevronRight fontSize="small" />}
+                            >
+                                {visibleBreadcrumbs.length > 0 ? visibleBreadcrumbs.map((item, index) => (
+                                    item.href && !item.current ? (
+                                        <Link
+                                            key={`${item.label}-${index}`}
+                                            component={RouterLink}
+                                            to={item.href}
+                                            underline="hover"
+                                            color="inherit"
+                                            variant="body2"
+                                        >
+                                            {item.label}
+                                        </Link>
+                                    ) : (
+                                        <Typography
+                                            key={`${item.label}-${index}`}
+                                            variant="body2"
+                                            aria-current={item.current ? "page" : undefined}
+                                            className={item.current ? "app-navbar__breadcrumb-current" : "app-navbar__breadcrumb-parent"}
+                                            noWrap
+                                        >
+                                            {item.label}
+                                        </Typography>
+                                    )
+                                )) : (
+                                    <Typography variant="body2" className="app-navbar__breadcrumb-current">
+                                        Workspace
+                                    </Typography>
+                                )}
+                            </Breadcrumbs>
+                        </div>
+                    </div>
 
                     {/* Follow-up Reminders — visible on every page, not just Lead List */}
                     <FollowUpReminderBell />

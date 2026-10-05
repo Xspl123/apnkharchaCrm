@@ -23,7 +23,7 @@ const ProductList = () => {
                 </Box>
             )}
 
-            <Container maxWidth="xl" sx={{ py: 4 }}>
+            <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2 } }}>
 
                 <ProductHeader stats={p.stats} />
 
@@ -31,7 +31,8 @@ const ProductList = () => {
 
                 {/* ══ TABS ══ */}
                 <Paper sx={{ mb: 2, borderRadius: '12px' }} elevation={1}>
-                    <Tabs value={p.activeTab} onChange={(_, v) => p.setActiveTab(v)} sx={{ px: 2 }}>
+                    <Tabs value={p.activeTab} onChange={(_, v) => p.setActiveTab(v)} variant="scrollable" scrollButtons="auto"
+                        allowScrollButtonsMobile sx={{ px: { xs: 1, sm: 2 }, '& .MuiTab-root': { minWidth: { xs: 120, sm: 150 }, px: { xs: 1.5, sm: 2 } } }}>
                         <Tab label={`📦 Products (${p.products.length})`} />
                         <Tab label={`🏷️ Categories (${p.categories.length})`} />
                         <Tab label="🎛️ Attributes" />
@@ -54,7 +55,7 @@ const ProductList = () => {
                             formData={p.formData} setFormData={p.setFormData}
                             handleChange={p.handleChange} handleSubmit={p.handleSubmit} handleCancel={p.handleCancel}
                             categories={p.categories} hsnCodes={p.hsnCodes} actionLoading={p.actionLoading}
-                            appendSpeech={appendSpeech}
+                            appendSpeech={appendSpeech} onAttributeValuesChange={p.setProductAttributeValues}
                         />
 
                         <ProductsTable

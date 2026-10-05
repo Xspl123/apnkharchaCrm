@@ -10,11 +10,23 @@ import {
     Button,
     CircularProgress,
     Alert,
-    Grid
+    Box,
+    Grid,
+    useTheme,
 } from "@mui/material";
-import { AccountBalanceWallet, Visibility, VisibilityOff } from "@mui/icons-material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 const Login = () => {
+    const theme = useTheme();
+    const inputSx = {
+        "& .MuiOutlinedInput-root": {
+            backgroundColor: theme.palette.background.default,
+            color: theme.palette.text.primary,
+            "& fieldset": { borderColor: theme.palette.divider },
+            "&:hover fieldset": { borderColor: theme.palette.primary.main },
+        },
+        "& .MuiInputLabel-root": { color: theme.palette.text.secondary },
+    };
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +59,9 @@ const Login = () => {
             style={{
                 minHeight: "100vh",
 
-                background: "linear-gradient(45deg, #ff9a9e, #fad0c4, #fbc2eb, #a8e063, #f8ff00, #ff0000, #89cff0)", // Multicolor gradient
+                background: theme.palette.mode === "dark"
+                    ? "linear-gradient(135deg, #0b1220, #111827 55%, #172554)"
+                    : "linear-gradient(135deg, #eff6ff, #f5f3ff 55%, #f8fafc)",
                 backgroundSize: "400% 400%",
                 animation: "gradientAnimation 10s ease infinite",
                 padding: "20px",
@@ -71,7 +85,8 @@ const Login = () => {
                         borderRadius: "16px",
                         textAlign: "center",
                         margin: "auto", 
-                        background: "rgba(255, 255, 255, 0.95)",
+                        background: theme.palette.background.paper,
+                        color: theme.palette.text.primary,
                         boxShadow: "0px 6px 30px rgba(0, 0, 0, 0.3)",
                         transform: "scale(1)",
                         transition: "transform 0.3s ease",
@@ -83,12 +98,18 @@ const Login = () => {
                         (e.currentTarget.style.transform = "scale(1)")
                     }
                 >
-                    <AccountBalanceWallet
-                        style={{
-                            fontSize: 60,
-                            color: "#764ba2",
-                            marginBottom: "20px",
-                            animation: "bounce 2s infinite", 
+                    <Box
+                        component="img"
+                        src="/pwa/icon-512.png"
+                        alt="Kharcha logo"
+                        sx={{
+                            display: "block",
+                            width: { xs: 56, sm: 64 },
+                            height: { xs: 56, sm: 64 },
+                            objectFit: "contain",
+                            borderRadius: 2,
+                            mx: "auto",
+                            mb: 2,
                         }}
                     />
                     <Typography
@@ -96,11 +117,10 @@ const Login = () => {
                         fontWeight="bold"
                         gutterBottom
                         style={{
-                            color: "#333",
+                            color: theme.palette.text.primary,
                             fontFamily: "'Pacifico', cursive",
                             textAlign: "center",
                             fontSize: "2em",
-                            animation: "colorAnimation 5s infinite", 
                         }}
                     >
                         Kharcha
@@ -108,7 +128,7 @@ const Login = () => {
                     <Typography
                         variant="body1"
                         style={{
-                            color: "#555",
+                            color: theme.palette.text.secondary,
                             marginBottom: "20px",
                         }}
                     >
@@ -139,6 +159,7 @@ const Login = () => {
                             margin="normal"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            sx={inputSx}
 
                             InputProps={{
                                 style: { fontSize: "16px" },
@@ -156,6 +177,7 @@ const Login = () => {
                             margin="normal"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            sx={inputSx}
 
                             InputProps={{
                                 style: { fontSize: "16px" },
@@ -166,7 +188,7 @@ const Login = () => {
                                             minWidth: "auto",
                                             padding: "0",
                                             marginLeft: "8px",
-                                            color: "#764ba2",
+                                            color: theme.palette.primary.main,
                                         }}
                                     >
                                         {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -191,14 +213,14 @@ const Login = () => {
                                 fontSize: "16px",
                                 fontWeight: "bold",
                                 textTransform: "none",
-                                background: "#764ba2",
+                                background: theme.palette.primary.main,
                                 transition: "background 0.3s ease",
                             }}
                             onMouseOver={(e) =>
-                                (e.target.style.background = "#5a3d8a")
+                                (e.target.style.background = theme.palette.primary.dark)
                             }
                             onMouseOut={(e) =>
-                                (e.target.style.background = "#764ba2")
+                                (e.target.style.background = theme.palette.primary.main)
                             }
                         >
                             {loading ? (
@@ -214,7 +236,7 @@ const Login = () => {
                         align="center"
                         style={{
                             marginTop: "20px",
-                            color: "#555",
+                            color: theme.palette.text.secondary,
                         }}
                     >
                         Don&apos;t have an account?{" "}
@@ -222,15 +244,15 @@ const Login = () => {
                             to="/register"
                             style={{
                                 textDecoration: "none",
-                                color: "#764ba2",
+                                color: theme.palette.primary.main,
                                 fontWeight: "bold",
                                 transition: "color 0.3s ease",
                             }}
                             onMouseOver={(e) =>
-                                (e.target.style.color = "#5a3d8a")
+                                (e.target.style.color = theme.palette.primary.dark)
                             }
                             onMouseOut={(e) =>
-                                (e.target.style.color = "#764ba2")
+                                (e.target.style.color = theme.palette.primary.main)
                             }
                         >
                             Register

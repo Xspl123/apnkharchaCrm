@@ -18,6 +18,18 @@
   --app-space-6: 24px;
 }
 
+[data-color-mode="dark"] {
+  --app-color-primary: #7dd3fc;
+  --app-color-primary-soft: rgba(125, 211, 252, 0.14);
+  --app-color-text: #e5eef9;
+  --app-color-text-muted: #94a3b8;
+  --app-color-border: rgba(148, 163, 184, 0.2);
+  --app-color-surface: #111827;
+  --app-color-surface-alt: #182235;
+  --app-shadow-sm: 0 12px 28px rgba(0, 0, 0, 0.2);
+  --app-shadow-md: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
 .page-shell {
   display: flex;
   flex-direction: column;
@@ -106,6 +118,23 @@
   padding: var(--app-space-4);
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+[data-color-mode="dark"] .page-form-card,
+[data-color-mode="dark"] .data-table-toolbar {
+  border-color: var(--app-color-border);
+  background: var(--app-color-surface);
+  color: var(--app-color-text);
+}
+
+[data-color-mode="dark"] .page-form-title,
+[data-color-mode="dark"] .metric-banner-text {
+  color: var(--app-color-text);
+}
+
+[data-color-mode="dark"] .metric-banner {
+  border-color: rgba(125, 211, 252, 0.25);
+  background: linear-gradient(135deg, #172554 0%, #182235 100%);
 }
 
 .table-search-field {

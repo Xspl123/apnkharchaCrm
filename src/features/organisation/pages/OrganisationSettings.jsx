@@ -285,7 +285,7 @@ export default function OrganisationSettings() {
                                             }} />
                                     ))}
                                     <Typography variant="caption" color="text.secondary">
-                                        (Plan change ke liye admin se contact karein)
+                                        (Contact your administrator to change the plan.)
                                     </Typography>
                                 </Stack>
                             </Grid>
@@ -449,7 +449,7 @@ export default function OrganisationSettings() {
             <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)} PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle fontWeight={700}>Remove Member?</DialogTitle>
                 <DialogContent>
-                    <Typography color="text.secondary">Yeh member organisation se remove ho jaayega.</Typography>
+                    <Typography color="text.secondary">This member will be removed from the organization.</Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setDeleteDialog(null)} sx={{ borderRadius: '10px' }}>Cancel</Button>

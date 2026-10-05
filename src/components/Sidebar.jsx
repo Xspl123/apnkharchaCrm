@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import {
     Drawer, List, ListItemButton, ListItemIcon, ListItemText,
     Box, Typography, Collapse, Divider, Avatar, Stack,
-    Tooltip,
+    Tooltip, useTheme,
 } from "@mui/material";
 import {
     Category, ExpandLess, ExpandMore,
@@ -26,6 +26,7 @@ const APP_BRAND_LOGO = "/pwa/icon-512.png";
 export default function Sidebar({ open, toggleSidebar, isMobile }) {
     const navigate   = useNavigate();
     const location   = useLocation();
+    const theme      = useTheme();
     const [openMenus, setOpenMenus] = useState({});
 
     const permissionApi = usePermission();
@@ -73,14 +74,14 @@ export default function Sidebar({ open, toggleSidebar, isMobile }) {
         py: 0.9,
         borderRadius: '10px',
         justifyContent: open ? 'initial' : 'center',
-        color: active ? '#1e3a8a' : '#475569',
-        bgcolor: active ? '#eff0ffff' : 'transparent',
-        borderLeft: active && open ? '3px solid #3b82f6' : '3px solid transparent',
+        color: active ? theme.palette.primary.main : theme.palette.text.secondary,
+        bgcolor: active ? theme.palette.action.selected : 'transparent',
+        borderLeft: active && open ? `3px solid ${theme.palette.primary.main}` : '3px solid transparent',
         transition: 'all 0.15s',
-        '&:hover': { bgcolor: active ? '#093d82ff' : '#f8fafc', color: active ? "#fff" : '#1e3a8a' },
+        '&:hover': { bgcolor: theme.palette.action.hover, color: theme.palette.primary.main },
         '& .MuiListItemIcon-root': {
             minWidth: open ? 36 : 'auto',
-            color: active ? '#3b82f6' : '#334155',
+            color: active ? theme.palette.primary.main : theme.palette.text.secondary,
         },
         '& .MuiListItemText-primary': {
             fontSize: nested ? '0.88rem' : '0.92rem',
@@ -116,9 +117,17 @@ export default function Sidebar({ open, toggleSidebar, isMobile }) {
                 flexShrink: 0,
                 '& .MuiDrawer-paper': {
                     width: open ? DRAWER_WIDTH : COLLAPSED_WIDTH,
-                    bgcolor: '#ffffff',
-                    borderRight: '1px solid #e2e8f0',
-                    boxShadow: '2px 0 12px rgba(15,23,42,0.04)',
+                    bgcolor: theme.palette.background.paper,
+                    borderRight: `1px solid ${theme.palette.divider}`,
+                    boxShadow: theme.palette.mode === 'dark'
+                        ? '2px 0 12px rgba(0,0,0,0.22)'
+                        : '2px 0 12px rgba(15,23,42,0.04)',
+                    '--sidebar-primary': theme.palette.primary.main,
+                    '--sidebar-secondary': theme.palette.secondary.main,
+                    '--sidebar-subtle': theme.palette.background.default,
+                    '--sidebar-text': theme.palette.text.primary,
+                    '--sidebar-secondary-text': theme.palette.text.secondary,
+                    '--sidebar-divider': theme.palette.divider,
                     transition: 'width 0.25s ease',
                     overflowX: 'hidden',
                 },

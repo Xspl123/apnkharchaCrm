@@ -141,8 +141,8 @@ const InvoiceItemCard = ({
                             )}
                             renderInput={(params) => (
                                 <TextField {...params}
-                                    label="🏪 Product (Inventory se select karo)"
-                                    placeholder="Name, SKU ya HSN se search karo..."
+                                    label="🏪 Product (select from inventory)"
+                                    placeholder="Search by name, SKU, or HSN..."
                                     required
                                     InputProps={{
                                         ...params.InputProps,
@@ -171,7 +171,7 @@ const InvoiceItemCard = ({
                             )}
                             noOptionsText={
                                 <Typography variant="body2" color="text.secondary">
-                                    Inventory mein nahi mila — manually type karo
+                                    No inventory match found. Enter the product manually.
                                 </Typography>
                             }
                         />

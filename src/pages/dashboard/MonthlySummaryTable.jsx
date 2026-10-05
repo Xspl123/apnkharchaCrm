@@ -1,10 +1,11 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, useTheme } from "@mui/material";
 
 import { fmtAmt } from "./dashboardUtils";
 
 export default function MonthlySummaryTable({ monthlyComparisonData, selectedYear }) {
+  const theme = useTheme();
   return (
-    <Paper elevation={0} sx={{ p: 2.5, borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+    <Paper elevation={0} sx={{ p: 2.5, borderRadius: "16px", border: `1px solid ${theme.palette.divider}` }}>
       <Typography variant="h6" fontWeight={700} mb={0.5}>Month-wise Summary</Typography>
       <Typography variant="caption" color="text.secondary" display="block" mb={2}>Period summary for {selectedYear}</Typography>
       <TableContainer sx={{ maxHeight: 300 }}>
@@ -12,7 +13,7 @@ export default function MonthlySummaryTable({ monthlyComparisonData, selectedYea
           <TableHead>
             <TableRow>
               {["Month", "Income", "Expense", "Net"].map((h) => (
-                <TableCell key={h} sx={{ fontWeight: 700, bgcolor: "#f8fafc" }}>{h}</TableCell>
+                <TableCell key={h} sx={{ fontWeight: 700, bgcolor: theme.palette.mode === "dark" ? theme.palette.primary.main : theme.palette.background.default, color: theme.palette.mode === "dark" ? theme.palette.background.paper : theme.palette.text.primary }}>{h}</TableCell>
               ))}
             </TableRow>
           </TableHead>

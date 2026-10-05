@@ -124,7 +124,7 @@ export default function RoleManagement() {
                                 <AdminIcon /> Role & Permission Management
                             </Typography>
                             <Typography variant="body2" sx={{ opacity: 0.85 }}>
-                                Har role ke liye permissions configure karo
+                                Configure permissions for each role
                             </Typography>
                         </Box>
                         <Chip label={`${visibleRoles.length} Roles`}
@@ -198,7 +198,7 @@ export default function RoleManagement() {
                         <GlassCard>
                             <CardContent sx={{ textAlign: 'center', py: 6 }}>
                                 <AdminIcon sx={{ fontSize: 48, color: '#d1d5db', mb: 2 }} />
-                                <Typography color="text.secondary">Left side se koi role select karo</Typography>
+                                <Typography color="text.secondary">Select a role from the left.</Typography>
                             </CardContent>
                         </GlassCard>
                     ) : (
@@ -281,7 +281,7 @@ export default function RoleManagement() {
                 <DialogTitle fontWeight={700}>Permissions Update Confirm</DialogTitle>
                 <DialogContent>
                     <Typography color="text.secondary">
-                        <strong>{selectedRole?.label}</strong> role ke permissions update ho jaayenge. Kya aap sure hain?
+                        <strong>{selectedRole?.label}</strong> role permissions will be updated. Are you sure?
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>

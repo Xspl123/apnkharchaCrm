@@ -40,7 +40,7 @@ const fmt = (val) =>
 const EmptyRow = ({ cols, message }) => (
     <TableRow>
         <TableCell colSpan={cols} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-            {message || 'Koi data nahi'}
+            {message || 'No data found.'}
         </TableCell>
     </TableRow>
 );
@@ -80,7 +80,7 @@ const B2BTab = ({ data }) => {
         setExpanded((prev) => ({ ...prev, [gstin]: !prev[gstin] }));
 
     if (!data?.length)
-        return <EmptyRow cols={1} message="Is period mein koi B2B invoice nahi" />;
+        return <EmptyRow cols={1} message="No B2B invoices for this period" />;
 
     return (
         <>
@@ -200,7 +200,7 @@ const B2CSTab = ({ data }) => {
     if (!data?.length)
         return (
             <Box py={4} textAlign="center">
-                <Typography color="text.secondary">Is period mein koi B2CS invoice nahi</Typography>
+                <Typography color="text.secondary">No B2CS invoices for this period</Typography>
             </Box>
         );
 
@@ -244,7 +244,7 @@ const B2CLTab = ({ data }) => {
     if (!data?.length)
         return (
             <Box py={4} textAlign="center">
-                <Typography color="text.secondary">Is period mein koi B2CL invoice nahi</Typography>
+                <Typography color="text.secondary">No B2CL invoices for this period</Typography>
             </Box>
         );
 
@@ -290,7 +290,7 @@ const ExportsTab = ({ data }) => {
     if (!data?.length)
         return (
             <Box py={4} textAlign="center">
-                <Typography color="text.secondary">Is period mein koi Export invoice nahi</Typography>
+                <Typography color="text.secondary">No export invoices for this period</Typography>
             </Box>
         );
 
@@ -327,7 +327,7 @@ const HSNTab = ({ data }) => {
     if (!data?.length)
         return (
             <Box py={4} textAlign="center">
-                <Typography color="text.secondary">HSN data nahi mila</Typography>
+                <Typography color="text.secondary">No HSN data found.</Typography>
             </Box>
         );
 
@@ -437,7 +437,7 @@ const Gstr1Page = () => {
                         {gstr1Loading ? <CircularProgress size={20} color="inherit" /> : 'Fetch'}
                     </Button>
                     {gstr1 && (
-                        <Tooltip title="Draft ke taur pe save karo">
+                        <Tooltip title="Save as draft">
                             <Button
                                 variant="outlined"
                                 startIcon={<SaveAlt />}
@@ -522,7 +522,7 @@ const Gstr1Page = () => {
             {!gstr1Loading && !gstr1 && !error && (
                 <Box textAlign="center" py={8}>
                     <Typography color="text.secondary">
-                        Period select karo aur Fetch karo
+                        Select a period and fetch the data
                     </Typography>
                 </Box>
             )}

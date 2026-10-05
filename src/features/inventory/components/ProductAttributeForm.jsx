@@ -11,6 +11,8 @@ import {
 import { Save as SaveIcon, Tune as AttrIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
+const EMPTY_ATTRIBUTE_VALUES = [];
+
 const GradientButton = styled(Button)(({ gradient }) => ({
     background: gradient || 'linear-gradient(135deg,#667eea,#764ba2)',
     color: 'white', fontWeight: 600, borderRadius: '12px',
@@ -23,13 +25,17 @@ const GradientButton = styled(Button)(({ gradient }) => ({
 // Props: productId, categoryId, onSaved
 // ══════════════════════════════════════════════════════════
 
-const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
+const ProductAttributeForm = ({ productId, categoryId, initialValues, onSaved, onValuesChange }) => {
     const dispatch = useDispatch();
     const { groups, productAttributes, isLoading } = useSelector((s) => s.attributes);
 
     const [values,  setValues]  = useState({});  // { [attributeId]: value }
     const [loading, setLoading] = useState(false);
     const [saved,   setSaved]   = useState(false);
+    const [saveError, setSaveError] = useState('');
+    const cachedProductValues = productId ? productAttributes[productId] : null;
+    const fallbackValues = initialValues ?? EMPTY_ATTRIBUTE_VALUES;
+    const existingProductValues = cachedProductValues?.length ? cachedProductValues : fallbackValues;
 
     // ── Load groups filtered by category ─────────────────
     useEffect(() => {
@@ -47,11 +53,27 @@ const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
 
     // ── Pre-fill existing values ──────────────────────────
     useEffect(() => {
-        const existing = productAttributes[productId] || [];
+        const existing = existingProductValues || [];
         const map = {};
-        existing.forEach((v) => { map[v.attribute_id] = v.value; });
+        const availableAttributes = groups.flatMap((group) => group.attributes || []);
+        existing.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') return;
+            const nested = entry.attribute || entry.product_attribute || entry.pivot || {};
+            const attributeId = entry.attribute_id ?? entry.attributeId ?? entry.attribute?.id ??
+                entry.product_attribute?.id ?? entry.pivot?.attribute_id ?? nested.attribute_id;
+            const name = entry.attribute_name ?? nested.name ?? entry.name;
+            const matchedAttribute = availableAttributes.find((attribute) =>
+                name && attribute.name?.toLowerCase() === String(name).toLowerCase()
+            );
+            const value = entry.value ?? entry.attribute_value ?? entry.attributeValue ??
+                entry.pivot?.value ?? entry.pivot?.attribute_value ?? nested.value ?? nested.attribute_value;
+            const resolvedId = attributeId ?? matchedAttribute?.id ??
+                (value != null ? entry.id : null);
+            if (resolvedId != null && value != null) map[resolvedId] = String(value);
+        });
         setValues(map);
-    }, [productAttributes, productId]);
+        onValuesChange?.(serializeValues(map));
+    }, [existingProductValues, productId, groups, onValuesChange]);
 
     // ── Relevant groups — category-specific + general ────
     const relevantGroups = groups.filter((g) =>
@@ -59,8 +81,11 @@ const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
     );
 
     const handleChange = (attrId, value) => {
-        setValues((p) => ({ ...p, [attrId]: value }));
+        const nextValues = { ...values, [attrId]: value };
+        setValues(nextValues);
+        onValuesChange?.(serializeValues(nextValues));
         setSaved(false);
+        setSaveError('');
     };
 
     const handleSave = async () => {
@@ -73,9 +98,10 @@ const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
             }));
             await dispatch(saveProductAttributes({ productId, attributes })).unwrap();
             setSaved(true);
+            setSaveError('');
             if (onSaved) onSaved();
-        } catch {
-            return;
+        } catch (error) {
+            setSaveError(typeof error === 'string' ? error : 'Could not save product attributes. Please try again.');
         } finally { setLoading(false); }
     };
 
@@ -90,14 +116,15 @@ const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
     if (relevantGroups.length === 0) {
         return (
             <Alert severity="info" sx={{ borderRadius: '10px' }}>
-                Is category ke liye koi attribute group nahi hai —
-                Inventory → Attributes mein ja ke banao!
+                No attribute groups are configured for this category —
+                Create one under Inventory → Attributes.
             </Alert>
         );
     }
 
     return (
         <Box>
+            {saveError && <Alert severity="error" sx={{ mb: 2, borderRadius: '10px' }}>{saveError}</Alert>}
             {relevantGroups.map((group) => (
                 <Box key={group.id} mb={3}>
                     {/* Group Header */}
@@ -123,7 +150,7 @@ const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
                                 {/* Text */}
                                 {attr.type === 'text' && (
                                     <TextField fullWidth size="small"
-                                        placeholder={`${attr.name} daalo...`}
+                                        placeholder={`Enter ${attr.name}...`}
                                         value={values[attr.id] ?? ''}
                                         onChange={(e) => handleChange(attr.id, e.target.value)}
                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
@@ -153,10 +180,21 @@ const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
                                         onChange={(e) => handleChange(attr.id, e.target.value)}
                                         displayEmpty
                                         sx={{ borderRadius: '8px' }}>
-                                        <MenuItem value=""><em>Select karo...</em></MenuItem>
-                                        {(attr.options || []).map((opt) => (
-                                            <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                                        ))}
+                                        <MenuItem value=""><em>Select...</em></MenuItem>
+                                        {(Array.isArray(attr.options) ? attr.options : []).map((option) => {
+                                            const opt = typeof option === 'object'
+                                                ? option.value ?? option.label ?? option.name
+                                                : option;
+                                            return (
+                                                <MenuItem key={opt} value={String(opt)}>{String(opt)}</MenuItem>
+                                            );
+                                        })}
+                                        {values[attr.id] && !(attr.options || []).some((option) => {
+                                            const opt = typeof option === 'object'
+                                                ? option.value ?? option.label ?? option.name
+                                                : option;
+                                            return String(opt) === String(values[attr.id]);
+                                        }) && <MenuItem value={String(values[attr.id])}>{values[attr.id]}</MenuItem>}
                                     </Select>
                                 )}
 
@@ -199,8 +237,18 @@ const ProductAttributeForm = ({ productId, categoryId, onSaved }) => {
                     </GradientButton>
                 </Stack>
             )}
+            {!productId && relevantGroups.length > 0 && (
+                <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+                    Attribute values will be saved when you save the product.
+                </Typography>
+            )}
         </Box>
     );
 };
+
+const serializeValues = (values) => Object.entries(values).map(([attribute_id, value]) => ({
+    attribute_id: parseInt(attribute_id, 10),
+    value: String(value ?? ''),
+}));
 
 export default ProductAttributeForm;

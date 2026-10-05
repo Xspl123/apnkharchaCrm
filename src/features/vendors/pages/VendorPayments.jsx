@@ -102,7 +102,7 @@ const VendorPayments = () => {
         } catch (err) {
             setSnackbar({
                 open: true,
-                message: err?.response?.data?.message || 'Purchase orders load nahi huye.',
+                message: err?.response?.data?.message || 'Could not load purchase orders.',
                 severity: 'error',
             });
         } finally {
@@ -124,7 +124,7 @@ const VendorPayments = () => {
             setPayments([]);
             setSnackbar({
                 open: true,
-                message: err?.response?.data?.message || 'Payments load nahi ho paayin.',
+                message: err?.response?.data?.message || 'Could not load payments.',
                 severity: 'error',
             });
         } finally {
@@ -186,15 +186,15 @@ const VendorPayments = () => {
         const maxBalance = parseFloat(selectedPO?.balance_amount) || 0;
 
         if (!selectedPO?.id) {
-            setSnackbar({ open: true, message: 'Pehle PO select karo.', severity: 'error' });
+            setSnackbar({ open: true, message: 'Select a purchase order first.', severity: 'error' });
             return;
         }
         if (!amount || amount <= 0) {
-            setSnackbar({ open: true, message: 'Valid amount daalo.', severity: 'error' });
+            setSnackbar({ open: true, message: 'Enter a valid amount.', severity: 'error' });
             return;
         }
         if (maxBalance > 0 && amount > maxBalance) {
-            setSnackbar({ open: true, message: 'Amount outstanding balance se zyada nahi ho sakta.', severity: 'error' });
+            setSnackbar({ open: true, message: 'Amount cannot exceed the outstanding balance.', severity: 'error' });
             return;
         }
 
@@ -316,7 +316,7 @@ const VendorPayments = () => {
                                 <Typography variant="h6" fontWeight={700}>Purchase Orders</Typography>
                                 <TextField
                                     size="small"
-                                    placeholder="PO number ya vendor search karo..."
+                                    placeholder="Search by purchase order number or vendor..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     InputProps={{
@@ -330,7 +330,7 @@ const VendorPayments = () => {
                                 <Stack spacing={1.5}>
                                     {filteredPOs.length === 0 ? (
                                         <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                                            Koi purchase order nahi mila
+                                            No purchase orders found.
                                         </Typography>
                                     ) : filteredPOs.map((po) => (
                                         <Paper
@@ -388,7 +388,7 @@ const VendorPayments = () => {
                         <CardContent>
                             {!selectedPO ? (
                                 <Typography variant="body2" color="text.secondary" textAlign="center" py={8}>
-                                    Payment details dekhne ke liye PO select karo
+                                    Select a purchase order to view payment details.
                                 </Typography>
                             ) : (
                                 <>
@@ -410,7 +410,7 @@ const VendorPayments = () => {
                                                 onClick={() => handleOpenPayment(selectedPO)}
                                                 gradient="linear-gradient(135deg, #11998e, #38ef7d)"
                                             >
-                                                Pay Karo
+                                                Make Payment
                                             </GradientButton>
                                         )}
                                     </Stack>
@@ -441,7 +441,7 @@ const VendorPayments = () => {
 
                                     {payments.length === 0 ? (
                                         <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                                            Koi payment nahi mili abhi tak
+                                            No payments recorded yet.
                                         </Typography>
                                     ) : (
                                         <Stack spacing={1.5}>
@@ -579,8 +579,8 @@ const VendorPayments = () => {
                 <DialogContent>
                     <Typography variant="body2" color="text.secondary">
                         {paymentToDelete?.reference_no
-                            ? `Reference ${paymentToDelete.reference_no} wala payment delete karna hai?`
-                            : 'Yeh payment record delete karna hai?'}
+                            ? `Delete the payment with reference ${paymentToDelete.reference_no}?`
+                            : 'Delete this payment record?'}
                     </Typography>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="body2" fontWeight={700}>
