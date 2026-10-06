@@ -110,7 +110,10 @@ const initialState = {
     states:       [],
 
     // Selected period (shared across pages)
-    selectedPeriod: new Date().toISOString().slice(0, 7), // '2026-02'
+    selectedPeriod: (() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    })(),
 
     // UI
     error:        null,
@@ -187,6 +190,7 @@ const gstSlice = createSlice({
         builder
             .addCase(fetchReturns.pending, (state) => {
                 state.returnsLoading = true;
+                state.error = null;
             })
             .addCase(fetchReturns.fulfilled, (state, action) => {
                 state.returnsLoading = false;

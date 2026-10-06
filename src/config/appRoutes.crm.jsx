@@ -100,24 +100,17 @@ export const isRouteAccessible = (route, permissionApi, user) => {
     return false;
   }
 
-  if (route.permission) {
-    return permissionApi.can(route.permission);
-  }
+  const hasAccessRules = Boolean(
+    route.permission || route.permissionsAny?.length || route.roles?.length || route.allowSuperAdmin
+  );
+  if (!hasAccessRules) return true;
 
-  if (route.permissionsAny?.length) {
-    return permissionApi.can(route.permissionsAny);
-  }
-
-  if (route.roles?.length) {
-    return route.roles.some((role) => permissionApi.isRole(role)) ||
-      (route.allowSuperAdmin && permissionApi.isSuperAdmin());
-  }
-
-  if (route.allowSuperAdmin) {
-    return permissionApi.isSuperAdmin();
-  }
-
-  return true;
+  return Boolean(
+    (route.permission && permissionApi.can(route.permission)) ||
+    (route.permissionsAny?.length && permissionApi.can(route.permissionsAny)) ||
+    (route.roles?.some((role) => permissionApi.isRole(role))) ||
+    (route.allowSuperAdmin && permissionApi.isSuperAdmin())
+  );
 };
 
 export const getSidebarSections = (permissionApi, user) =>

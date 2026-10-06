@@ -10,7 +10,6 @@ import invoiceReducer from "./features/invoiceSlice";
 import invoicePaymentReducer from "./features/invoicePaymentSlice";
 import companyReducer from "./features/companySlice";
 import hsnCodeReducer from "./features/hsnCodeSlice";
-import gstReducer from "../features/gst/state/gstSlice";
 import vendorReducer from "../features/vendors/state/vendorSlice";
 import inventoryReducer from "../features/inventory/state/inventorySlice";
 import salesReturnReducer from "./features/salesReturnSlice";
@@ -53,7 +52,6 @@ const businessReducers = {
   invoices: invoiceReducer,
   invoicePayments: invoicePaymentReducer,
   hsnCodes: hsnCodeReducer,
-  gst: gstReducer,
   vendors: vendorReducer,
   inventory: inventoryReducer,
   salesReturns: salesReturnReducer,

@@ -39,9 +39,11 @@ export const publicRoutes = [
   { path: "/verify-otp", element: <VerifyOtp /> },
 ];
 
-// No grouped sections — every route below is a top-level sidebar item,
-// matching the original ApnaKharcha sidebar exactly.
-export const menuSections = [];
+// Keep Dashboard at the top, then group finance tools and company management.
+export const menuSections = [
+  { key: "finance", label: "Finance", icon: <AccountBalanceIcon /> },
+  { key: "sales", label: "Sales", icon: <AssessmentIcon /> },
+];
 
 export const protectedRoutes = [
   { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: <HomeIcon />, element: <Dashboard />, showInSidebar: true },
@@ -53,23 +55,30 @@ export const protectedRoutes = [
     requiresOrg: false,
     breadcrumbs: [{ label: "Organisation" }, { label: "Setup", current: true }],
   },
-  { key: "companies", path: "/companies", label: "Companies", icon: <AccountBalanceIcon />, element: <CompanyList />, permission: "clients.manage", showInSidebar: true, roles: ["sales_manager"], allowSuperAdmin: true },
-  { key: "accounts", path: "/accounts", label: "Accounts", icon: <AccountBalanceIcon />, element: <Accountpage />, showInSidebar: true },
-  { key: "transactions", path: "/transactions", label: "Transactions", icon: <AttachMoneyIcon />, element: <Transactions />, showInSidebar: true },
-  { key: "categories", path: "/categories", label: "Categories", icon: <CategoryIcon />, element: <CategoryPage />, showInSidebar: true },
-  { key: "budgets", path: "/budgets", label: "Budgets", icon: <PieChartIcon />, element: <BudgetPage />, showInSidebar: true },
-  { key: "reports", path: "/reports", label: "Reports", icon: <AssessmentIcon />, element: <Report />, showInSidebar: true },
-  { key: "profit-loss", path: "/profit-loss", label: "Profit & Loss", icon: <TrendingDownIcon />, element: <ProfitLossReport />, showInSidebar: true },
-  { key: "loans", path: "/loans", label: "Loans", icon: <MonetizationOnIcon />, element: <LoanList />, showInSidebar: true },
+  { key: "companies", path: "/companies", label: "Companies", icon: <AccountBalanceIcon />, element: <CompanyList />, permission: "clients.manage", group: "sales", showInSidebar: true, roles: ["sales_manager"], allowSuperAdmin: true },
+  { key: "accounts", path: "/accounts", label: "Accounts", icon: <AccountBalanceIcon />, element: <Accountpage />, group: "finance", showInSidebar: true },
+  { key: "transactions", path: "/transactions", label: "Transactions", icon: <AttachMoneyIcon />, element: <Transactions />, group: "finance", showInSidebar: true },
+  { key: "categories", path: "/categories", label: "Categories", icon: <CategoryIcon />, element: <CategoryPage />, group: "finance", showInSidebar: true },
+  { key: "budgets", path: "/budgets", label: "Budgets", icon: <PieChartIcon />, element: <BudgetPage />, group: "finance", showInSidebar: true },
+  { key: "loans", path: "/loans", label: "Loans", icon: <MonetizationOnIcon />, element: <LoanList />, group: "finance", showInSidebar: true },
+  { key: "reports", path: "/reports", label: "Reports", icon: <AssessmentIcon />, element: <Report />, group: "finance", showInSidebar: true },
+  { key: "profit-loss", path: "/profit-loss", label: "Profit & Loss", icon: <TrendingDownIcon />, element: <ProfitLossReport />, group: "finance", showInSidebar: true },
 ];
 
 export const isRouteAccessible = (route, permissionApi, user) => {
   if (route.requiresOrg && !user?.org_id && !user?.organisation?.id) return false;
-  if (route.permission) return permissionApi.can(route.permission);
-  if (route.permissionsAny?.length) return permissionApi.can(route.permissionsAny);
-  if (route.roles?.length) return route.roles.some((role) => permissionApi.isRole(role)) || (route.allowSuperAdmin && permissionApi.isSuperAdmin());
-  if (route.allowSuperAdmin) return permissionApi.isSuperAdmin();
-  return true;
+
+  const hasAccessRules = Boolean(
+    route.permission || route.permissionsAny?.length || route.roles?.length || route.allowSuperAdmin
+  );
+  if (!hasAccessRules) return true;
+
+  return Boolean(
+    (route.permission && permissionApi.can(route.permission)) ||
+    (route.permissionsAny?.length && permissionApi.can(route.permissionsAny)) ||
+    (route.roles?.some((role) => permissionApi.isRole(role))) ||
+    (route.allowSuperAdmin && permissionApi.isSuperAdmin())
+  );
 };
 
 export const getSidebarSections = (permissionApi, user) =>

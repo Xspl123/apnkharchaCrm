@@ -27,6 +27,11 @@ import {
     FileUpload,
 } from '@mui/icons-material';
 
+const getCurrentPeriod = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+
 // ── Summary Card Component ────────────────────────────────
 
 const SummaryCard = ({ title, value, subtitle, icon, color }) => (
@@ -119,8 +124,8 @@ const GstDashboard = () => {
 
     const handleFetch = () => {
         if (!period) return;
-        dispatch(setSelectedPeriod(period));
-        dispatch(fetchGstSummary(period));
+        if (period === selectedPeriod) dispatch(fetchGstSummary(period));
+        else dispatch(setSelectedPeriod(period));
     };
 
     // Format currency
@@ -154,7 +159,7 @@ const GstDashboard = () => {
                         value={period}
                         onChange={(e) => setPeriod(e.target.value)}
                         sx={{ width: 180 }}
-                        inputProps={{ max: new Date().toISOString().slice(0, 7) }}
+                        inputProps={{ max: getCurrentPeriod() }}
                     />
                     <Button
                         variant="contained"

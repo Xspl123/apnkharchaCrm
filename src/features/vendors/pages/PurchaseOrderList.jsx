@@ -827,8 +827,10 @@ const PurchaseOrderList = () => {
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                     <Paper elevation={0} sx={{
                         p: 2.5, mb: 3, borderRadius: '16px',
-                        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                        color: 'white',
+                        background: isDark
+                            ? 'linear-gradient(135deg, #164e63 0%, #115e59 100%)'
+                            : 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
+                        color: '#f0fdfa',
                     }}>
                         <Stack
                             direction={{ xs: 'column', sm: 'row' }}
@@ -855,7 +857,7 @@ const PurchaseOrderList = () => {
                                     <Chip key={key}
                                         label={`${stats[key]} ${cfg.label}`}
                                         size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, flexShrink: 0 }}
+                                        sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: '#f0fdfa', fontWeight: 600, flexShrink: 0 }}
                                     />
                                 ))}
                             </Stack>
@@ -1404,31 +1406,34 @@ const PurchaseOrderList = () => {
                             bgcolor: theme.palette.background.paper,
                             color: theme.palette.text.primary,
                             overflow: 'hidden',
-                            maxHeight: '90vh',
+                            maxHeight: { xs: 'calc(100dvh - 24px)', sm: '90vh' },
                             boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
                         }
                     }}>
                     <Box sx={{
-                        px: 4,
-                        py: 2.5,
+                        px: { xs: 2, sm: 4 },
+                        py: { xs: 1.5, sm: 2.5 },
                         borderBottom: '1px solid rgba(17, 153, 142, 0.12)',
                         display: 'flex',
+                        flexWrap: { xs: 'wrap', sm: 'nowrap' },
                         justifyContent: 'space-between',
                         alignItems: 'center',
+                        gap: { xs: 1, sm: 2 },
                         bgcolor: isDark ? theme.palette.background.paper : 'rgba(255,255,255,0.92)',
                         backdropFilter: 'blur(10px)',
                     }}>
-                        <Stack direction="row" alignItems="center" spacing={2}>
+                        <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 2 }} sx={{ minWidth: 0, flex: { xs: '1 1 100%', sm: '1 1 auto' } }}>
                             <Avatar sx={{
                                 bgcolor: '#11998e',
-                                width: 40,
-                                height: 40,
+                                width: { xs: 36, sm: 40 },
+                                height: { xs: 36, sm: 40 },
+                                flexShrink: 0,
                                 boxShadow: '0 4px 10px rgba(17,153,142,0.2)'
                             }}>
                                 <POIcon sx={{ fontSize: 22 }} />
                             </Avatar>
-                            <Box>
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: (isDark ? '#f1f5f9' : '#1e293b'), letterSpacing: '-0.3px' }}>
+                            <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.25rem' }, color: (isDark ? '#f1f5f9' : '#1e293b'), letterSpacing: '-0.3px', overflowWrap: 'anywhere' }}>
                                     Purchase Order {viewPO?.po_number}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: (isDark ? '#94a3b8' : '#64748b'), display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1438,7 +1443,7 @@ const PurchaseOrderList = () => {
                             </Box>
                         </Stack>
 
-                        <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} alignItems="center" justifyContent="space-between" sx={{ width: { xs: '100%', sm: 'auto' }, flexShrink: 0 }}>
                             <StatusChip status={viewPO?.status} />
                             <IconButton
                                 onClick={() => {
@@ -1460,10 +1465,11 @@ const PurchaseOrderList = () => {
                                     <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: '100%' }}>
                                 <Grid container spacing={3} sx={{ mb: 4 }}>
                                     <Grid item xs={12} md={7}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                                            <Box sx={{
-                                                width: '90px',
-                                                height: '90px',
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.5 }, minWidth: 0 }}>
+                                                <Box sx={{
+                                                width: { xs: 56, sm: 90 },
+                                                height: { xs: 56, sm: 90 },
+                                                flexShrink: 0,
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
@@ -1471,18 +1477,19 @@ const PurchaseOrderList = () => {
                                                 borderRadius: '14px',
                                                 boxShadow: '0 10px 25px rgba(17,153,142,0.22)'
                                             }}>
-                                                <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', fontSize: '42px' }}>
+                                                <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '28px', sm: '42px' } }}>
                                                     {(viewPO?.vendor?.company_name || viewPO?.vendor?.vendor_name || 'P').charAt(0)}
                                                 </Typography>
                                             </Box>
 
-                                            <Box>
+                                            <Box sx={{ minWidth: 0 }}>
                                                 <Typography variant="h5" sx={{
                                                     fontWeight: 800,
                                                     color: (isDark ? '#f1f5f9' : '#0f172a'),
                                                     mb: 0.8,
                                                     letterSpacing: '-0.5px',
-                                                    fontSize: '26px'
+                                                    fontSize: { xs: '1.15rem', sm: '26px' },
+                                                    overflowWrap: 'anywhere'
                                                 }}>
                                                     {viewPO?.vendor?.company_name || viewPO?.vendor?.vendor_name || 'Vendor'}
                                                 </Typography>
@@ -1564,8 +1571,9 @@ const PurchaseOrderList = () => {
                                             fontWeight: 800,
                                             color: (isDark ? '#f1f5f9' : '#0f172a'),
                                             mb: 1.5,
-                                            fontSize: '34px',
-                                            letterSpacing: '2px',
+                                            fontSize: { xs: '24px', sm: '34px' },
+                                            letterSpacing: { xs: '0.5px', sm: '2px' },
+                                            overflowWrap: 'anywhere',
                                         }}>
                                             PURCHASE ORDER
                                         </Typography>
@@ -1881,7 +1889,14 @@ const PurchaseOrderList = () => {
                                             boxShadow: '0 8px 20px rgba(0,0,0,0.02)',
                                             bgcolor: (isDark ? '#1e293b' : '#ffffff')
                                         }}>
-                                            <Table size="small">
+                                            <Table size="small" sx={{
+                                                width: '100%',
+                                                tableLayout: 'fixed',
+                                                '& .MuiTableCell-root': {
+                                                    px: { xs: 1.25, sm: 2 },
+                                                    overflowWrap: 'anywhere',
+                                                },
+                                            }}>
                                                 <TableBody>
                                                     {[
                                                         ['Subtotal', fmt(viewPO?.sub_total)],
@@ -2065,7 +2080,7 @@ const PurchaseOrderList = () => {
                             </Box>
                         )}
                     </DialogContent>
-                    <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+                    <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: 2, gap: 1, flexWrap: 'wrap' }}>
                         {viewPO?.can_approve && (
                             <GradientButton size="small" startIcon={<ApproveIcon />}
                                 onClick={() => handleStatusClick(viewPO, 'approved')}
@@ -2101,11 +2116,11 @@ const PurchaseOrderList = () => {
                                 Cancel PO
                             </Button>
                         )}
-                        <Box flex={1} />
+                        <Box sx={{ flex: { xs: '1 1 100%', sm: 1 }, display: { xs: 'none', sm: 'block' } }} />
                         <Button onClick={() => {
                             setViewDialog(false);
                             dispatch(clearVendorPayments());
-                        }} sx={{ borderRadius: '8px' }}>Close</Button>
+                        }} sx={{ borderRadius: '8px', ml: 'auto' }}>Close</Button>
                     </DialogActions>
                 </Dialog>
 

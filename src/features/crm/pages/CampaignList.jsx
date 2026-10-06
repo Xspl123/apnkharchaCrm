@@ -501,8 +501,8 @@ export default function CampaignList() {
             </Dialog>
 
             <Dialog open={attachDialog} onClose={() => setAttachDialog(false)} maxWidth="sm" fullWidth
-                PaperProps={{ sx: { borderRadius: '16px' } }}>
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                PaperProps={{ sx: { borderRadius: '16px', bgcolor: 'background.paper', color: 'text.primary', backgroundImage: 'none' } }}>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider', color: 'text.primary' }}>
                     <Typography fontWeight={700}>Attach Leads</Typography>
                     <IconButton size="small" onClick={() => setAttachDialog(false)}><CloseIcon /></IconButton>
                 </DialogTitle>
@@ -529,7 +529,7 @@ export default function CampaignList() {
                                         direction="row"
                                         justifyContent="space-between"
                                         alignItems="center"
-                                        sx={{ p: 1.25, borderRadius: '10px', bgcolor: '#f8fafc', border: '1px solid #e5e7eb' }}
+                                        sx={{ p: 1.25, borderRadius: '10px', bgcolor: 'background.default', border: 1, borderColor: 'divider', color: 'text.primary' }}
                                     >
                                         <Box>
                                             <Typography variant="body2" fontWeight={600}>
@@ -561,6 +561,7 @@ export default function CampaignList() {
                             value={selectedLeadIds}
                             label="Select Leads"
                             onChange={(e) => setSelectedLeadIds(e.target.value)}
+                            MenuProps={{ PaperProps: { sx: { bgcolor: 'background.paper', color: 'text.primary', backgroundImage: 'none' } } }}
                             renderValue={(selected) => {
                                 const selectedLabels = leads
                                     .filter((lead) => selected.includes(lead.id))

@@ -117,15 +117,9 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                     "--navbar-border": theme.palette.divider,
                     "--navbar-text": theme.palette.text.primary,
                     "--navbar-subtext": theme.palette.text.secondary,
-                    "--navbar-breadcrumb": theme.palette.mode === "dark"
-                        ? "#ffffff"
-                        : theme.palette.text.secondary,
-                    "--navbar-breadcrumb-current": theme.palette.mode === "dark"
-                        ? "#ffffff"
-                        : theme.palette.text.primary,
-                    "--navbar-separator": theme.palette.mode === "dark"
-                        ? "rgba(255, 255, 255, 0.72)"
-                        : theme.palette.text.secondary,
+                    "--navbar-breadcrumb": "#ffffff",
+                    "--navbar-breadcrumb-current": "#ffffff",
+                    "--navbar-separator": "rgba(255, 255, 255, 0.72)",
                     "--navbar-accent": theme.palette.primary.main,
                     "--navbar-secondary": theme.palette.secondary.main,
                     "--navbar-shadow": theme.palette.mode === "dark"

@@ -48,7 +48,6 @@ const MODULE_CONFIG = {
     clients:    { color: '#0284c7', label: 'Clients' },
     crm:        { color: '#7c3aed', label: 'CRM' },
     reports:    { color: '#059669', label: 'Reports' },
-    gst:        { color: '#b45309', label: 'GST' },
 };
 
 export default function RoleManagement() {
@@ -73,6 +72,27 @@ export default function RoleManagement() {
     const visibleRoles = isSuperAdmin()
     ? roles
     : roles.filter((r) => r.name !== 'super_admin');
+
+    const rolesByOrg = visibleRoles.reduce((groups, role) => {
+        const key = role.org_id ? `org-${role.org_id}` : 'platform';
+        const label = role.org_id
+            ? role.org_name || `Organisation ${role.org_id}`
+            : 'Platform';
+
+        if (!groups[key]) groups[key] = { label, roles: [] };
+        groups[key].roles.push(role);
+        return groups;
+    }, {});
+    const roleGroups = Object.entries(rolesByOrg).sort(([keyA, groupA], [keyB, groupB]) => {
+        if (keyA === 'platform') return -1;
+        if (keyB === 'platform') return 1;
+        return groupA.label.localeCompare(groupB.label);
+    });
+    const selectedRoleOrgLabel = selectedRole
+        ? selectedRole.org_id
+            ? selectedRole.org_name || `Organisation ${selectedRole.org_id}`
+            : 'Platform'
+        : '';
 
     // Max permissions for progress bar
     const maxPerms = roles.find((r) => r.name === 'super_admin')?.permissions?.length || 44;
@@ -142,51 +162,61 @@ export default function RoleManagement() {
                             sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                             Select Role
                         </Typography>
-                        <Stack spacing={1}>
+                        <Stack spacing={2}>
                             {isLoading ? <CircularProgress size={24} /> :
-                                visibleRoles.map((role) => {
-                                    const isSelected   = selectedRole?.id === role.id;
-                                    const isLocked     = role.name === 'super_admin';
-                                    return (
-                                        <Box key={role.id}
-                                            onClick={() => !isLocked && handleSelectRole(role)}
-                                            sx={{
-                                                p: 1.5, borderRadius: '10px',
-                                                border: `2px solid ${isSelected ? role.color : 'transparent'}`,
-                                                bgcolor: isSelected ? role.color + '12' : 'rgba(0,0,0,0.02)',
-                                                cursor: isLocked ? 'not-allowed' : 'pointer',
-                                                opacity: isLocked ? 0.65 : 1,
-                                                transition: 'all 0.2s',
-                                                '&:hover': { bgcolor: isLocked ? undefined : role.color + '12' },
-                                            }}>
-                                            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                                <Box>
-                                                    <Stack direction="row" spacing={1} alignItems="center">
-                                                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: role.color }} />
-                                                        <Typography fontWeight={600} variant="body2">{role.label}</Typography>
-                                                    </Stack>
-                                                    <Typography variant="caption" color="text.secondary" sx={{ pl: 2.5 }}>
-                                                        {role.permissions?.length || 0} permissions
-                                                    </Typography>
-                                                </Box>
-                                                {isLocked && (
-                                                    <Tooltip title={
-                                                        role.name === 'super_admin'
-                                                            ? 'Super Admin permissions cannot be modified'
-                                                            : 'Org Admin has full access — locked'
-                                                    }>
-                                                        <LockIcon sx={{ fontSize: 16, color: '#9ca3af' }} />
-                                                    </Tooltip>
-                                                )}
-                                            </Stack>
-                                            <LinearProgress variant="determinate"
-                                                value={Math.round(((role.permissions?.length || 0) / maxPerms) * 100)}
-                                                sx={{ mt: 1, borderRadius: 4, height: 4,
-                                                    bgcolor: role.color + '20',
-                                                    '& .MuiLinearProgress-bar': { bgcolor: role.color } }} />
-                                        </Box>
-                                    );
-                                })
+                                roleGroups.map(([orgKey, group]) => (
+                                    <Box key={orgKey}>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            fontWeight={700}
+                                            sx={{ display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: 0.7 }}
+                                        >
+                                            {group.label}
+                                        </Typography>
+                                        <Stack spacing={1}>
+                                            {group.roles.map((role) => {
+                                                const isSelected = selectedRole?.id === role.id;
+                                                const isLocked = role.name === 'super_admin';
+                                                return (
+                                                    <Box key={role.id}
+                                                        onClick={() => !isLocked && handleSelectRole(role)}
+                                                        sx={{
+                                                            p: 1.5, borderRadius: '10px',
+                                                            border: `2px solid ${isSelected ? role.color : 'transparent'}`,
+                                                            bgcolor: isSelected ? role.color + '12' : 'rgba(0,0,0,0.02)',
+                                                            cursor: isLocked ? 'not-allowed' : 'pointer',
+                                                            opacity: isLocked ? 0.65 : 1,
+                                                            transition: 'all 0.2s',
+                                                            '&:hover': { bgcolor: isLocked ? undefined : role.color + '12' },
+                                                        }}>
+                                                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                                            <Box>
+                                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: role.color }} />
+                                                                    <Typography fontWeight={600} variant="body2">{role.label}</Typography>
+                                                                </Stack>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ pl: 2.5 }}>
+                                                                    {role.permissions?.length || 0} permissions
+                                                                </Typography>
+                                                            </Box>
+                                                            {isLocked && (
+                                                                <Tooltip title="Super Admin permissions cannot be modified">
+                                                                    <LockIcon sx={{ fontSize: 16, color: '#9ca3af' }} />
+                                                                </Tooltip>
+                                                            )}
+                                                        </Stack>
+                                                        <LinearProgress variant="determinate"
+                                                            value={Math.round(((role.permissions?.length || 0) / maxPerms) * 100)}
+                                                            sx={{ mt: 1, borderRadius: 4, height: 4,
+                                                                bgcolor: role.color + '20',
+                                                                '& .MuiLinearProgress-bar': { bgcolor: role.color } }} />
+                                                    </Box>
+                                                );
+                                            })}
+                                        </Stack>
+                                    </Box>
+                                ))
                             }
                         </Stack>
                     </CardContent>
@@ -209,6 +239,7 @@ export default function RoleManagement() {
                                         <Stack direction="row" spacing={1.5} alignItems="center">
                                             <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: selectedRole.color }} />
                                             <Typography fontWeight={700} variant="h6">{selectedRole.label}</Typography>
+                                            <Chip label={selectedRoleOrgLabel} size="small" variant="outlined" />
                                             <Chip
                                                 label={`${Object.values(checkedPerms).filter(Boolean).length} selected`}
                                                 size="small"
@@ -227,7 +258,9 @@ export default function RoleManagement() {
 
                                     <Divider sx={{ mb: 2 }} />
 
-                                    {permissions.map((moduleGroup) => {
+                                    {permissions
+                                        .filter((moduleGroup) => moduleGroup.module?.toLowerCase() !== 'gst')
+                                        .map((moduleGroup) => {
                                         const config     = MODULE_CONFIG[moduleGroup.module] || { color: '#6b7280', label: moduleGroup.module };
                                         const perms      = moduleGroup.permissions;
                                         const selected   = countSelected(perms);
@@ -269,7 +302,7 @@ export default function RoleManagement() {
                                                 </AccordionDetails>
                                             </Accordion>
                                         );
-                                    })}
+                                        })}
                                 </CardContent>
                             </GlassCard>
                         </motion.div>

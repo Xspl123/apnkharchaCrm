@@ -24,6 +24,11 @@ import {
 const fmt = (val) =>
     `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
+const getCurrentPeriod = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+
 // ── Status Chip ───────────────────────────────────────────
 
 const StatusChip = ({ status }) => (
@@ -82,10 +87,12 @@ const DeadlineInfo = ({ period, returnType }) => {
 const CreateDraftDialog = ({ open, onClose, onSubmit, loading }) => {
     const [form, setForm] = useState({
         return_type: 'GSTR1',
-        period: new Date().toISOString().slice(0, 7),
+        period: getCurrentPeriod(),
     });
 
-    const handleSubmit = () => onSubmit(form);
+    const handleSubmit = () => {
+        if (form.period) onSubmit(form);
+    };
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -139,10 +146,11 @@ const CreateDraftDialog = ({ open, onClose, onSubmit, loading }) => {
                         fullWidth
                         value={form.period}
                         onChange={(e) => setForm((p) => ({ ...p, period: e.target.value }))}
-                        inputProps={{ max: new Date().toISOString().slice(0, 7) }}
+                        required
+                        inputProps={{ max: getCurrentPeriod() }}
                     />
                     <Alert severity="info">
-                        After saving the draft, you can review and file it.
+                        Review this draft, file the return on the GST portal, then mark it as filed here.
                     </Alert>
                 </Stack>
             </DialogContent>
@@ -154,7 +162,7 @@ const CreateDraftDialog = ({ open, onClose, onSubmit, loading }) => {
                     onClick={handleSubmit}
                     variant="contained"
                     startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <SaveAlt />}
-                    disabled={loading}
+                    disabled={loading || !form.period}
                 >
                     Save Draft
                 </Button>
@@ -171,14 +179,14 @@ const FileConfirmDialog = ({ open, onClose, onConfirm, returnData, loading }) =>
             <Stack direction="row" spacing={1} alignItems="center">
                 <WarningAmber color="warning" />
                 <Typography variant="h6" fontWeight={700}>
-                    File Return
+                    Mark Return as Filed
                 </Typography>
             </Stack>
         </DialogTitle>
         <DialogContent>
             <DialogContentText>
-                Are you sure? Once filed, this return
-                <strong> cannot be modified.</strong>
+                First submit this return on the GST portal. This action only updates its status in this app;
+                it does not submit anything to the government portal.
             </DialogContentText>
             {returnData && (
                 <Paper
@@ -222,7 +230,7 @@ const FileConfirmDialog = ({ open, onClose, onConfirm, returnData, loading }) =>
                 startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <FileUpload />}
                 disabled={loading}
             >
-                Yes, File Return
+                Mark as Filed
             </Button>
         </DialogActions>
     </Dialog>
@@ -265,7 +273,7 @@ const StatsCards = ({ returns }) => {
 
 const GstReturnsPage = () => {
     const dispatch = useDispatch();
-    const { returns, returnsLoading, actionLoading, error } =
+    const { returns, returnsLoading, actionLoading, error, selectedPeriod } =
         useSelector((s) => s.gst);
 
     // Filters
@@ -296,17 +304,24 @@ const GstReturnsPage = () => {
         dispatch(fetchReturns(clean));
     };
 
+    const getActiveFilters = () => Object.fromEntries(
+        Object.entries(filters).filter(([, value]) => value !== '')
+    );
+
     const handleResetFilters = () => {
         setFilters({ return_type: '', status: '', period: '' });
         dispatch(fetchReturns({}));
     };
 
     const handleCreateDraft = async (formData) => {
-        const result = await dispatch(saveReturnDraft(formData));
+        const result = await dispatch(saveReturnDraft({
+            ...formData,
+            period: formData.period || selectedPeriod,
+        }));
         if (saveReturnDraft.fulfilled.match(result)) {
             setSnackbar({ open: true, message: 'Draft saved successfully!', severity: 'success' });
             setCreateOpen(false);
-            dispatch(fetchReturns({}));
+            dispatch(fetchReturns(getActiveFilters()));
         } else {
             setSnackbar({ open: true, message: result.payload || 'Error saving draft', severity: 'error' });
         }
@@ -315,8 +330,9 @@ const GstReturnsPage = () => {
     const handleFileConfirm = async () => {
         const result = await dispatch(fileReturn(fileDialog.data.id));
         if (fileReturn.fulfilled.match(result)) {
-            setSnackbar({ open: true, message: 'Return filed successfully! 🎉', severity: 'success' });
+            setSnackbar({ open: true, message: 'Return marked as filed in this app.', severity: 'success' });
             setFileDialog({ open: false, data: null });
+            dispatch(fetchReturns(getActiveFilters()));
         } else {
             setSnackbar({ open: true, message: result.payload || 'Error filing return', severity: 'error' });
         }
@@ -345,7 +361,7 @@ const GstReturnsPage = () => {
                 </Box>
                 <Stack direction="row" spacing={1}>
                     <Tooltip title="Refresh">
-                        <IconButton onClick={() => dispatch(fetchReturns({}))} disabled={returnsLoading}>
+                        <IconButton onClick={() => dispatch(fetchReturns(getActiveFilters()))} disabled={returnsLoading}>
                             <Refresh />
                         </IconButton>
                     </Tooltip>
@@ -358,6 +374,11 @@ const GstReturnsPage = () => {
                     </Button>
                 </Stack>
             </Stack>
+
+            <Alert severity="info" sx={{ mb: 2 }}>
+                Prepare and review returns here, then submit them on the GST portal. After portal submission, use
+                <strong> Mark filed</strong> to update the status in this app; it does not submit to GSTN.
+            </Alert>
 
             {/* ── Error ── */}
             {error && (
@@ -434,7 +455,7 @@ const GstReturnsPage = () => {
                         <TableHead>
                             <TableRow sx={{ bgcolor: 'grey.100' }}>
                                 {['#', 'Return Type', 'Period', 'Deadline', 'Status', 'Tax Liability', 'Filed At', 'Actions'].map((col) => (
-                                    <TableCell key={col} sx={{ fontWeight: 700 }}>
+                                    <TableCell key={col} sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                                         {col}
                                     </TableCell>
                                 ))}
@@ -556,7 +577,7 @@ const GstReturnsPage = () => {
                                                     )}
                                                     {/* File */}
                                                     {ret.status === 'draft' && (
-                                                        <Tooltip title="Mark as filed">
+                        <Tooltip title="After filing on the GST portal, mark this return as filed here">
                                                             <Button
                                                                 size="small"
                                                                 variant="contained"
@@ -567,7 +588,7 @@ const GstReturnsPage = () => {
                                                                 }
                                                                 disabled={actionLoading}
                                                             >
-                                                                File
+                                                                Mark filed
                                                             </Button>
                                                         </Tooltip>
                                                     )}

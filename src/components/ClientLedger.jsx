@@ -30,7 +30,8 @@ import {
     Drawer,
     CircularProgress,
     Alert,
-    Snackbar
+    Snackbar,
+    useMediaQuery
 } from '@mui/material';
 import {
     Receipt as ReceiptIcon,
@@ -50,25 +51,31 @@ import { getClientLedger, setLedgerClose } from '../redux/features/clientSlice';
 
 // ==================== STYLED COMPONENTS ====================
 
-const GlassCard = styled(Card)(() => ({
-    background: 'rgba(255, 255, 255, 0.95)',
+const GlassCard = styled(Card)(({ theme }) => ({
+    background: theme.palette.background.paper,
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-    border: '1px solid rgba(255, 255, 255, 0.3)',
+    boxShadow: theme.palette.mode === 'dark'
+        ? '0 8px 32px rgba(0, 0, 0, 0.28)'
+        : '0 8px 32px rgba(0, 0, 0, 0.08)',
+    border: `1px solid ${theme.palette.divider}`,
 }));
 
-const StyledTableCell = styled(TableCell)(() => ({
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
     fontWeight: 600,
     padding: '16px',
-    borderBottom: '2px solid #f0f2f5',
+    borderBottom: `2px solid ${theme.palette.divider}`,
 }));
 
-const BalanceChip = styled(Chip)(({ balance }) => ({
+const BalanceChip = styled(Chip)(({ balance, theme }) => ({
     fontWeight: 700,
     borderRadius: '8px',
-    backgroundColor: balance >= 0 ? '#e8f5e9' : '#ffebee',
-    color: balance >= 0 ? '#2e7d32' : '#c62828',
+    backgroundColor: balance >= 0
+        ? (theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.18)' : '#e8f5e9')
+        : (theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.18)' : '#ffebee'),
+    color: balance >= 0
+        ? (theme.palette.mode === 'dark' ? '#86efac' : '#2e7d32')
+        : (theme.palette.mode === 'dark' ? '#fca5a5' : '#c62828'),
 }));
 
 // ==================== LEDGER COMPONENT ====================
@@ -76,6 +83,7 @@ const BalanceChip = styled(Chip)(({ balance }) => ({
 const ClientLedger = ({ open, onClose, clientId, clientName }) => {
     const dispatch = useDispatch();
     const { ledger } = useSelector((state) => state.clients);
+    const isMobile = useMediaQuery('(max-width:600px)');
     const fetchedRef = useRef(false);
     
     const [searchTerm, setSearchTerm] = useState('');
@@ -444,34 +452,34 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                 onClose={handleClose}
                 PaperProps={{
                     sx: {
-                        width: '90%',
+                        width: { xs: '100%', sm: '90%' },
                         maxWidth: '1200px',
-                        borderTopLeftRadius: '24px',
-                        borderBottomLeftRadius: '24px',
-                        bgcolor: '#f8fafc'
+                        borderTopLeftRadius: { xs: 0, sm: '24px' },
+                        borderBottomLeftRadius: { xs: 0, sm: '24px' },
+                        bgcolor: 'background.default'
                     }
                 }}
             >
                 <Box sx={{ height: '100%', overflow: 'auto' }}>
                     {/* Header */}
                     <Box sx={{
-                        p: 3,
+                        p: { xs: 2, sm: 3 },
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         color: 'white',
                         position: 'sticky',
                         top: 0,
                         zIndex: 10
                     }}>
-                        <Stack direction="row" alignItems="center" justifyContent="space-between">
-                            <Stack direction="row" alignItems="center" spacing={2}>
-                                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 56, height: 56 }}>
-                                    <LedgerIcon sx={{ fontSize: 32 }} />
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                            <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 2 }} sx={{ minWidth: 0 }}>
+                                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: { xs: 42, sm: 56 }, height: { xs: 42, sm: 56 }, flexShrink: 0 }}>
+                                    <LedgerIcon sx={{ fontSize: { xs: 24, sm: 32 } }} />
                                 </Avatar>
-                                <Box>
-                                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                <Box sx={{ minWidth: 0 }}>
+                                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
                                         Client Ledger
                                     </Typography>
-                                    <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                                    <Typography variant="h6" sx={{ opacity: 0.9, fontSize: { xs: '0.95rem', sm: '1.25rem' }, overflowWrap: 'anywhere' }}>
                                         {clientNameFromData || clientName || 'Loading...'}
                                     </Typography>
                                 </Box>
@@ -661,8 +669,8 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                                                     <IconButton 
                                                         onClick={handlePrint}
                                                         sx={{ 
-                                                            bgcolor: '#f1f5f9',
-                                                            '&:hover': { bgcolor: '#e2e8f0' }
+                                                            bgcolor: 'action.hover',
+                                                            '&:hover': { bgcolor: 'action.selected' }
                                                         }}
                                                     >
                                                         <PrintIcon />
@@ -672,8 +680,8 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                                                     <IconButton 
                                                         onClick={handleDownloadPDF}
                                                         sx={{ 
-                                                            bgcolor: '#f1f5f9',
-                                                            '&:hover': { bgcolor: '#e2e8f0' }
+                                                            bgcolor: 'action.hover',
+                                                            '&:hover': { bgcolor: 'action.selected' }
                                                         }}
                                                     >
                                                         <PictureAsPdfIcon />
@@ -683,8 +691,8 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                                                     <IconButton 
                                                         onClick={handleExportCSV}
                                                         sx={{ 
-                                                            bgcolor: '#f1f5f9',
-                                                            '&:hover': { bgcolor: '#e2e8f0' }
+                                                            bgcolor: 'action.hover',
+                                                            '&:hover': { bgcolor: 'action.selected' }
                                                         }}
                                                     >
                                                         <DownloadIcon />
@@ -697,11 +705,51 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                             </Box>
 
                             {/* Ledger Table */}
-                            <Box sx={{ px: 3, pb: 4 }}>
-                                <TableContainer component={Paper} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
+                    <Box sx={{ px: { xs: 1.5, sm: 3 }, pb: 4 }}>
+                        {isMobile ? (
+                            <Stack spacing={1.25}>
+                                {filteredLedger.length > 0 ? filteredLedger.map((entry, index) => (
+                                    <Paper key={index} elevation={0} sx={{ p: 1.75, borderRadius: '14px', border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+                                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="caption" color="text.secondary">{entry.date || '-'}</Typography>
+                                                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 0.5 }}>
+                                                    {entry.type?.includes('Invoice') ? <ReceiptIcon sx={{ fontSize: 18, color: '#667eea' }} /> : entry.type?.includes('Payment') ? <PaymentIcon sx={{ fontSize: 18, color: '#10b981' }} /> : <AccountBalanceIcon sx={{ fontSize: 18, color: '#f59e0b' }} />}
+                                                    <Typography variant="body2" sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>{entry.type || 'Transaction'}</Typography>
+                                                </Stack>
+                                            </Box>
+                                            <BalanceChip label={formatCurrency(entry.balance)} balance={entry.balance} size="small" sx={{ flexShrink: 0, maxWidth: '48%' }} />
+                                        </Stack>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1.5, pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
+                                            <Box>
+                                                <Typography variant="caption" color="text.secondary">Debit</Typography>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: entry.debit > 0 ? '#ef4444' : 'text.primary' }}>{entry.debit > 0 ? formatCurrency(entry.debit) : '-'}</Typography>
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="caption" color="text.secondary">Credit</Typography>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: entry.credit > 0 ? '#10b981' : 'text.primary' }}>{entry.credit > 0 ? formatCurrency(entry.credit) : '-'}</Typography>
+                                            </Box>
+                                        </Box>
+                                    </Paper>
+                                )) : (
+                                    <Paper sx={{ p: 3, textAlign: 'center', borderRadius: '14px' }}>
+                                        <Typography variant="body2" color="text.secondary">No transactions found for this client</Typography>
+                                    </Paper>
+                                )}
+                                <Paper elevation={0} sx={{ p: 1.75, borderRadius: '14px', bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Current Balance</Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                                        <Box><Typography variant="caption" color="text.secondary">Debit</Typography><Typography variant="body2" sx={{ fontWeight: 700, color: '#ef4444' }}>{formatCurrency(totals.invoiced)}</Typography></Box>
+                                        <Box><Typography variant="caption" color="text.secondary">Credit</Typography><Typography variant="body2" sx={{ fontWeight: 700, color: '#10b981' }}>{formatCurrency(totals.paid)}</Typography></Box>
+                                        <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><Typography variant="caption" color="text.secondary">Balance</Typography><Chip label={formatCurrency(closingBalance)} color={closingBalance >= 0 ? 'success' : 'error'} size="small" sx={{ fontWeight: 700 }} /></Box>
+                                    </Box>
+                                </Paper>
+                            </Stack>
+                        ) : (
+                                <TableContainer component={Paper} sx={{ borderRadius: '16px', overflowX: 'auto' }}>
                                     <Table>
                                         <TableHead>
-                                            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                                            <TableRow sx={{ bgcolor: 'action.hover' }}>
                                                 <StyledTableCell>Date</StyledTableCell>
                                                 <StyledTableCell>Description</StyledTableCell>
                                                 <StyledTableCell align="right">Debit (₹)</StyledTableCell>
@@ -715,8 +763,8 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                                                     <TableRow 
                                                         key={index}
                                                         sx={{
-                                                            '&:hover': { bgcolor: '#f8fafc' },
-                                                            bgcolor: entry.type === 'Opening Balance' ? '#f1f5f9' : 'inherit'
+                                                            '&:hover': { bgcolor: 'action.hover' },
+                                                            bgcolor: entry.type === 'Opening Balance' ? 'action.selected' : 'inherit'
                                                         }}
                                                     >
                                                         <TableCell>
@@ -786,7 +834,7 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                                             )}
 
                                             {/* Summary Row */}
-                                            <TableRow sx={{ bgcolor: '#f1f5f9' }}>
+                                            <TableRow sx={{ bgcolor: 'action.selected' }}>
                                                 <TableCell colSpan={2}>
                                                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                                                         Current Balance
@@ -813,6 +861,7 @@ const ClientLedger = ({ open, onClose, clientId, clientName }) => {
                                         </TableBody>
                                     </Table>
                                 </TableContainer>
+                        )}
                             </Box>
                         </>
                     )}

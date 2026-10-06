@@ -47,10 +47,6 @@ const InvoicePaymentList = lazy(() => import("../pages/InvoicePaymentList"));
 const CompanyList = lazy(() => import("../pages/CompanyList"));
 const HsnCodeList = lazy(() => import("../pages/HsnCodeList"));
 const ClientLedgerPage = lazy(() => import("../pages/ClientLedgerPage"));
-const GstDashboard = lazy(() => import("../features/gst/pages/GstDashboard"));
-const Gstr1Page = lazy(() => import("../features/gst/pages/Gstr1Page"));
-const Gstr3bPage = lazy(() => import("../features/gst/pages/Gstr3bPage"));
-const GstReturnsPage = lazy(() => import("../features/gst/pages/GstReturnsPage"));
 const VendorDashboard = lazy(() => import("../features/vendors/pages/VendorDashboard"));
 const VendorList = lazy(() => import("../features/vendors/pages/VendorList"));
 const VendorPayments = lazy(() => import("../features/vendors/pages/VendorPayments"));
@@ -74,12 +70,13 @@ export const publicRoutes = [
 ];
 
 export const menuSections = [
-  { key: "platform", label: "Platform", icon: <AdminPanelSettingsIcon /> },
+  { key: "finance", label: "Finance", icon: <AccountBalanceIcon /> },
   { key: "sales", label: "Sales", icon: <AssessmentIcon /> },
   { key: "purchase", label: "Purchase", icon: <StoreIcon /> },
   { key: "inventory", label: "Inventory", icon: <InventoryIcon /> },
   { key: "organisation", label: "Organisation", icon: <BusinessIcon /> },
   { key: "admin", label: "User Management", icon: <AdminPanelSettingsIcon /> },
+  { key: "platform", label: "Platform", icon: <AdminPanelSettingsIcon /> },
 ];
 
 export const protectedRoutes = [
@@ -87,29 +84,22 @@ export const protectedRoutes = [
   { key: "organisation-setup", path: "/organisation/setup", label: "Organisation Setup", element: <OrganisationSetup />, requiresOrg: false,
     breadcrumbs: [{ label: "Organisation" }, { label: "Setup", current: true }] },
   { key: "organisation-settings", path: "/organisation/settings", label: "Settings", icon: <SettingsIcon />, element: <OrganisationSettings />, group: "organisation", showInSidebar: true, requiresOrg: true },
-  { key: "companies", path: "/companies", label: "Companies", icon: <AccountBalanceIcon />, element: <CompanyList />, permission: "clients.manage", showInSidebar: true, roles: ["sales_manager"], allowSuperAdmin: true },
-  { key: "accounts", path: "/accounts", label: "Accounts", icon: <AccountBalanceIcon />, element: <Accountpage />, showInSidebar: true },
-  { key: "transactions", path: "/transactions", label: "Transactions", icon: <AttachMoneyIcon />, element: <Transactions />, showInSidebar: true },
-  { key: "categories", path: "/categories", label: "Categories", icon: <CategoryIcon />, element: <CategoryPage />, showInSidebar: true },
-  { key: "budgets", path: "/budgets", label: "Budgets", icon: <PieChartIcon />, element: <BudgetPage />, showInSidebar: true },
-  { key: "reports", path: "/reports", label: "Reports", icon: <AssessmentIcon />, element: <Report />, showInSidebar: true },
-  { key: "profit-loss", path: "/profit-loss", label: "Profit & Loss", icon: <TrendingDownIcon />, element: <ProfitLossReport />, showInSidebar: true },
-  { key: "loans", path: "/loans", label: "Loans", icon: <MonetizationOnIcon />, element: <LoanList />, showInSidebar: true },
+  { key: "companies", path: "/companies", label: "Companies", icon: <AccountBalanceIcon />, element: <CompanyList />, permission: "clients.manage", group: "sales", showInSidebar: true, roles: ["sales_manager"], allowSuperAdmin: true },
+  { key: "accounts", path: "/accounts", label: "Accounts", icon: <AccountBalanceIcon />, element: <Accountpage />, group: "finance", showInSidebar: true },
+  { key: "transactions", path: "/transactions", label: "Transactions", icon: <AttachMoneyIcon />, element: <Transactions />, group: "finance", showInSidebar: true },
+  { key: "categories", path: "/categories", label: "Categories", icon: <CategoryIcon />, element: <CategoryPage />, group: "finance", showInSidebar: true },
+  { key: "budgets", path: "/budgets", label: "Budgets", icon: <PieChartIcon />, element: <BudgetPage />, group: "finance", showInSidebar: true },
+  { key: "loans", path: "/loans", label: "Loans", icon: <MonetizationOnIcon />, element: <LoanList />, group: "finance", showInSidebar: true },
+  { key: "reports", path: "/reports", label: "Reports", icon: <AssessmentIcon />, element: <Report />, group: "finance", showInSidebar: true },
+  { key: "profit-loss", path: "/profit-loss", label: "Profit & Loss", icon: <TrendingDownIcon />, element: <ProfitLossReport />, group: "finance", showInSidebar: true },
   { key: "clients", path: "/clients", label: "Clients", icon: <PersonIcon />, element: <ClientList />, permission: "clients.view", group: "sales", showInSidebar: true },
   { key: "client-ledger", path: "/clients/:clientId/ledger", label: "Client Ledger", element: <ClientLedgerPage />, permission: "clients.view",
     breadcrumbs: ({ params, state }) => {
       const client = state?.clients?.clients?.find((item) => String(item.id) === params.clientId);
       return [{ label: "Sales" }, { label: "Clients", href: "/clients" }, { label: client?.company_name || `Client ${params.clientId} Ledger`, current: true }];
     } },
-  { key: "gst-dashboard", path: "/gst/dashboard", label: "GST Dashboard", icon: <DashboardIcon />, element: <GstDashboard />, permission: "gst.view", group: "sales", showInSidebar: true },
   { key: "invoices", path: "/invoices", label: "Invoices", icon: <AssessmentIcon />, element: <InvoiceList />, permission: "invoices.view", group: "sales", showInSidebar: true },
   { key: "invoices-payment", path: "/invoices-payment", label: "Payments", icon: <AttachMoneyIcon />, element: <InvoicePaymentList />, permission: "payments.manage", group: "sales", showInSidebar: true },
-  { key: "gst-gstr1", path: "/gst/gstr1", label: "GSTR-1", icon: <AssessmentIcon />, element: <Gstr1Page />, permission: "gst.view",
-    breadcrumbs: [{ label: "Sales" }, { label: "GSTR-1", current: true }] },
-  { key: "gst-gstr3b", path: "/gst/gstr3b", label: "GSTR-3B", icon: <AssessmentIcon />, element: <Gstr3bPage />, permission: "gst.view",
-    breadcrumbs: [{ label: "Sales" }, { label: "GSTR-3B", current: true }] },
-  { key: "gst-returns", path: "/gst/returns", label: "Returns", icon: <AssessmentIcon />, element: <GstReturnsPage />, permission: "gst.view",
-    breadcrumbs: [{ label: "Sales" }, { label: "Returns", current: true }] },
   { key: "hsn-codes", path: "/hsn-codes", label: "Hsn Codes", icon: <CategoryIcon />, element: <HsnCodeList />, permission: "products.view", group: "sales", showInSidebar: true, allowSuperAdmin: true },
   { key: "vendors-dashboard", path: "/vendors/dashboard", label: "Vendor Dashboard", icon: <DashboardIcon />, element: <VendorDashboard />, permission: "vendors.view", group: "purchase", showInSidebar: true },
   { key: "vendors-list", path: "/vendors/list", label: "Vendors", icon: <PersonIcon />, element: <VendorList />, permission: "vendors.view", group: "purchase", showInSidebar: true },
@@ -128,11 +118,18 @@ export const protectedRoutes = [
 
 export const isRouteAccessible = (route, permissionApi, user) => {
   if (route.requiresOrg && !user?.org_id && !user?.organisation?.id) return false;
-  if (route.permission) return permissionApi.can(route.permission);
-  if (route.permissionsAny?.length) return permissionApi.can(route.permissionsAny);
-  if (route.roles?.length) return route.roles.some((role) => permissionApi.isRole(role)) || (route.allowSuperAdmin && permissionApi.isSuperAdmin());
-  if (route.allowSuperAdmin) return permissionApi.isSuperAdmin();
-  return true;
+
+  const hasAccessRules = Boolean(
+    route.permission || route.permissionsAny?.length || route.roles?.length || route.allowSuperAdmin
+  );
+  if (!hasAccessRules) return true;
+
+  return Boolean(
+    (route.permission && permissionApi.can(route.permission)) ||
+    (route.permissionsAny?.length && permissionApi.can(route.permissionsAny)) ||
+    (route.roles?.some((role) => permissionApi.isRole(role))) ||
+    (route.allowSuperAdmin && permissionApi.isSuperAdmin())
+  );
 };
 
 export const getSidebarSections = (permissionApi, user) =>

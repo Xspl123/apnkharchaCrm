@@ -45,33 +45,36 @@ const InvoiceViewDialog = ({
                 sx: {
                     borderRadius: '16px',
                     overflow: 'hidden',
-                    maxHeight: '90vh',
+                    maxHeight: { xs: 'calc(100vh - 24px)', sm: '90vh' },
                     boxShadow: '0 20px 60px rgba(0,0,0,0.08)'
                 }
             }}
         >
             {/* Premium Header - Glass Morphism */}
             <Box sx={{
-                px: 4,
-                py: 2.5,
+                px: { xs: 2, sm: 4 },
+                py: { xs: 1.5, sm: 2.5 },
                 borderBottom: '1px solid rgba(102, 126, 234, 0.1)',
                 display: 'flex',
+                flexWrap: { xs: 'wrap', sm: 'nowrap' },
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: { xs: 1, sm: 2 },
                 bgcolor: 'rgba(255,255,255,0.9)',
                 backdropFilter: 'blur(10px)'
             }}>
-                <Stack direction="row" alignItems="center" spacing={2}>
+                <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 2 }} sx={{ minWidth: 0, flex: { xs: '1 1 100%', sm: '1 1 auto' } }}>
                     <Avatar sx={{
                         bgcolor: '#667eea',
-                        width: 40,
-                        height: 40,
+                        width: { xs: 36, sm: 40 },
+                        height: { xs: 36, sm: 40 },
+                        flexShrink: 0,
                         boxShadow: '0 4px 10px rgba(102,126,234,0.2)'
                     }}>
                         <ReceiptIcon sx={{ fontSize: 22 }} />
                     </Avatar>
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.3px' }}>
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.25rem' }, color: '#1e293b', letterSpacing: '-0.3px', overflowWrap: 'anywhere' }}>
                             Invoice {invoiceToView?.invoice_no}
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -81,7 +84,7 @@ const InvoiceViewDialog = ({
                     </Box>
                 </Stack>
 
-                <Stack direction="row" spacing={1.5}>
+                <Stack direction="row" spacing={{ xs: 0.75, sm: 1.5 }} justifyContent="space-between" sx={{ width: { xs: '100%', sm: 'auto' }, flexShrink: 0 }}>
                     <Button
                         variant="contained"
                         size="small"
@@ -92,7 +95,7 @@ const InvoiceViewDialog = ({
                             color: 'white',
                             textTransform: 'none',
                             borderRadius: '10px',
-                            px: 3,
+                            px: { xs: 1.5, sm: 3 },
                             py: 1,
                             fontSize: '13px',
                             fontWeight: 600,
@@ -115,7 +118,7 @@ const InvoiceViewDialog = ({
                             color: 'white',
                             textTransform: 'none',
                             borderRadius: '10px',
-                            px: 3,
+                            px: { xs: 1.5, sm: 3 },
                             py: 1,
                             fontSize: '13px',
                             fontWeight: 600,
@@ -142,17 +145,10 @@ const InvoiceViewDialog = ({
             </Box>
 
             {/* Invoice Content - Premium Design */}
-            <DialogContent sx={{
-                p: 0,
-                bgcolor: '#ffffff',
-                '& .MuiDialogContent-root': {
-                    overflowY: 'auto',
-                    overflowX: 'hidden'
-                }
-            }}>
+            <DialogContent sx={{ p: 0, bgcolor: '#ffffff', overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
                 <div ref={invoicePrintRef}>
                     <Box sx={{
-                        p: 4,
+                        p: { xs: 2, sm: 4 },
                         maxWidth: '100%',
                         '@media print': {
                             padding: '0.5in',
@@ -162,13 +158,14 @@ const InvoiceViewDialog = ({
                     }}>
                         {/* ========== PREMIUM HEADER WITH LOGO ========== */}
                         <Grid container spacing={3} sx={{ mb: 4 }}>
-                            <Grid item xs={7}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                            <Grid item xs={12} md={7} sx={{ minWidth: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.5 }, minWidth: 0 }}>
                                     {/* COMPANY LOGO - Premium Box */}
                                     {invoiceToView?.company?.logo_url ? (
                                         <Box sx={{
-                                            width: '90px',
-                                            height: '90px',
+                                            width: { xs: 56, sm: 90 },
+                                            height: { xs: 56, sm: 90 },
+                                            flexShrink: 0,
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -196,8 +193,9 @@ const InvoiceViewDialog = ({
                                         </Box>
                                     ) : (
                                         <Box sx={{
-                                            width: '90px',
-                                            height: '90px',
+                                            width: { xs: 56, sm: 90 },
+                                            height: { xs: 56, sm: 90 },
+                                            flexShrink: 0,
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -205,25 +203,26 @@ const InvoiceViewDialog = ({
                                             borderRadius: '14px',
                                             boxShadow: '0 10px 25px rgba(102,126,234,0.25)'
                                         }}>
-                                            <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', fontSize: '42px' }}>
+                                            <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', fontSize: { xs: '28px', sm: '42px' } }}>
                                                 {invoiceToView?.company?.company_name?.charAt(0) || 'A'}
                                             </Typography>
                                         </Box>
                                     )}
 
                                     {/* COMPANY DETAILS */}
-                                    <Box>
+                                    <Box sx={{ minWidth: 0 }}>
                                         <Typography variant="h5" sx={{
                                             fontWeight: 800,
                                             color: '#0f172a',
                                             mb: 0.8,
                                             letterSpacing: '-0.5px',
-                                            fontSize: '26px'
+                                            fontSize: { xs: '1.1rem', sm: '26px' },
+                                            overflowWrap: 'anywhere'
                                         }}>
                                             {invoiceToView?.company?.company_name || 'ApnaKharcha Services'}
                                         </Typography>
-                                        <Box sx={{ color: '#475569', fontSize: '13px', lineHeight: '1.7' }}>
-                                            <Typography variant="body2" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                        <Box sx={{ color: '#475569', fontSize: '13px', lineHeight: '1.7', minWidth: 0 }}>
+                                            <Typography variant="body2" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.8, overflowWrap: 'anywhere' }}>
                                                 📍 {invoiceToView?.company?.address || 'A-126 Noida, Uttar Pradesh, 201301'}
                                             </Typography>
                                         </Box>
@@ -233,7 +232,7 @@ const InvoiceViewDialog = ({
                                 {/* COMPANY CONTACT */}
                                 <Box sx={{
                                     mt: 2,
-                                    ml: '115px',
+                                    ml: { xs: 0, sm: '115px' },
                                     display: 'flex',
                                     flexWrap: 'wrap',
                                     gap: 1.5,
@@ -250,7 +249,7 @@ const InvoiceViewDialog = ({
                                         border: '1px solid #e2e8f0'
                                     }}>
                                         📞
-                                        <Typography variant="caption" sx={{ fontWeight: 500, color: '#334155' }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 500, color: '#334155', overflowWrap: 'anywhere' }}>
                                             {invoiceToView?.company?.phone || '07982748233'}
                                         </Typography>
                                     </Box>
@@ -265,7 +264,7 @@ const InvoiceViewDialog = ({
                                         border: '1px solid #e2e8f0'
                                     }}>
                                         ✉️
-                                        <Typography variant="caption" sx={{ fontWeight: 500, color: '#334155' }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 500, color: '#334155', overflowWrap: 'anywhere' }}>
                                             {invoiceToView?.company?.email || 'abhishek@apnakharcha.in'}
                                         </Typography>
                                     </Box>
@@ -280,7 +279,7 @@ const InvoiceViewDialog = ({
                                         border: '1px solid #bae6fd'
                                     }}>
                                         <span style={{ fontWeight: 700, color: '#0284c7' }}>GST</span>
-                                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#0369a1' }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#0369a1', overflowWrap: 'anywhere' }}>
                                             {invoiceToView?.company?.gstin || '07ABCDE1234F1Z6'}
                                         </Typography>
                                     </Box>
@@ -304,13 +303,13 @@ const InvoiceViewDialog = ({
                                 </Box>
                             </Grid>
 
-                            <Grid item xs={5} sx={{ textAlign: 'right' }}>
+                            <Grid item xs={12} md={5} sx={{ textAlign: { xs: 'left', md: 'right' }, minWidth: 0 }}>
                                 <Typography variant="h2" sx={{
                                     fontWeight: 800,
                                     color: '#0f172a',
                                     mb: 1.5,
-                                    fontSize: '36px',
-                                    letterSpacing: '2px',
+                                    fontSize: { xs: '24px', sm: '36px' },
+                                    letterSpacing: { xs: '0.5px', sm: '2px' },
                                     textShadow: '0 2px 5px rgba(0,0,0,0.02)'
                                 }}>
                                     INVOICE
@@ -326,21 +325,22 @@ const InvoiceViewDialog = ({
                                     border: '1px solid #e2e8f0',
                                     boxShadow: '0 4px 10px rgba(0,0,0,0.02)'
                                 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, mb: 1 }}>
                                         <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Invoice Number</Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>{invoiceToView?.invoice_no}</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a', overflowWrap: 'anywhere', textAlign: 'right' }}>{invoiceToView?.invoice_no}</Typography>
                                     </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, mb: 1 }}>
                                         <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Invoice Date</Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{formatDate(invoiceToView?.invoice_date)}</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', textAlign: 'right' }}>{formatDate(invoiceToView?.invoice_date)}</Typography>
                                     </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
                                         <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Due Date</Typography>
                                         <Typography
                                             variant="body2"
                                             sx={{
                                                 fontWeight: 700,
-                                                color: invoiceToView?.due_date && new Date(invoiceToView.due_date) < new Date() && invoiceToView?.status !== 'paid' ? '#dc2626' : '#0f172a'
+                                                color: invoiceToView?.due_date && new Date(invoiceToView.due_date) < new Date() && invoiceToView?.status !== 'paid' ? '#dc2626' : '#0f172a',
+                                                textAlign: 'right'
                                             }}
                                         >
                                             {formatDate(invoiceToView?.due_date) || 'N/A'}
@@ -422,13 +422,13 @@ const InvoiceViewDialog = ({
 
                                         <Box sx={{
                                             bgcolor: '#ffffff',
-                                            p: 3,
                                             borderRadius: '16px',
                                             border: '1px solid #e2e8f0',
                                             boxShadow: '0 8px 20px rgba(0,0,0,0.02)',
                                             display: 'grid',
-                                            gridTemplateColumns: '1fr 1fr',
-                                            gap: 3
+                                            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+                                            gap: { xs: 2, md: 3 },
+                                            p: { xs: 2, sm: 3 }
                                         }}>
                                             <Box>
                                                 <Typography variant="h6" sx={{
@@ -545,14 +545,57 @@ const InvoiceViewDialog = ({
                             INVOICE ITEMS
                         </Typography>
 
+                        <Stack spacing={1.5} sx={{ display: { xs: 'flex', md: 'none' }, mb: 3, '@media print': { display: 'none' } }}>
+                            {(invoiceToView?.items || []).map((item, index) => (
+                                <Box key={index} sx={{
+                                    p: 2,
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '12px',
+                                    bgcolor: '#fff',
+                                    minWidth: 0,
+                                }}>
+                                    <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
+                                        <Box sx={{ minWidth: 0 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0f172a', overflowWrap: 'anywhere' }}>
+                                                {String(index + 1).padStart(2, '0')}. {item.item_name}
+                                            </Typography>
+                                            {item.description && (
+                                                <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: '#64748b', overflowWrap: 'anywhere' }}>
+                                                    {item.description}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                        <Typography variant="subtitle2" sx={{ flexShrink: 0, fontWeight: 800, color: '#0f172a', overflowWrap: 'anywhere' }}>
+                                            {item.amount}
+                                        </Typography>
+                                    </Stack>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.25, mt: 1.5 }}>
+                                        {[
+                                            ['HSN/SAC', item.hsn_code || '—'],
+                                            ['Quantity', `${item.qty} ${item.unit || ''}`],
+                                            ['Rate', item.rate],
+                                            ['Tax', `${item.tax_rate}%`],
+                                        ].map(([label, value]) => (
+                                            <Box key={label} sx={{ minWidth: 0 }}>
+                                                <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{label}</Typography>
+                                                <Typography variant="body2" sx={{ color: '#334155', fontWeight: 600, overflowWrap: 'anywhere' }}>{value}</Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Box>
+                            ))}
+                        </Stack>
+
                         <TableContainer sx={{
+                            display: { xs: 'none', md: 'block' },
                             mb: 3,
                             border: '1px solid #e2e8f0',
                             borderRadius: '16px',
-                            overflow: 'hidden',
-                            boxShadow: '0 8px 20px rgba(0,0,0,0.02)'
+                            overflowX: 'auto',
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.02)',
+                            '@media print': { display: 'block' },
                         }}>
-                            <Table size="small">
+                            <Table size="small" sx={{ minWidth: 720 }}>
                                 <TableHead>
                                     <TableRow sx={{
                                         bgcolor: '#f8fafc',
@@ -705,7 +748,7 @@ const InvoiceViewDialog = ({
 
                         {/* ========== PREMIUM TOTALS SECTION ========== */}
                         <Grid container justifyContent="flex-end" sx={{ mb: 4 }}>
-                            <Grid item xs={12} sm={5.5}>
+                            <Grid item xs={12} md={5.5}>
                                 <Box sx={{
                                     border: '1px solid #e2e8f0',
                                     borderRadius: '16px',
@@ -713,7 +756,14 @@ const InvoiceViewDialog = ({
                                     boxShadow: '0 8px 20px rgba(0,0,0,0.02)',
                                     bgcolor: '#ffffff'
                                 }}>
-                                    <Table size="small">
+                                    <Table size="small" sx={{
+                                        width: '100%',
+                                        tableLayout: 'fixed',
+                                        '& .MuiTableCell-root': {
+                                            px: { xs: 1.25, sm: 2 },
+                                            overflowWrap: 'anywhere',
+                                        },
+                                    }}>
                                         <TableBody>
                                             {/* Subtotal */}
                                             <TableRow>
@@ -746,7 +796,7 @@ const InvoiceViewDialog = ({
                                                         color: '#475569',
                                                         py: 1.8,
                                                         fontSize: '14px',
-                                                        pl: 4
+                                                        pl: { xs: 2, sm: 4 }
                                                     }}>
                                                         CGST ({((parseFloat(invoiceToView?.cgst) / parseFloat(invoiceToView?.sub_total) * 100) || 2.5).toFixed(2)}%)
                                                     </TableCell>
@@ -842,7 +892,7 @@ const InvoiceViewDialog = ({
                                                         py: 1.8,
                                                         fontSize: '14px',
                                                         fontWeight: 700,
-                                                        pl: 4
+                                                        pl: { xs: 2, sm: 4 }
                                                     }}>
                                                         ✓ Paid Amount
                                                     </TableCell>
@@ -850,7 +900,8 @@ const InvoiceViewDialog = ({
                                                         color: '#166534',
                                                         fontWeight: 700,
                                                         py: 1.8,
-                                                        fontSize: '15px'
+                                                        fontSize: '15px',
+                                                        overflowWrap: 'anywhere'
                                                     }}>
                                                         {formatCurrency(invoiceToView?.paid_amount)}
                                                     </TableCell>
@@ -865,7 +916,7 @@ const InvoiceViewDialog = ({
                                                         color: '#b91c1c',
                                                         py: 2,
                                                         fontSize: '15px',
-                                                        pl: 4,
+                                                        pl: { xs: 2, sm: 4 },
                                                         borderTop: '1px dashed #e2e8f0'
                                                     }}>
                                                         Balance Due
@@ -891,7 +942,7 @@ const InvoiceViewDialog = ({
                         {invoiceToView?.company?.bank_name && (
                             <Box sx={{
                                 mt: 3,
-                                p: 3,
+                                p: { xs: 2, sm: 3 },
                                 border: '1px solid #e2e8f0',
                                 borderRadius: '16px',
                                 bgcolor: '#ffffff',
@@ -921,8 +972,8 @@ const InvoiceViewDialog = ({
                                     <span style={{ fontSize: '18px' }}>🏦</span>
                                     BANK DETAILS FOR PAYMENT
                                 </Typography>
-                                <Grid container spacing={3}>
-                                    <Grid item xs={6} md={3}>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12} sm={6} md={3}>
                                         <Typography variant="caption" sx={{
                                             color: '#64748b',
                                             display: 'block',
@@ -937,12 +988,13 @@ const InvoiceViewDialog = ({
                                         <Typography variant="body2" sx={{
                                             fontWeight: 700,
                                             color: '#0f172a',
-                                            fontSize: '15px'
+                                            fontSize: '15px',
+                                            overflowWrap: 'anywhere'
                                         }}>
                                             {invoiceToView.company.bank_name}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={12} sm={6} md={3}>
                                         <Typography variant="caption" sx={{
                                             color: '#64748b',
                                             display: 'block',
@@ -957,12 +1009,13 @@ const InvoiceViewDialog = ({
                                         <Typography variant="body2" sx={{
                                             fontWeight: 700,
                                             color: '#0f172a',
-                                            fontSize: '15px'
+                                            fontSize: '15px',
+                                            overflowWrap: 'anywhere'
                                         }}>
                                             {invoiceToView.company.bank_account_no}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={12} sm={6} md={3}>
                                         <Typography variant="caption" sx={{
                                             color: '#64748b',
                                             display: 'block',
@@ -977,12 +1030,13 @@ const InvoiceViewDialog = ({
                                         <Typography variant="body2" sx={{
                                             fontWeight: 700,
                                             color: '#0f172a',
-                                            fontSize: '15px'
+                                            fontSize: '15px',
+                                            overflowWrap: 'anywhere'
                                         }}>
                                             {invoiceToView.company.bank_ifsc}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={12} sm={6} md={3}>
                                         <Typography variant="caption" sx={{
                                             color: '#64748b',
                                             display: 'block',
@@ -997,7 +1051,8 @@ const InvoiceViewDialog = ({
                                         <Typography variant="body2" sx={{
                                             fontWeight: 700,
                                             color: '#0f172a',
-                                            fontSize: '15px'
+                                            fontSize: '15px',
+                                            overflowWrap: 'anywhere'
                                         }}>
                                             {invoiceToView.company.bank_branch}
                                         </Typography>
@@ -1010,7 +1065,7 @@ const InvoiceViewDialog = ({
                         {invoiceToView?.notes && (
                             <Box sx={{
                                 mt: 3,
-                                p: 3,
+                                p: { xs: 2, sm: 3 },
                                 bgcolor: '#f8fafc',
                                 borderRadius: '16px',
                                 border: '1px solid #e2e8f0',
@@ -1045,12 +1100,13 @@ const InvoiceViewDialog = ({
                         {/* ========== PREMIUM SIGNATURE SECTION ========== */}
                         <Box sx={{ mt: 6, mb: 2 }}>
                             <Grid container spacing={2}>
-                                <Grid item xs={6}>
+                                <Grid item xs={12} sm={6}>
                                     <Box sx={{
                                         borderTop: '3px solid #94a3b8',
                                         pt: 1.5,
                                         display: 'inline-block',
-                                        minWidth: '200px'
+                                        minWidth: { xs: 0, sm: '200px' },
+                                        maxWidth: '100%'
                                     }}>
                                         <Typography variant="body2" sx={{
                                             fontWeight: 700,
@@ -1071,12 +1127,13 @@ const InvoiceViewDialog = ({
                                         </Typography>
                                     </Box>
                                 </Grid>
-                                <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                                <Grid item xs={12} sm={6} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
                                     <Box sx={{
                                         borderTop: '3px solid #667eea',
                                         pt: 1.5,
                                         display: 'inline-block',
-                                        minWidth: '200px'
+                                        minWidth: { xs: 0, sm: '200px' },
+                                        maxWidth: '100%'
                                     }}>
                                         <Typography variant="body2" sx={{
                                             fontWeight: 800,

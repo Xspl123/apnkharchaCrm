@@ -15,6 +15,7 @@ import {
 
 const fmt = (val) =>
     `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+const num = (val) => Number(val) || 0;
 
 const THead = ({ cols }) => (
     <TableHead>
@@ -108,7 +109,7 @@ const TaxRow = ({ label, taxable, cgst, sgst, igst, highlight }) => (
                 fontWeight={700}
                 color={highlight ? 'error.main' : 'text.primary'}
             >
-                {fmt((cgst || 0) + (sgst || 0) + (igst || 0))}
+                {fmt(num(cgst) + num(sgst) + num(igst))}
             </Typography>
         </TableCell>
     </TableRow>
@@ -179,22 +180,22 @@ const OutwardSuppliesSection = ({ data }) => {
                             <TaxRow
                                 label="Total Outward Tax Liability"
                                 taxable={
-                                    (intra_taxable?.taxable_value || 0) +
-                                    (inter_taxable?.taxable_value || 0) +
-                                    (exports?.taxable_value || 0)
+                                    num(intra_taxable?.taxable_value) +
+                                    num(inter_taxable?.taxable_value) +
+                                    num(exports?.taxable_value)
                                 }
                                 cgst={
-                                    (intra_taxable?.cgst || 0) +
-                                    (reverse_charge?.cgst || 0)
+                                    num(intra_taxable?.cgst) +
+                                    num(reverse_charge?.cgst)
                                 }
                                 sgst={
-                                    (intra_taxable?.sgst || 0) +
-                                    (reverse_charge?.sgst || 0)
+                                    num(intra_taxable?.sgst) +
+                                    num(reverse_charge?.sgst)
                                 }
                                 igst={
-                                    (inter_taxable?.igst || 0) +
-                                    (exports?.igst || 0) +
-                                    (reverse_charge?.igst || 0)
+                                    num(inter_taxable?.igst) +
+                                    num(exports?.igst) +
+                                    num(reverse_charge?.igst)
                                 }
                                 highlight
                             />
@@ -254,12 +255,12 @@ const InterStateSection = ({ data }) => {
                                 </TableCell>
                                 <TableCell align="right">
                                     <Typography variant="body2" fontWeight={700}>
-                                        {fmt(data.reduce((s, r) => s + (r.taxable_value || 0), 0))}
+                                        {fmt(data.reduce((s, r) => s + num(r.taxable_value), 0))}
                                     </Typography>
                                 </TableCell>
                                 <TableCell align="right">
                                     <Typography variant="body2" fontWeight={700} color="#ed6c02">
-                                        {fmt(data.reduce((s, r) => s + (r.igst || 0), 0))}
+                                        {fmt(data.reduce((s, r) => s + num(r.igst), 0))}
                                     </Typography>
                                 </TableCell>
                             </TableRow>
@@ -416,14 +417,20 @@ const Gstr3bPage = () => {
     }, [dispatch, selectedPeriod]);
 
     const handleFetch = () => {
-        dispatch(setSelectedPeriod(period));
-        dispatch(fetchGstr3b(period));
+        if (!period) return;
+        if (period === selectedPeriod) dispatch(fetchGstr3b(period));
+        else dispatch(setSelectedPeriod(period));
     };
 
     const handleSaveDraft = async () => {
+        const draftPeriod = gstr3b?.period || selectedPeriod || period;
+        if (!draftPeriod) {
+            setSnackbar({ open: true, message: 'Please select a return period first.', severity: 'error' });
+            return;
+        }
         const result = await dispatch(saveReturnDraft({
             return_type: 'GSTR3B',
-            period: gstr3b.period,
+            period: draftPeriod,
         }));
         if (saveReturnDraft.fulfilled.match(result)) {
             setSnackbar({ open: true, message: 'GSTR-3B draft saved!', severity: 'success' });
