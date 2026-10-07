@@ -9,7 +9,8 @@ import {
     ListItemIcon, List, ListItem, Collapse, useMediaQuery,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
     Snackbar, Alert, Breadcrumbs, Link, useTheme, Box, CircularProgress,
-    Table, TableHead, TableRow, TableCell, TableBody, TableContainer
+    Table, TableHead, TableRow, TableCell, TableBody, TableContainer,
+    TablePagination, Autocomplete
 } from "@mui/material";
 import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess, Visibility, VisibilityOff, ChevronRight, DashboardOutlined, History as HistoryIcon } from "@mui/icons-material";
 import FollowUpReminderBell from "../features/crm/components/FollowUpReminderBell";
@@ -31,6 +32,9 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
     const [loginHistory, setLoginHistory] = useState([]);
     const [loginHistoryUsers, setLoginHistoryUsers] = useState([]);
     const [loginHistoryUserId, setLoginHistoryUserId] = useState("");
+    const [loginHistoryPage, setLoginHistoryPage] = useState(0);
+    const [loginHistoryRowsPerPage, setLoginHistoryRowsPerPage] = useState(25);
+    const [loginHistoryTotal, setLoginHistoryTotal] = useState(0);
     const [loginHistoryLoading, setLoginHistoryLoading] = useState(false);
     const [loginHistoryError, setLoginHistoryError] = useState("");
     const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -51,6 +55,9 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
     const breadcrumbs = getBreadcrumbs(location.pathname, location.state);
     const matchedRoute = getMatchedRoute(location.pathname);
     const visibleBreadcrumbs = isMobile ? breadcrumbs.slice(-1) : breadcrumbs;
+    const selectedLoginHistoryUser = loginHistoryUsers.find(
+        (historyUser) => String(historyUser.id) === String(loginHistoryUserId)
+    );
 
     const handleProfileMenuOpen = useCallback((event) => {
         setProfileAnchorEl(event.currentTarget);
@@ -70,14 +77,17 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
         navigate("/", { replace: true });
     };
 
-    const loadLoginHistory = async (userId = "") => {
+    const loadLoginHistory = async (userId = "", page = 0, rowsPerPage = loginHistoryRowsPerPage) => {
         setLoginHistoryLoading(true);
         setLoginHistoryError("");
         try {
+            const params = { page: page + 1, per_page: rowsPerPage };
+            if (userId) params.user_id = userId;
             const response = isSuperAdmin
-                ? await axiosClient.get("/super-admin/login-history", { params: userId ? { user_id: userId } : {} })
-                : await axiosClient.get("/login-history");
+                ? await axiosClient.get("/super-admin/login-history", { params })
+                : await axiosClient.get("/login-history", { params });
             setLoginHistory(response.data?.data || []);
+            setLoginHistoryTotal(response.data?.pagination?.total ?? response.data?.total ?? 0);
         } catch {
             setLoginHistoryError("Could not load login history. Please try again.");
         } finally {
@@ -89,6 +99,7 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
         handleProfileMenuClose();
         setLoginHistoryOpen(true);
         setLoginHistoryUserId("");
+        setLoginHistoryPage(0);
         let usersLoadError = "";
         if (isSuperAdmin) {
             try {
@@ -99,14 +110,26 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                 usersLoadError = "Could not load the user list.";
             }
         }
-        await loadLoginHistory();
+        await loadLoginHistory("", 0);
         if (usersLoadError) setLoginHistoryError(usersLoadError);
     };
 
-    const handleLoginHistoryUserChange = (event) => {
-        const userId = event.target.value;
+    const handleLoginHistoryUserChange = (userId) => {
         setLoginHistoryUserId(userId);
-        void loadLoginHistory(userId);
+        setLoginHistoryPage(0);
+        void loadLoginHistory(userId, 0);
+    };
+
+    const handleLoginHistoryPageChange = (_, page) => {
+        setLoginHistoryPage(page);
+        void loadLoginHistory(loginHistoryUserId, page);
+    };
+
+    const handleLoginHistoryRowsPerPageChange = (event) => {
+        const rowsPerPage = Number(event.target.value);
+        setLoginHistoryRowsPerPage(rowsPerPage);
+        setLoginHistoryPage(0);
+        void loadLoginHistory(loginHistoryUserId, 0, rowsPerPage);
     };
 
     const handleResetPasswordOpen = () => {
@@ -341,22 +364,37 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                         Location is estimated from the IP address and may be inaccurate.
                     </Typography>
                     {isSuperAdmin && (
-                        <TextField
-                            select
-                            fullWidth
-                            size="small"
-                            label="Filter by user"
-                            value={loginHistoryUserId}
-                            onChange={handleLoginHistoryUserChange}
+                        <Autocomplete
+                            options={loginHistoryUsers}
+                            value={selectedLoginHistoryUser || null}
+                            onChange={(_, historyUser) => handleLoginHistoryUserChange(historyUser?.id ? String(historyUser.id) : "")}
+                            getOptionLabel={(historyUser) => `${historyUser.name || "User"} (${historyUser.email || "no email"})`}
+                            isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                            renderOption={(props, historyUser) => (
+                                <li {...props} key={historyUser.id}>
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={600}>
+                                            {historyUser.name || "User"} ({historyUser.email || "no email"})
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {historyUser.last_login_history?.logged_in_at
+                                                ? `Last login: ${new Date(historyUser.last_login_history.logged_in_at).toLocaleString()} · ${historyUser.last_login_history.device_name || "Unknown device"}`
+                                                : "No login history yet"}
+                                        </Typography>
+                                    </Box>
+                                </li>
+                            )}
+                            renderInput={(params) => <TextField {...params} label="Search user" placeholder="Name or email" size="small" />}
                             sx={{ mb: 2 }}
-                        >
-                            <MenuItem value="">All users</MenuItem>
-                            {loginHistoryUsers.map((historyUser) => (
-                                <MenuItem key={historyUser.id} value={historyUser.id}>
-                                    {historyUser.name} ({historyUser.email})
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        />
+                    )}
+                    {isSuperAdmin && selectedLoginHistoryUser && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            <strong>Last login:</strong>{" "}
+                            {selectedLoginHistoryUser.last_login_history?.logged_in_at
+                                ? `${new Date(selectedLoginHistoryUser.last_login_history.logged_in_at).toLocaleString()} · ${selectedLoginHistoryUser.last_login_history.device_name || "Unknown device"}`
+                                : "No login history available for this user."}
+                        </Alert>
                     )}
                     {loginHistoryError && <Alert severity="error" sx={{ mb: 2 }}>{loginHistoryError}</Alert>}
                     {loginHistoryLoading ? (
@@ -402,6 +440,18 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                                 </TableBody>
                             </Table>
                         </TableContainer>
+                    )}
+                    {!loginHistoryLoading && (
+                        <TablePagination
+                            component="div"
+                            count={loginHistoryTotal}
+                            page={loginHistoryPage}
+                            onPageChange={handleLoginHistoryPageChange}
+                            rowsPerPage={loginHistoryRowsPerPage}
+                            onRowsPerPageChange={handleLoginHistoryRowsPerPageChange}
+                            rowsPerPageOptions={[10, 25, 50, 100]}
+                            sx={{ borderTop: 1, borderColor: "divider" }}
+                        />
                     )}
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
