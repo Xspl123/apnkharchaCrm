@@ -3,7 +3,7 @@ import {
   Dialog, DialogContent, DialogTitle, IconButton, Box, Typography, Tabs, Tab,
   TextField, MenuItem, Grid, Paper, Stack, Button, Divider, Chip,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Snackbar, Alert, Avatar, Tooltip,
+  Snackbar, Alert, Avatar, Tooltip, useTheme,
 } from '@mui/material';
 import {
   Close as CloseIcon, Link as LinkIcon, ContentCopy as CopyIcon,
@@ -80,6 +80,8 @@ const saveHistory = (rows) => {
 };
 
 export default function UtmLinkGenerator({ open, onClose, organisation }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [tab, setTab] = useState(0);
   const [campaignName, setCampaignName] = useState('');
   const [source, setSource] = useState('facebook');
@@ -280,8 +282,18 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
               </Grid>
 
               <Grid item xs={12}>
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: '10px', bgcolor: '#eef2ff' }}>
-                  <Typography variant="caption" fontWeight={800} color="#4338ca">Preview Parameters</Typography>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    borderRadius: '10px',
+                    bgcolor: isDark ? 'background.default' : '#eef2ff',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Typography variant="caption" fontWeight={800} sx={{ color: isDark ? '#c4b5fd' : '#4338ca' }}>
+                    Preview Parameters
+                  </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
                     <Chip size="small" label={params.utm_source} sx={{ bgcolor: '#e0e7ff', color: '#4338ca', fontWeight: 700 }} />
                     <Chip size="small" label={params.utm_medium} sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700 }} />
@@ -303,7 +315,13 @@ export default function UtmLinkGenerator({ open, onClose, organisation }) {
                   value={link || 'Loading organization...'}
                   InputProps={{
                     readOnly: true,
-                    sx: { fontSize: 13, bgcolor: '#f8fafc', borderRadius: '10px' },
+                    sx: {
+                      fontSize: 13,
+                      bgcolor: isDark ? 'background.default' : '#f8fafc',
+                      color: 'text.primary',
+                      borderRadius: '10px',
+                      '& .MuiInputBase-input': { color: 'text.primary' },
+                    },
                     endAdornment: (
                       <Tooltip title="Copy">
                         <IconButton onClick={handleCopy} disabled={!link} edge="end" sx={{ alignSelf: 'flex-start', mt: 1 }}>

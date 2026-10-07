@@ -30,6 +30,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
 
+    // Keep this app's optimized dependencies separate from other Vite servers
+    // that may share the workspace or node_modules directory.
+    cacheDir: path.resolve(__dirname, 'node_modules/.vite-react-admin-panel'),
+
     resolve: { alias },
 
     // Environment variable frontend में उपलब्ध रहेगी

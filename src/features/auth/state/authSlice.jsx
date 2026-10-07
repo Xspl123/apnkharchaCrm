@@ -39,7 +39,12 @@ export const loginUser = createAsyncThunk(
     "auth/loginUser",
     async (userData, thunkAPI) => {
         try {
-            const response = await axiosClient.post("/login", userData);
+            const response = await axiosClient.post("/login", {
+                email: userData.email,
+                password: userData.password,
+                device_id: userData.deviceId,
+                replace_existing_session: userData.replaceExistingSession,
+            });
             return {
                 user: response.data?.user,
                 token: response.data?.token || null,
@@ -47,7 +52,11 @@ export const loginUser = createAsyncThunk(
         } catch (error) {
             const errorMessage = error.response?.data?.message || "Login failed";
             const validationErrors = error.response?.data?.errors || null;
-            return thunkAPI.rejectWithValue({ message: errorMessage, errors: validationErrors });
+            return thunkAPI.rejectWithValue({
+                message: errorMessage,
+                errors: validationErrors,
+                code: error.response?.data?.code,
+            });
         }
     }
 );
@@ -194,7 +203,9 @@ const authSlice = createSlice({
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.loading       = false;
-                state.error         = action.payload?.message || "An error occurred";
+                state.error         = action.payload?.code === "active_session_exists"
+                    ? null
+                    : action.payload?.message || "An error occurred";
                 state.user          = null;
                 state.token         = null;
                 state.role          = null;

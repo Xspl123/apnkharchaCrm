@@ -8,9 +8,10 @@ import {
     AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Avatar,
     ListItemIcon, List, ListItem, Collapse, useMediaQuery,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
-    Snackbar, Alert, Breadcrumbs, Link, useTheme
+    Snackbar, Alert, Breadcrumbs, Link, useTheme, Box, CircularProgress,
+    Table, TableHead, TableRow, TableCell, TableBody, TableContainer
 } from "@mui/material";
-import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess, Visibility, VisibilityOff, ChevronRight, DashboardOutlined } from "@mui/icons-material";
+import { Menu as MenuIcon, Palette, Settings, ExpandMore, ExpandLess, Visibility, VisibilityOff, ChevronRight, DashboardOutlined, History as HistoryIcon } from "@mui/icons-material";
 import FollowUpReminderBell from "../features/crm/components/FollowUpReminderBell";
 import { getBreadcrumbs, getMatchedRoute } from "../config/appRoutes";
 import "./Navbar.css";
@@ -26,6 +27,12 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loginHistoryOpen, setLoginHistoryOpen] = useState(false);
+    const [loginHistory, setLoginHistory] = useState([]);
+    const [loginHistoryUsers, setLoginHistoryUsers] = useState([]);
+    const [loginHistoryUserId, setLoginHistoryUserId] = useState("");
+    const [loginHistoryLoading, setLoginHistoryLoading] = useState(false);
+    const [loginHistoryError, setLoginHistoryError] = useState("");
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState("");
     const [snackbarSeverity, setSnackbarSeverity] = useState("success");
@@ -36,6 +43,7 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
     const theme = useTheme();
 
     const user = useSelector((state) => state.auth.user);
+    const isSuperAdmin = user?.role?.name === "super_admin";
     const organisation = useSelector((state) => state.orgs?.organisation);
     const companies = useSelector((state) => state.companies?.companies || []);
     const brandName = companies[0]?.company_name || organisation?.name || "";
@@ -52,15 +60,53 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
         setProfileAnchorEl(null);
     }, []);
 
-    const handleLogout = async () => {
+    const handleLogout = () => {
+        // Start the server request while the current token is still available,
+        // then clear local auth and leave the protected route immediately.
+        // Waiting for the request can leave the app on a blank/stale screen.
+        void dispatch(logoutUser());
+        dispatch(logout());
+        handleProfileMenuClose();
+        navigate("/", { replace: true });
+    };
+
+    const loadLoginHistory = async (userId = "") => {
+        setLoginHistoryLoading(true);
+        setLoginHistoryError("");
         try {
-            await dispatch(logoutUser()).unwrap();
+            const response = isSuperAdmin
+                ? await axiosClient.get("/super-admin/login-history", { params: userId ? { user_id: userId } : {} })
+                : await axiosClient.get("/login-history");
+            setLoginHistory(response.data?.data || []);
         } catch {
-            dispatch(logout());
+            setLoginHistoryError("Could not load login history. Please try again.");
         } finally {
-            navigate("/");
-            handleProfileMenuClose();
+            setLoginHistoryLoading(false);
         }
+    };
+
+    const handleLoginHistoryOpen = async () => {
+        handleProfileMenuClose();
+        setLoginHistoryOpen(true);
+        setLoginHistoryUserId("");
+        let usersLoadError = "";
+        if (isSuperAdmin) {
+            try {
+                const response = await axiosClient.get("/super-admin/users");
+                setLoginHistoryUsers(response.data?.data || []);
+            } catch {
+                setLoginHistoryUsers([]);
+                usersLoadError = "Could not load the user list.";
+            }
+        }
+        await loadLoginHistory();
+        if (usersLoadError) setLoginHistoryError(usersLoadError);
+    };
+
+    const handleLoginHistoryUserChange = (event) => {
+        const userId = event.target.value;
+        setLoginHistoryUserId(userId);
+        void loadLoginHistory(userId);
     };
 
     const handleResetPasswordOpen = () => {
@@ -201,6 +247,10 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                         </MenuItem>
                         <MenuItem onClick={handleResetPasswordOpen}>Reset Password</MenuItem>
                         <MenuItem onClick={handleProfileMenuClose}>Profile</MenuItem>
+                        <MenuItem onClick={handleLoginHistoryOpen}>
+                            <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+                            Login History
+                        </MenuItem>
                         <MenuItem onClick={handleLogout}>Logout</MenuItem>
 
                         {/* Theme Change Menu */}
@@ -273,6 +323,89 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                 <DialogActions>
                     <Button onClick={handleResetPasswordClose}>Cancel</Button>
                     <Button onClick={handleResetPasswordSubmit} color="primary">Submit</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={loginHistoryOpen}
+                onClose={() => setLoginHistoryOpen(false)}
+                fullWidth
+                maxWidth="md"
+            >
+                <DialogTitle>Login History</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {isSuperAdmin
+                            ? "Recent sign-ins across all user accounts."
+                            : `Recent sign-ins for ${user?.name || "your account"}${user?.email ? ` (${user.email})` : ""}.`}{" "}
+                        Location is estimated from the IP address and may be inaccurate.
+                    </Typography>
+                    {isSuperAdmin && (
+                        <TextField
+                            select
+                            fullWidth
+                            size="small"
+                            label="Filter by user"
+                            value={loginHistoryUserId}
+                            onChange={handleLoginHistoryUserChange}
+                            sx={{ mb: 2 }}
+                        >
+                            <MenuItem value="">All users</MenuItem>
+                            {loginHistoryUsers.map((historyUser) => (
+                                <MenuItem key={historyUser.id} value={historyUser.id}>
+                                    {historyUser.name} ({historyUser.email})
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    )}
+                    {loginHistoryError && <Alert severity="error" sx={{ mb: 2 }}>{loginHistoryError}</Alert>}
+                    {loginHistoryLoading ? (
+                        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+                            <CircularProgress size={28} />
+                        </Box>
+                    ) : (
+                        <TableContainer sx={{ maxHeight: 420, border: 1, borderColor: "divider", borderRadius: 2 }}>
+                            <Table size="small" stickyHeader>
+                                <TableHead>
+                                    <TableRow>
+                                        {[...(isSuperAdmin ? ["User"] : []), "Date and time", "Device", "IP address", "Approx. location"].map((heading) => (
+                                            <TableCell key={heading} sx={{ fontWeight: 700, bgcolor: "background.default", color: "text.primary" }}>
+                                                {heading}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {loginHistory.map((entry) => (
+                                        <TableRow key={entry.id} hover>
+                                            {isSuperAdmin && (
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={700}>{entry.user?.name || "Deleted user"}</Typography>
+                                                    {entry.user?.email && <Typography variant="caption" color="text.secondary">{entry.user.email}</Typography>}
+                                                </TableCell>
+                                            )}
+                                            <TableCell>{entry.logged_in_at ? new Date(entry.logged_in_at).toLocaleString() : "—"}</TableCell>
+                                            <TableCell>{entry.device_name || "Unknown device"}</TableCell>
+                                            <TableCell>{entry.ip_address || "Unavailable"}</TableCell>
+                                            <TableCell>
+                                                {[entry.city, entry.region, entry.country].filter(Boolean).join(", ") || "Unavailable"}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {loginHistory.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={isSuperAdmin ? 5 : 4} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                                                No login history available yet.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setLoginHistoryOpen(false)} sx={{ textTransform: "none" }}>Close</Button>
                 </DialogActions>
             </Dialog>
 

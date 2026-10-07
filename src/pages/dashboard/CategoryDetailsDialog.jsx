@@ -17,6 +17,7 @@ import {
   TableRow,
   TextField,
   Typography,
+  useTheme,
 } from "@mui/material";
 
 import { fmtAmt, months } from "./dashboardUtils";
@@ -33,13 +34,16 @@ export default function CategoryDetailsDialog({
   setPopupYear,
   setSelectedCategory,
 }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+
   return (
     <Dialog
       open={isPopupOpen}
       onClose={() => setIsPopupOpen(false)}
       fullWidth
       maxWidth="sm"
-      PaperProps={{ sx: { borderRadius: "16px" } }}
+      PaperProps={{ sx: { borderRadius: "16px", bgcolor: "background.paper" } }}
     >
       <DialogTitle fontWeight={700}>📊 Category Details</DialogTitle>
       <DialogContent>
@@ -64,28 +68,40 @@ export default function CategoryDetailsDialog({
           </TextField>
         </Stack>
 
-        <TableContainer sx={{ maxHeight: 300, borderRadius: "10px" }}>
+        <TableContainer sx={{ maxHeight: 300, borderRadius: "10px", bgcolor: "background.paper" }}>
           <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow sx={{ bgcolor: "#f8fafc" }}>
-                {["Date", "Description", "Amount", "Type"].map((h) => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
+              <TableRow>
+                {["Date", "Description", "Amount", "Type"].map((h) => (
+                  <TableCell
+                    key={h}
+                    sx={{
+                      fontWeight: 700,
+                      bgcolor: isDark ? "background.default" : "#f8fafc",
+                      color: "text.primary",
+                      borderColor: "divider",
+                    }}
+                  >
+                    {h}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
               {popupData.map((t, i) => (
-                <TableRow key={i} hover>
-                  <TableCell>{new Date(t.transaction_date).toLocaleDateString("en-IN")}</TableCell>
-                  <TableCell>{t.description}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{fmtAmt(t.amount)}</TableCell>
-                  <TableCell><Chip label={t.category?.type} size="small" sx={{ fontSize: 10 }} /></TableCell>
+                <TableRow key={i} hover sx={{ "&:hover": { bgcolor: isDark ? "action.hover" : undefined } }}>
+                  <TableCell sx={{ borderColor: "divider" }}>{new Date(t.transaction_date).toLocaleDateString("en-IN")}</TableCell>
+                  <TableCell sx={{ borderColor: "divider" }}>{t.description}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, borderColor: "divider" }}>{fmtAmt(t.amount)}</TableCell>
+                  <TableCell sx={{ borderColor: "divider" }}><Chip label={t.category?.type} size="small" sx={{ fontSize: 10 }} /></TableCell>
                 </TableRow>
               ))}
-              {popupData.length === 0 && <TableRow><TableCell colSpan={4} align="center" sx={{ py: 3, color: "#94a3b8" }}>No data</TableCell></TableRow>}
+              {popupData.length === 0 && <TableRow><TableCell colSpan={4} align="center" sx={{ py: 3, color: "text.secondary", borderColor: "divider" }}>No data</TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableContainer>
 
-        <Stack direction="row" spacing={3} mt={2} p={1.5} bgcolor="#f8fafc" borderRadius="10px">
+        <Stack direction="row" spacing={3} mt={2} p={1.5} bgcolor={isDark ? "background.default" : "#f8fafc"} borderRadius="10px" border={1} borderColor="divider">
           <Box>
             <Typography variant="caption" color="text.secondary">Income</Typography>
             <Typography fontWeight={700} color="#16a34a">
