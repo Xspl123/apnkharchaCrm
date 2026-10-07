@@ -1,4 +1,5 @@
 import './InvoicePrintPDF.css';
+import { getItemAttributeSnapshot } from '../../utils/productAttributeSnapshot';
 
 class InvoicePrintPDF {
 
@@ -307,6 +308,7 @@ class InvoicePrintPDF {
                                                 <td>
                                                     <div class="item-name">${item.item_name || 'Item'}</div>
                                                     ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
+                                                    ${getItemAttributeSnapshot(item).length ? `<div class="item-desc">${getItemAttributeSnapshot(item).map((attribute) => `${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`).join(' · ')}</div>` : ''}
                                                 </td>
                                                 <td>${item.hsn_code || '—'}</td>
                                                 <td class="text-center">${qty.toFixed(2)} ${item.unit || 'pcs'}</td>

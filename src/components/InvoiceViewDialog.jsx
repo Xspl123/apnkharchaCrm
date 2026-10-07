@@ -24,6 +24,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import BusinessIcon from "@mui/icons-material/Business";
 import DescriptionIcon from "@mui/icons-material/Description";
 import DateRangeIcon from "@mui/icons-material/DateRange";
+import { getItemAttributeSnapshot } from "../utils/productAttributeSnapshot";
 
 const InvoiceViewDialog = ({
     open,
@@ -564,6 +565,13 @@ const InvoiceViewDialog = ({
                                                     {item.description}
                                                 </Typography>
                                             )}
+                                            {getItemAttributeSnapshot(item).length > 0 && (
+                                                <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: '#475569', overflowWrap: 'anywhere' }}>
+                                                    {getItemAttributeSnapshot(item).map((attribute) =>
+                                                        `${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`
+                                                    ).join(' · ')}
+                                                </Typography>
+                                            )}
                                         </Box>
                                         <Typography variant="subtitle2" sx={{ flexShrink: 0, fontWeight: 800, color: '#0f172a', overflowWrap: 'anywhere' }}>
                                             {item.amount}
@@ -691,6 +699,13 @@ const InvoiceViewDialog = ({
                                                         lineHeight: 1.5
                                                     }}>
                                                         {item.description}
+                                                    </Typography>
+                                                )}
+                                                {getItemAttributeSnapshot(item).length > 0 && (
+                                                    <Typography variant="caption" sx={{ color: '#475569', display: 'block', mt: 0.4, fontSize: '12px', lineHeight: 1.5 }}>
+                                                        {getItemAttributeSnapshot(item).map((attribute) =>
+                                                            `${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`
+                                                        ).join(' · ')}
                                                     </Typography>
                                                 )}
                                             </TableCell>

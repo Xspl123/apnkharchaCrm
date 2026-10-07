@@ -40,11 +40,11 @@ import {
 import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 
-const GlassCard = styled(Card)(() => ({
-    background: 'rgba(255,255,255,0.9)',
+const GlassCard = styled(Card)(({ theme }) => ({
+    background: theme.palette.mode === 'dark' ? theme.palette.background.paper : 'rgba(255,255,255,0.9)',
     backdropFilter: 'blur(12px)',
     borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.3)',
+    border: `1px solid ${theme.palette.mode === 'dark' ? theme.palette.divider : 'rgba(255,255,255,0.3)'}`,
     boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
 }));
 
@@ -2340,9 +2340,9 @@ function LeadListComponent() {
             </Dialog>
 
             <Dialog open={!!mergeGroup} onClose={closeMergeDialog} maxWidth="sm" fullWidth
-                PaperProps={{ sx: { borderRadius: '16px' } }}>
-                <DialogTitle fontWeight={700}>Review Duplicate Leads</DialogTitle>
-                <DialogContent>
+                PaperProps={{ sx: { borderRadius: '16px', bgcolor: 'background.paper', color: 'text.primary' } }}>
+                <DialogTitle fontWeight={700} sx={{ color: 'text.primary' }}>Review Duplicate Leads</DialogTitle>
+                <DialogContent sx={{ color: 'text.primary' }}>
                     {mergeError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setMergeError('')}>{mergeError}</Alert>}
                     <Alert severity="info" sx={{ mb: 2 }}>
                         The lead marked "Keep" will remain. Only empty fields will be filled from the other leads.
@@ -2354,9 +2354,11 @@ function LeadListComponent() {
                             <Stack spacing={1.5}>
                                 {mergeGroup.leads.map((lead) => (
                                     <Box key={lead.id} sx={{
-                                        border: '1px solid', borderColor: lead.id === mergePrimaryId ? '#6366f1' : '#e5e7eb',
+                                        border: '1px solid', borderColor: lead.id === mergePrimaryId ? theme.palette.primary.main : theme.palette.divider,
                                         borderRadius: '10px', p: 1.5,
-                                        bgcolor: lead.id === mergePrimaryId ? '#eef2ff' : 'transparent',
+                                        bgcolor: lead.id === mergePrimaryId
+                                            ? (theme.palette.mode === 'dark' ? 'rgba(99,102,241,0.18)' : '#eef2ff')
+                                            : theme.palette.background.paper,
                                     }}>
                                         <FormControlLabel
                                             value={lead.id}

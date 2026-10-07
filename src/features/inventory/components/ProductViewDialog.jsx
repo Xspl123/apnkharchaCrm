@@ -14,8 +14,8 @@ const ProductViewDialog = ({
 }) => (
     <Dialog open={viewDialog} onClose={() => setViewDialog(false)}
         maxWidth="md" fullWidth
-        PaperProps={{ sx: { borderRadius: '20px' } }}>
-        <DialogTitle sx={{ pb: 0 }}>
+        PaperProps={{ sx: { borderRadius: '20px', bgcolor: 'background.paper', color: 'text.primary' } }}>
+        <DialogTitle sx={{ pb: 0, color: 'text.primary' }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
                     <Avatar sx={{ bgcolor: viewProduct?.category?.color || '#f093fb', width: 44, height: 44 }}>
@@ -58,7 +58,7 @@ const ProductViewDialog = ({
                                 { label: 'Low Stock Alert', value: fmtQty(viewProduct.low_stock_alert, viewProduct.unit), color: '#ed6c02' },
                             ].map((item) => (
                                 <Grid item xs={6} sm={3} key={item.label}>
-                                    <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: 'grey.50', textAlign: 'center' }}>
+                                    <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: 'background.default', color: 'text.primary', textAlign: 'center' }}>
                                         <Typography variant="h6" fontWeight={800} color={item.color}>{item.value}</Typography>
                                         <Typography variant="caption" color="text.secondary">{item.label}</Typography>
                                     </Paper>
@@ -74,12 +74,12 @@ const ProductViewDialog = ({
                                 </Typography>
                             ) : (
                                 <TableContainer component={Paper} elevation={0}
-                                    sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                                    sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', overflow: 'hidden', bgcolor: 'background.paper' }}>
                                     <Table size="small">
                                         <TableHead>
-                                            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                                            <TableRow sx={{ bgcolor: 'action.hover' }}>
                                                 {['Date', 'Type', 'Qty', 'Rate', 'Before', 'After', 'Ref'].map((h) => (
-                                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11 }}>{h}</TableCell>
+                                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: 'text.secondary' }}>{h}</TableCell>
                                                 ))}
                                             </TableRow>
                                         </TableHead>

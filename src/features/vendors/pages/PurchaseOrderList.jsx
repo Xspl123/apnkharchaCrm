@@ -9,6 +9,8 @@ import {
     createVendorPayment, deleteVendorPayment, clearVendorPayments, reset,
 } from '../state/vendorSlice';
 import { getHsnCodes } from '../../../redux/features/hsnCodeSlice';
+import { getAttributeGroups, getProductAttributes } from '../../../redux/features/attributeSlice';
+import { createProductAttributeSnapshot, getItemAttributeSnapshot } from '../../../utils/productAttributeSnapshot';
 import Autocomplete from '@mui/material/Autocomplete';
 import {
     Box, Container, Grid, Card, CardContent, Typography, Paper,
@@ -27,7 +29,7 @@ import {
     HourglassEmpty as PendingIcon,
     Remove as RemoveIcon, AutoAwesome as AutoIcon,
     Business as BusinessIcon, Description as DescriptionIcon,
-    DateRange as DateRangeIcon,
+    DateRange as DateRangeIcon, Print as PrintIcon, PictureAsPdf as PdfIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { styled, useTheme } from '@mui/material/styles';
@@ -110,6 +112,7 @@ const emptyItem = {
     tax_rate:    18,
     amount:      0,
     tax_amount:  0,
+    attributes:  [],
 };
 
 const emptyForm = {
@@ -162,6 +165,7 @@ const PurchaseOrderList = () => {
     const { purchaseOrders, vendors, payments, isLoading, actionLoading } =
         useSelector((s) => s.vendors);
     const { products, categories } = useSelector((s) => s.inventory);
+    const { groups: attributeGroups = [] } = useSelector((s) => s.attributes || {});
     const { hsnCodes } = useSelector((s) => s.hsnCodes);
 
     const [showForm,      setShowForm]      = useState(false);
@@ -199,6 +203,7 @@ const PurchaseOrderList = () => {
                 dispatch(getHsnCodes()),
                 dispatch(getProducts()),
                 dispatch(getCategories()),
+                dispatch(getAttributeGroups()),
             ]);
         } finally {
             setLoading(false);
@@ -273,16 +278,17 @@ const PurchaseOrderList = () => {
                 ...updated[index],
                 item_name:  value, 
                 product_id: null,  
+                attributes: [],
             });
             return { ...prev, items: updated };
         });
     };
 
-    const handleProductSelect = (index, product) => {
+    const handleProductSelect = async (index, product) => {
         if (!product) {
             setFormData((prev) => {
                 const updated = [...prev.items];
-                updated[index] = calcItem({ ...updated[index], product_id: null });
+                updated[index] = calcItem({ ...updated[index], product_id: null, attributes: [] });
                 return { ...prev, items: updated };
             });
             return;
@@ -292,6 +298,9 @@ const PurchaseOrderList = () => {
             updated[index] = calcItem({
                 ...updated[index],
                 product_id:  product.id,
+                attributes:  createProductAttributeSnapshot(
+                    product.attribute_values || product.attributes || [], attributeGroups
+                ),
                 category_id: product.category_id   || null,
                 item_name:   product.name,
                 hsn_code:    product.hsn_code       || updated[index].hsn_code,
@@ -301,6 +310,21 @@ const PurchaseOrderList = () => {
             });
             return { ...prev, items: updated };
         });
+        try {
+            const embeddedAttributes = product.attribute_values ?? product.attributes;
+            const values = Array.isArray(embeddedAttributes) && embeddedAttributes.length > 0
+                ? embeddedAttributes
+                : await dispatch(getProductAttributes(product.id)).unwrap();
+            const attributes = createProductAttributeSnapshot(values, attributeGroups);
+            setFormData((prev) => {
+                if (prev.items[index]?.product_id !== product.id) return prev;
+                const updated = [...prev.items];
+                updated[index] = { ...updated[index], attributes };
+                return { ...prev, items: updated };
+            });
+        } catch {
+            // Attribute loading is optional; keep the selected PO line intact.
+        }
         showSnackbar(`${product.name} — auto filled! ✅`, 'success');
     };
 
@@ -364,6 +388,7 @@ const PurchaseOrderList = () => {
                     tax_rate:     parseFloat(item.tax_rate ?? 18),
                     amount:       parseFloat(item.amount   ?? 0),
                     tax_amount:   parseFloat(item.tax_amount ?? 0),
+                    attributes:   getItemAttributeSnapshot(item),
                 })),
             })).unwrap();
             showSnackbar('Purchase Order created successfully! 🎉');
@@ -432,6 +457,23 @@ const PurchaseOrderList = () => {
             setViewDialog(true);
             await loadPaymentsForPO(poDetails.id);
         }
+    };
+
+    const handlePrintPO = async () => {
+        const { default: PurchaseOrderPrintPDF } = await import('../components/PurchaseOrderPrintPDF');
+        try {
+            await PurchaseOrderPrintPDF.handlePrint(viewPO, setLoading);
+        } catch (error) {
+            showSnackbar(error?.message || 'Could not print purchase order.', 'error');
+        }
+    };
+
+    const handleExportPOPDF = async () => {
+        const [{ default: PurchaseOrderPrintPDF }, { default: html2pdf }] = await Promise.all([
+            import('../components/PurchaseOrderPrintPDF'),
+            import('html2pdf.js'),
+        ]);
+        await PurchaseOrderPrintPDF.handleExportPDF(viewPO, setLoading, showSnackbar, html2pdf);
     };
 
     // ── Payment ───────────────────────────────────────────
@@ -665,6 +707,15 @@ const PurchaseOrderList = () => {
                                 sx={{ height: 18, fontSize: 10, bgcolor: 'rgba(102,126,234,0.1)', color: '#667eea', fontWeight: 700 }}
                             />
                         )}
+                        {getItemAttributeSnapshot(item).map((attribute, attributeIndex) => (
+                            <Chip
+                                key={`${attribute.attribute_id ?? attribute.attribute_name}-${attributeIndex}`}
+                                label={`${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: 10 }}
+                            />
+                        ))}
                     </Stack>
                 </TableCell>
 
@@ -1445,6 +1496,18 @@ const PurchaseOrderList = () => {
 
                         <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} alignItems="center" justifyContent="space-between" sx={{ width: { xs: '100%', sm: 'auto' }, flexShrink: 0 }}>
                             <StatusChip status={viewPO?.status} />
+                            <Tooltip title="Print purchase order">
+                                <IconButton onClick={handlePrintPO} aria-label="Print purchase order"
+                                    sx={{ color: '#11998e', bgcolor: isDark ? '#334155' : '#ecfdf5', '&:hover': { bgcolor: isDark ? '#475569' : '#d1fae5' } }}>
+                                    <PrintIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Download PO PDF">
+                                <IconButton onClick={handleExportPOPDF} aria-label="Download purchase order PDF"
+                                    sx={{ color: '#dc2626', bgcolor: isDark ? '#334155' : '#fef2f2', '&:hover': { bgcolor: isDark ? '#475569' : '#fee2e2' } }}>
+                                    <PdfIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
                             <IconButton
                                 onClick={() => {
                                     setViewDialog(false);
@@ -1722,6 +1785,13 @@ const PurchaseOrderList = () => {
                                                             {item.description}
                                                         </Typography>
                                                     )}
+                                                    {getItemAttributeSnapshot(item).length > 0 && (
+                                                        <Typography variant="caption" sx={{ color: isDark ? '#cbd5e1' : '#475569', display: 'block', mt: 0.4, overflowWrap: 'anywhere' }}>
+                                                            {getItemAttributeSnapshot(item).map((attribute) =>
+                                                                `${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`
+                                                            ).join(' · ')}
+                                                        </Typography>
+                                                    )}
                                                     {item.sku && (
                                                         <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', display: 'block', mt: 0.4 }}>
                                                             SKU: {item.sku}
@@ -1811,6 +1881,13 @@ const PurchaseOrderList = () => {
                                                         {item.sku && (
                                                             <Typography variant="caption" sx={{ color: (isDark ? '#94a3b8' : '#64748b'), display: 'block', mt: 0.4 }}>
                                                                 SKU: {item.sku}
+                                                            </Typography>
+                                                        )}
+                                                        {getItemAttributeSnapshot(item).length > 0 && (
+                                                            <Typography variant="caption" sx={{ color: isDark ? '#cbd5e1' : '#475569', display: 'block', mt: 0.4, lineHeight: 1.5 }}>
+                                                                {getItemAttributeSnapshot(item).map((attribute) =>
+                                                                    `${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`
+                                                                ).join(' · ')}
                                                             </Typography>
                                                         )}
                                                         <Stack direction="row" spacing={1} mt={0.8}>

@@ -18,6 +18,7 @@ import {
     Percent as PercentIcon,
 } from "@mui/icons-material";
 import SpeechFieldButton from "../../../components/SpeechFieldButton";
+import { getItemAttributeSnapshot } from "../../../utils/productAttributeSnapshot";
 
 const InvoiceItemCard = ({
     appendSpeech,
@@ -232,6 +233,21 @@ const InvoiceItemCard = ({
                             className="invoice-page__field-rounded-sm"
                         />
                     </Grid>
+
+                    {getItemAttributeSnapshot(item).length > 0 && (
+                        <Grid item xs={12}>
+                            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                                {getItemAttributeSnapshot(item).map((attribute, attributeIndex) => (
+                                    <Chip
+                                        key={`${attribute.attribute_id ?? attribute.attribute_name}-${attributeIndex}`}
+                                        size="small"
+                                        variant="outlined"
+                                        label={`${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`}
+                                    />
+                                ))}
+                            </Stack>
+                        </Grid>
+                    )}
 
                     {/* Qty */}
                     <Grid item xs={6} md={2}>

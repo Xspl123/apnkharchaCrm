@@ -14,6 +14,8 @@ import { getClients } from "../redux/features/clientSlice";
 import { getCompanies } from "../redux/features/companySlice";
 import { getHsnCodes } from "../redux/features/hsnCodeSlice";
 import { getProducts } from "../features/inventory/state/inventorySlice";
+import { getAttributeGroups, getProductAttributes } from "../redux/features/attributeSlice";
+import { createProductAttributeSnapshot } from "../utils/productAttributeSnapshot";
 import InvoiceDialogs from "./invoices/components/InvoiceDialogs";
 import InvoiceFormSection from "./invoices/components/InvoiceFormSection";
 import InvoiceListHeader from "./invoices/components/InvoiceListHeader";
@@ -60,6 +62,7 @@ const InvoiceList = () => {
     const hsnCodes = hsnCodeState?.hsnCodes || [];
 
     const { products } = useSelector((state) => state.inventory);
+    const { groups: attributeGroups = [] } = useSelector((state) => state.attributes || {});
 
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -112,6 +115,7 @@ const InvoiceList = () => {
                 dispatch(getCompanies()),
                 dispatch(getHsnCodes()),
                 dispatch(getProducts()),
+                dispatch(getAttributeGroups()),
             ]);
         } catch {
             showSnackbar("Error loading data", "error");
@@ -179,6 +183,10 @@ const InvoiceList = () => {
     const handleItemChange = (index, field, value) => {
         const updatedItems = [...formData.items];
         updatedItems[index][field] = value;
+        if (field === 'item_name') {
+            updatedItems[index].product_id = null;
+            updatedItems[index].attributes = [];
+        }
         updatedItems[index] = calculateItemTotals(updatedItems[index]);
         setFormData((prev) => ({ ...prev, items: updatedItems }));
     };
@@ -200,15 +208,21 @@ const InvoiceList = () => {
         }
     };
 
-    const handleProductSelect = (index, product) => {
+    const handleProductSelect = async (index, product) => {
         if (!product) {
-            handleItemChange(index, 'product_id', null);
+            const updatedItems = [...formData.items];
+            updatedItems[index] = { ...updatedItems[index], product_id: null, attributes: [] };
+            setFormData((prev) => ({ ...prev, items: updatedItems }));
             return;
         }
         const updatedItems = [...formData.items];
         updatedItems[index] = {
             ...updatedItems[index],
             product_id: product.id,
+            attributes: createProductAttributeSnapshot(
+                product.attribute_values || product.attributes || [],
+                attributeGroups
+            ),
             item_name: product.name,
             hsn_code: product.hsn_code || updatedItems[index].hsn_code,
             unit: product.unit || 'pcs',
@@ -218,6 +232,24 @@ const InvoiceList = () => {
         };
         updatedItems[index] = calculateItemTotals(updatedItems[index]);
         setFormData((prev) => ({ ...prev, items: updatedItems }));
+        try {
+            const embeddedAttributes = product.attribute_values ?? product.attributes;
+            const attributeValues = Array.isArray(embeddedAttributes) && embeddedAttributes.length > 0
+                ? embeddedAttributes
+                : await dispatch(getProductAttributes(product.id)).unwrap();
+            const attributes = createProductAttributeSnapshot(
+                attributeValues,
+                attributeGroups
+            );
+            setFormData((prev) => {
+                if (prev.items[index]?.product_id !== product.id) return prev;
+                const items = [...prev.items];
+                items[index] = { ...items[index], attributes };
+                return { ...prev, items };
+            });
+        } catch {
+            // Keep the product selection usable if its optional attributes cannot load.
+        }
         showSnackbar(`${product.name} — auto filled! ✅`, 'success');
     };
 
@@ -340,6 +372,7 @@ const InvoiceList = () => {
             amount: parseFloat(String(item.amount).replace(/,/g, '')) || 0,
             tax_amount: parseFloat(String(item.tax_amount).replace(/,/g, '')) || 0,
             product_id: item.product_id || null,
+            attributes: item.attributes || item.attribute_values || [],
         })) || [];
         setFormData({
             company_id: companyId,

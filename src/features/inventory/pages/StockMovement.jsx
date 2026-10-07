@@ -24,12 +24,12 @@ import { styled } from '@mui/material/styles';
 
 // ── Styled Components ─────────────────────────────────────
 
-const GlassCard = styled(Card)(() => ({
-    background: 'rgba(255,255,255,0.95)',
+const GlassCard = styled(Card)(({ theme }) => ({
+    background: theme.palette.mode === 'dark' ? theme.palette.background.paper : 'rgba(255,255,255,0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-    border: '1px solid rgba(255,255,255,0.3)',
+    border: `1px solid ${theme.palette.mode === 'dark' ? theme.palette.divider : 'rgba(255,255,255,0.3)'}`,
 }));
 
 const GradientButton = styled(Button)(({ gradient }) => ({
@@ -41,9 +41,9 @@ const GradientButton = styled(Button)(({ gradient }) => ({
     '&:disabled': { opacity: 0.6, transform: 'none' },
 }));
 
-const StyledRow = styled(TableRow)(() => ({
+const StyledRow = styled(TableRow)(({ theme }) => ({
     transition: 'all 0.2s',
-    '&:hover': { backgroundColor: 'rgba(102,126,234,0.04)' },
+    '&:hover': { backgroundColor: theme.palette.action.hover },
 }));
 
 // ── Helpers ───────────────────────────────────────────────
@@ -716,10 +716,10 @@ const StockMovement = () => {
                         <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
                             <Table sx={{ minWidth: { xs: 850, md: 0 } }}>
                                 <TableHead>
-                                    <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                    <TableRow sx={{ bgcolor: 'action.hover' }}>
                                         {['Date','Product','Type','Qty','Rate',
                                           'Value','Before','After','Reference','Actions'].map((h) => (
-                                            <TableCell key={h} sx={{ fontWeight: 700, py: 2, fontSize: 12 }}>
+                                            <TableCell key={h} sx={{ fontWeight: 700, py: 2, fontSize: 12, color: 'text.secondary' }}>
                                                 {h}
                                             </TableCell>
                                         ))}
