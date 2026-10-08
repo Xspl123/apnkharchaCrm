@@ -62,6 +62,18 @@ const emptyForm = {
     password_confirmation: '', role_id: '', is_active: true, invoice_prefix: 'INV',
 };
 
+const getLastLogin = (user) =>
+    user.last_login_history?.logged_in_at ||
+    user.last_login_at ||
+    user.last_login ||
+    null;
+
+const formatLastLogin = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+};
+
 export default function UserManagement() {
     const dispatch = useDispatch();
     const { users, isLoading } = useSelector((s) => s.users);
@@ -337,7 +349,7 @@ export default function UserManagement() {
                     <Table>
                         <TableHead>
                             <TableRow sx={{ bgcolor: 'rgba(102,126,234,0.06)' }}>
-                                {['#', 'User', 'Email', 'Role', 'Status', 'Created', 'Actions'].map((h) => (
+                                {['#', 'User', 'Email', 'Role', 'Status', 'Created', 'Last Login', 'Actions'].map((h) => (
                                     <TableCell key={h} sx={{ fontWeight: 700, color: '#374151' }}>{h}</TableCell>
                                 ))}
                             </TableRow>
@@ -345,13 +357,13 @@ export default function UserManagement() {
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                                         <CircularProgress size={32} />
                                     </TableCell>
                                 </TableRow>
                             ) : filtered.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                                    <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                                         No users found
                                     </TableCell>
                                 </TableRow>
@@ -387,6 +399,11 @@ export default function UserManagement() {
                                     <TableCell>
                                         <Typography variant="caption" color="text.secondary">
                                             {user.created_at}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {formatLastLogin(getLastLogin(user))}
                                         </Typography>
                                     </TableCell>
                                     <TableCell>

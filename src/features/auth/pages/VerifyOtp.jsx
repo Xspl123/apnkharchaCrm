@@ -13,6 +13,17 @@ import {
     Grid
 } from "@mui/material";
 
+const getDeviceId = () => {
+    const storageKey = "authDeviceId";
+    let deviceId = localStorage.getItem(storageKey);
+    if (!deviceId) {
+        deviceId = globalThis.crypto?.randomUUID?.() ||
+            `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem(storageKey, deviceId);
+    }
+    return deviceId;
+};
+
 const VerifyOtp = () => {
     const [otp, setOtp] = useState("");
     const dispatch = useDispatch();
@@ -53,7 +64,7 @@ const VerifyOtp = () => {
         }
 
         try {
-            await dispatch(verifyOtp({ email, otp })).unwrap();
+            await dispatch(verifyOtp({ email, otp, device_id: getDeviceId() })).unwrap();
             // Navigation will happen via useEffect when token is set
         } catch {
             return;
