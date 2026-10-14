@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { ShoppingCart as CartIcon } from '@mui/icons-material';
 import {
     getProductSummary, getLowStock,
     getCategories, getInventoryReport,
@@ -9,7 +10,6 @@ import {
     Box, Grid, Card, CardContent, Typography, Paper, Stack,
     Avatar, Chip, Divider, LinearProgress, CircularProgress,
     Table, TableHead, TableRow, TableCell, TableBody,
-    ShoppingCart as CartIcon,
     TableContainer, Alert,Button,
 } from '@mui/material';
 import {
