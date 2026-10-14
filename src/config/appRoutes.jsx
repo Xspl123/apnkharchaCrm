@@ -329,7 +329,6 @@ const allProtectedRoutes = [
     icon: <AccountBalanceIcon />,
     element: <VendorPayments />,
     permission: "vendor_payments.view",
-    permission: "purchase_orders.view",
     group: "purchase",
     showInSidebar: true,
     breadcrumbs: [
