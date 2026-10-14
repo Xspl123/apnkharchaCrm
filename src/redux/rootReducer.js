@@ -23,6 +23,8 @@ import quotationReducer from "../features/crm/state/quotationSlice";
 import orgReducer from "../features/organisation/state/orgSlice";
 import SuperAdminReducer from "./features/superAdminSlice";
 import { isCrmEnabled, isCrmOnlyEdition, isExpenseOnlyEdition } from "../config/moduleConfig";
+import orgFinanceReducer from "../features/finance/state/orgFinanceSlice";
+
 
 const crmReducers = isCrmEnabled
   ? {
@@ -70,6 +72,7 @@ const mainReducers = {
 const rootReducer = combineReducers({
   ...sharedReducers,
   ...(isCrmOnlyEdition ? {} : isExpenseOnlyEdition ? expenseReducers : mainReducers),
+     orgFinance: orgFinanceReducer,
 });
 
 export default rootReducer;

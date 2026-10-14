@@ -3,6 +3,7 @@ import axiosClient from '../../../api/axiosClient';
 const vendorService = {
     // Vendors
     getAll:      (params) => axiosClient.get('/vendors', { params }),
+    getLedger: (id, params) => axiosClient.get(`/vendors/${id}/ledger`, { params }),
     getSummary:  ()       => axiosClient.get('/vendors/summary'),
     getById:     (id)     => axiosClient.get(`/vendors/${id}`),
     create:      (data)   => axiosClient.post('/vendors', data),
@@ -22,6 +23,7 @@ const vendorService = {
     getPayments:   (params) => axiosClient.get('/vendor-payments', { params }),
     createPayment: (data)   => axiosClient.post('/vendor-payments', data),
     deletePayment: (id)     => axiosClient.delete(`/vendor-payments/${id}`),
+    
 };
 
 export default vendorService;

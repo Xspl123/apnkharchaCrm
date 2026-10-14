@@ -7,35 +7,41 @@ import {
     createPayment,
     updatePayment,
     deletePayment,
+    refundPayment,
     reset,
 } from "../redux/features/invoicePaymentSlice";
 import { getInvoices } from "../redux/features/invoiceSlice";
 
 import {
-    Container,
-    Typography,
-    
-    TextField,
-    Button,
-    Snackbar,
-    IconButton,
-    Collapse,
     Alert,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Select,
-    MenuItem,
+    Avatar,
+    Box,
+    Button,
     Card,
     CardContent,
+    Chip,
+    Collapse,
+    Container,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     Grid,
+    IconButton,
+    MenuItem,
+    Select,
+    Snackbar,
+    Stack,
+    TextField,
+    Tooltip,
+    Typography,
 } from "@mui/material";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PaymentIcon from "@mui/icons-material/Payment";
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 import { ConfirmDialog, DataTable, FormSection, PageHeader, SearchFilterBar, StatusChip } from "../components/common";
 
 const InvoicePaymentList = () => {
@@ -68,6 +74,14 @@ const InvoicePaymentList = () => {
 
     const [deleteDialog, setDeleteDialog] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState(null);
+
+    const [refundDialog, setRefundDialog] = useState(false);
+    const [paymentToRefund, setPaymentToRefund] = useState(null);
+    const [refundForm, setRefundForm] = useState({
+        refund_date: new Date().toISOString().split("T")[0],
+        refund_method: "cash",
+        notes: "Product returned refund",
+    });
 
     const [viewDialog, setViewDialog] = useState(false);
     const [paymentToView, setPaymentToView] = useState(null);
@@ -153,6 +167,76 @@ const InvoicePaymentList = () => {
             });
         }
     };
+
+    const handleOpenRefund = (payment) => {
+        setPaymentToRefund(payment);
+        setRefundForm({
+            refund_date: new Date().toISOString().split("T")[0],
+            refund_method: payment.payment_method || "cash",
+            notes: `Refund for invoice #${payment.invoice?.invoice_no || payment.invoice_no || ""}`,
+        });
+        setRefundDialog(true);
+    };
+
+    const handleConfirmRefund = async () => {
+        if (!paymentToRefund) return;
+        try {
+            await dispatch(
+                refundPayment({
+                    id: paymentToRefund.id,
+                    data: refundForm,
+                })
+            ).unwrap();
+
+            setSnackbar({
+                open: true,
+                message: "Payment refunded successfully! Ledger updated. ✅",
+                severity: "success",
+            });
+            setRefundDialog(false);
+            setPaymentToRefund(null);
+
+            dispatch(getPayments());
+            dispatch(getInvoices());
+        } catch (err) {
+            setSnackbar({
+                open: true,
+                message: getErrorMessage(err, "Failed to refund payment!"),
+                severity: "error",
+            });
+        }
+    };
+
+    // Helper: Check if payment belongs to a returned invoice
+    const isPaymentReturned = (payment) => {
+        if (payment.is_refunded) return true;
+        if (payment.is_invoice_returned || payment.invoice_status === "return") return true;
+        const inv = invoices.find(
+            (i) => String(i.id) === String(payment.invoice_id) || 
+                   (i.invoice_no && i.invoice_no === (payment.invoice?.invoice_no || payment.invoice_no))
+        );
+        return inv?.status === "return" || Boolean(inv?.is_return);
+    };
+
+    // Exclude returned invoice payments from collected metrics
+    const activePayments = payments.filter((p) => !isPaymentReturned(p));
+
+    const totalCollected = activePayments.reduce((sum, p) => {
+        const num = parseFloat(String(p.amount || 0).replace(/,/g, ""));
+        return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+
+    const thisMonthCollected = activePayments
+        .filter((p) => {
+            if (!p.payment_date) return false;
+            const pDate = new Date(p.payment_date);
+            const now = new Date();
+            return !isNaN(pDate.getTime()) && pDate.getMonth() === now.getMonth() && pDate.getFullYear() === now.getFullYear();
+        })
+        .reduce((sum, p) => {
+            const num = parseFloat(String(p.amount || 0).replace(/,/g, ""));
+            return sum + (isNaN(num) ? 0 : num);
+        }, 0);
 
     const handleEdit = (payment) => {
         setEditMode(true);
@@ -287,12 +371,7 @@ const InvoicePaymentList = () => {
                         <CardContent>
                             <Typography variant="h6">Total Collected</Typography>
                             <Typography variant="h4">
-                                ₹{payments
-                                    .reduce((sum, p) => {
-                                        const num = parseFloat(String(p.amount || 0).replace(/,/g, ""));
-                                        return sum + (isNaN(num) ? 0 : num);
-                                    }, 0)
-                                    .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ₹{totalCollected.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -302,12 +381,7 @@ const InvoicePaymentList = () => {
                         <CardContent>
                             <Typography variant="h6">This Month</Typography>
                             <Typography variant="h4">
-                                ₹{payments
-                                    .reduce((sum, p) => {
-                                        const num = parseFloat(String(p.amount || 0).replace(/,/g, ""));
-                                        return sum + (isNaN(num) ? 0 : num);
-                                    }, 0)
-                                    .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ₹{thisMonthCollected.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -328,128 +402,116 @@ const InvoicePaymentList = () => {
                     title={editMode ? "Edit Payment" : "New Payment"}
                     sx={{ mb: 3 }}
                 >
-                        <form onSubmit={handleSubmit}>
-                            <Grid container spacing={3}>
-                                {/* Invoice Selection */}
-                                <Grid item xs={12} md={6}>
-                                    <Select
-                                        name="invoice_id"
-                                        fullWidth
-                                        required
-                                        value={formData.invoice_id}
-                                        onChange={handleChange}
-                                        displayEmpty
-                                    >
-                                        <MenuItem value="" disabled>
-                                            Select Invoice
+                    <form onSubmit={handleSubmit}>
+                        <Grid container spacing={3}>
+                            {/* Invoice Selection */}
+                            <Grid item xs={12} md={6}>
+                                <Select
+                                    name="invoice_id"
+                                    fullWidth
+                                    required
+                                    value={formData.invoice_id}
+                                    onChange={handleChange}
+                                    displayEmpty
+                                >
+                                    <MenuItem value="" disabled>
+                                        Select Invoice
+                                    </MenuItem>
+                                    {unpaidInvoices.map((invoice) => (
+                                        <MenuItem key={invoice.id} value={invoice.id}>
+                                            {invoice.invoice_no} - {invoice.client?.company_name} (Balance: ₹{invoice.balance_amount})
                                         </MenuItem>
-                                        {unpaidInvoices.map((invoice) => (
-                                            <MenuItem key={invoice.id} value={invoice.id}>
-                                                {invoice.invoice_no} - {invoice.client?.company_name} (Balance: ₹
-                                                {invoice.balance_amount})
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </Grid>
-
-                                {/* Amount */}
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        label="Amount (₹)"
-                                        type="number"
-                                        name="amount"
-                                        fullWidth
-                                        required
-                                        value={formData.amount}
-                                        onChange={handleChange}
-                                        helperText={
-                                            selectedInvoice
-                                                ? `Balance Due: ₹${selectedInvoice.balance_amount}`
-                                                : ""
-                                        }
-                                    />
-                                </Grid>
-
-                                {/* Payment Date */}
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        label="Payment Date"
-                                        type="date"
-                                        name="payment_date"
-                                        fullWidth
-                                        required
-                                        InputLabelProps={{ shrink: true }}
-                                        value={formData.payment_date}
-                                        onChange={handleChange}
-                                    />
-                                </Grid>
-
-                                {/* Payment Method */}
-                                <Grid item xs={12} md={6}>
-                                    <Select
-                                        name="payment_method"
-                                        fullWidth
-                                        required
-                                        value={formData.payment_method}
-                                        onChange={handleChange}
-                                    >
-                                        <MenuItem value="cash">💵 Cash</MenuItem>
-                                        <MenuItem value="bank_transfer">🏦 Bank Transfer</MenuItem>
-                                        <MenuItem value="upi">📱 UPI</MenuItem>
-                                        <MenuItem value="cheque">📝 Cheque</MenuItem>
-                                        <MenuItem value="card">💳 Card</MenuItem>
-                                    </Select>
-                                </Grid>
-
-                                {/* Transaction ID */}
-                                {/* <Grid item xs={12} md={6}>
-                                    <TextField
-                                        label="Transaction ID / Reference"
-                                        name="transaction_id"
-                                        fullWidth
-                                        value={formData.transaction_id}
-                                        onChange={handleChange}
-                                    />
-                                </Grid> */}
-
-                                {/* Notes */}
-                                <Grid item xs={12}>
-                                    <TextField
-                                        label="Notes"
-                                        name="notes"
-                                        fullWidth
-                                        multiline
-                                        rows={3}
-                                        value={formData.notes}
-                                        onChange={handleChange}
-                                    />
-                                </Grid>
-
-                                {/* Action Buttons */}
-                                <Grid item xs={12} sm={6}>
-                                    <Button
-                                        type="submit"
-                                        variant="contained"
-                                        color="success"
-                                        fullWidth
-                                        size="large"
-                                    >
-                                        {editMode ? "Update Payment" : "Save Payment"}
-                                    </Button>
-                                </Grid>
-                                <Grid item xs={12} sm={6}>
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        fullWidth
-                                        size="large"
-                                        onClick={handleCancel}
-                                    >
-                                        Cancel
-                                    </Button>
-                                </Grid>
+                                    ))}
+                                </Select>
                             </Grid>
-                        </form>
+
+                            {/* Amount */}
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    label="Amount (₹)"
+                                    type="number"
+                                    name="amount"
+                                    fullWidth
+                                    required
+                                    value={formData.amount}
+                                    onChange={handleChange}
+                                    helperText={
+                                        selectedInvoice
+                                            ? `Balance Due: ₹${selectedInvoice.balance_amount}`
+                                            : ""
+                                    }
+                                />
+                            </Grid>
+
+                            {/* Payment Date */}
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    label="Payment Date"
+                                    type="date"
+                                    name="payment_date"
+                                    fullWidth
+                                    required
+                                    InputLabelProps={{ shrink: true }}
+                                    value={formData.payment_date}
+                                    onChange={handleChange}
+                                />
+                            </Grid>
+
+                            {/* Payment Method */}
+                            <Grid item xs={12} md={6}>
+                                <Select
+                                    name="payment_method"
+                                    fullWidth
+                                    required
+                                    value={formData.payment_method}
+                                    onChange={handleChange}
+                                >
+                                    <MenuItem value="cash">💵 Cash</MenuItem>
+                                    <MenuItem value="bank_transfer">🏦 Bank Transfer</MenuItem>
+                                    <MenuItem value="upi">📱 UPI</MenuItem>
+                                    <MenuItem value="cheque">📝 Cheque</MenuItem>
+                                    <MenuItem value="card">💳 Card</MenuItem>
+                                </Select>
+                            </Grid>
+
+                            {/* Notes */}
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Notes"
+                                    name="notes"
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    value={formData.notes}
+                                    onChange={handleChange}
+                                />
+                            </Grid>
+
+                            {/* Action Buttons */}
+                            <Grid item xs={12} sm={6}>
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    color="success"
+                                    fullWidth
+                                    size="large"
+                                >
+                                    {editMode ? "Update Payment" : "Save Payment"}
+                                </Button>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    fullWidth
+                                    size="large"
+                                    onClick={handleCancel}
+                                >
+                                    Cancel
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </form>
                 </FormSection>
             </Collapse>
 
@@ -480,11 +542,37 @@ const InvoicePaymentList = () => {
                         {
                             id: "invoiceNo",
                             headerName: "Invoice No",
-                            render: (_, payment) => (
-                                <Typography variant="body2" fontWeight="600">
-                                    {payment.invoice?.invoice_no || payment.invoice_no || "-"}
-                                </Typography>
-                            ),
+                            render: (_, payment) => {
+                                const isRet = isPaymentReturned(payment);
+                                return (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Typography variant="body2" fontWeight="600">
+                                            {payment.invoice?.invoice_no || payment.invoice_no || "-"}
+                                        </Typography>
+                                        {payment.is_refunded ? (
+                                            <Chip
+                                                label="REFUNDED"
+                                                size="small"
+                                                color="warning"
+                                                sx={{ height: 20, fontSize: "0.65rem", fontWeight: 700 }}
+                                            />
+                                        ) : isRet ? (
+                                            <Chip
+                                                label="RETURNED"
+                                                size="small"
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: "0.68rem",
+                                                    fontWeight: 700,
+                                                    bgcolor: "rgba(100, 116, 139, 0.12)",
+                                                    color: "#475569",
+                                                    border: "1px solid rgba(100, 116, 139, 0.3)",
+                                                }}
+                                            />
+                                        ) : null}
+                                    </Stack>
+                                );
+                            },
                         },
                         {
                             id: "client",
@@ -494,12 +582,16 @@ const InvoicePaymentList = () => {
                         {
                             field: "amount",
                             headerName: "Amount (₹)",
-                            render: (value) => (
-                                <StatusChip
-                                    status="paid"
-                                    label={`₹${formatPaymentAmount(value)}`}
-                                />
-                            ),
+                            render: (value, payment) => {
+                                const isRet = isPaymentReturned(payment);
+                                return (
+                                    <StatusChip
+                                        status={payment.is_refunded ? "cancelled" : (isRet ? "cancelled" : "paid")}
+                                        label={payment.is_refunded ? `REFUNDED ₹${formatPaymentAmount(value)}` : `₹${formatPaymentAmount(value)}`}
+                                        sx={isRet || payment.is_refunded ? { textDecoration: "line-through", opacity: 0.65 } : {}}
+                                    />
+                                );
+                            },
                         },
                         {
                             field: "payment_method",
@@ -512,17 +604,28 @@ const InvoicePaymentList = () => {
                             headerName: "Actions",
                             align: "center",
                             render: (_, payment) => (
-                                <>
+                                <Stack direction="row" spacing={0.5} justifyContent="center">
                                     <IconButton size="small" color="info" onClick={() => handleView(payment)} title="View">
-                                        <VisibilityIcon />
+                                        <VisibilityIcon fontSize="small" />
                                     </IconButton>
+                                    {!payment.is_refunded && (
+                                        <Tooltip title="Refund to Client" arrow>
+                                            <IconButton
+                                                size="small"
+                                                sx={{ color: "#f59e0b", "&:hover": { bgcolor: "rgba(245, 158, 11, 0.1)" } }}
+                                                onClick={() => handleOpenRefund(payment)}
+                                            >
+                                                <AssignmentReturnIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
                                     <IconButton size="small" color="primary" onClick={() => handleEdit(payment)} title="Edit">
-                                        <EditIcon />
+                                        <EditIcon fontSize="small" />
                                     </IconButton>
                                     <IconButton size="small" color="error" onClick={() => handleDeleteConfirm(payment)} title="Delete">
-                                        <DeleteIcon />
+                                        <DeleteIcon fontSize="small" />
                                     </IconButton>
-                                </>
+                                </Stack>
                             ),
                         },
                     ]}
@@ -538,6 +641,100 @@ const InvoicePaymentList = () => {
                 onClose={() => setDeleteDialog(false)}
                 onConfirm={handleDelete}
             />
+
+            {/* Refund Dialog */}
+            <Dialog
+                open={refundDialog}
+                onClose={() => setRefundDialog(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar sx={{ bgcolor: "#f59e0b", width: 40, height: 40 }}>
+                            <AssignmentReturnIcon />
+                        </Avatar>
+                        <Box>
+                            <Typography variant="h6" fontWeight={700}>
+                                Refund Payment
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Invoice #{paymentToRefund?.invoice_no || paymentToRefund?.invoice?.invoice_no} · {paymentToRefund?.client_name || paymentToRefund?.invoice?.client?.company_name}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                </DialogTitle>
+                <DialogContent>
+                    <Alert severity="info" sx={{ mb: 2, mt: 1 }}>
+                        Refund karne par client ke ledger mein <strong>Debit</strong> entry judegi aur closing balance settle ho jayega.
+                    </Alert>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="caption" fontWeight={600} color="text.secondary" display="block" mb={0.5}>
+                                Refund Amount (₹)
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                disabled
+                                size="small"
+                                value={paymentToRefund?.amount ? `₹${formatPaymentAmount(paymentToRefund.amount)}` : "₹0.00"}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="caption" fontWeight={600} color="text.secondary" display="block" mb={0.5}>
+                                Refund Date *
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                required
+                                type="date"
+                                size="small"
+                                value={refundForm.refund_date}
+                                onChange={(e) => setRefundForm({ ...refundForm, refund_date: e.target.value })}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="caption" fontWeight={600} color="text.secondary" display="block" mb={0.5}>
+                                Refund Method *
+                            </Typography>
+                            <Select
+                                fullWidth
+                                size="small"
+                                value={refundForm.refund_method}
+                                onChange={(e) => setRefundForm({ ...refundForm, refund_method: e.target.value })}
+                            >
+                                <MenuItem value="cash">💵 Cash</MenuItem>
+                                <MenuItem value="bank_transfer">🏦 Bank Transfer</MenuItem>
+                                <MenuItem value="upi">📱 UPI</MenuItem>
+                                <MenuItem value="cheque">📝 Cheque</MenuItem>
+                            </Select>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="caption" fontWeight={600} color="text.secondary" display="block" mb={0.5}>
+                                Notes / Reason
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                value={refundForm.notes}
+                                onChange={(e) => setRefundForm({ ...refundForm, notes: e.target.value })}
+                            />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                    <Button onClick={() => setRefundDialog(false)} color="inherit">
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        sx={{ bgcolor: "#f59e0b", "&:hover": { bgcolor: "#d97706" } }}
+                        onClick={handleConfirmRefund}
+                    >
+                        Confirm Refund
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* View Dialog */}
             <Dialog
@@ -563,7 +760,6 @@ const InvoicePaymentList = () => {
                             <Grid item xs={12}>
                                 <Typography variant="body1">
                                     <strong>Amount:</strong> ₹{formatPaymentAmount(paymentToView.amount)}
-
                                 </Typography>
                             </Grid>
                             <Grid item xs={12}>

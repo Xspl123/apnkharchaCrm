@@ -177,6 +177,20 @@ export const deleteVendorPayment = createAsyncThunk(
     }
 );
 
+export const getVendorLedger = createAsyncThunk(
+    'vendors/getLedger',
+    async (arg, { rejectWithValue }) => {
+        try {
+            const vendorId = typeof arg === 'object' && arg !== null ? (arg.vendorId || arg.id) : arg;
+            const params   = typeof arg === 'object' && arg !== null ? arg.params : undefined;
+            const res = await vendorService.getLedger(vendorId, params);
+            return { vendorId, data: res.data };
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Error loading vendor ledger');
+        }
+    }
+);
+
 // ── Initial State ─────────────────────────────────────────
 
 const initialState = {
@@ -189,6 +203,13 @@ const initialState = {
     actionLoading:  false,
     isError:        false,
     message:        '',
+    ledger: {
+        data: null,
+        isLoading: false,
+        isError: false,
+        message: '',
+        openVendorId: null,
+    },
 };
 
 // ── Slice ─────────────────────────────────────────────────
@@ -205,6 +226,12 @@ const vendorSlice = createSlice({
         },
         clearVendorPayments: (state) => {
             state.payments = [];
+        },
+        setLedgerClose: (state) => { 
+            if (state.ledger) {
+                state.ledger.openVendorId = null;
+                state.ledger.data = null;
+            }
         },
     },
     extraReducers: (builder) => {
@@ -315,9 +342,27 @@ const vendorSlice = createSlice({
 
         .addCase(deleteVendorPayment.fulfilled,(state, action) => {
             state.payments = state.payments.filter(p => p.id !== action.payload);
-        });
+        })
+
+        // ── Vendor Ledger ──
+        .addCase(getVendorLedger.pending, (state) => {
+            state.ledger.isLoading = true;
+            state.ledger.isError   = false;
+            state.ledger.message   = '';
+        })
+        .addCase(getVendorLedger.fulfilled, (state, action) => {
+            state.ledger.isLoading    = false;
+            state.ledger.data         = action.payload.data;
+            state.ledger.openVendorId = action.payload.vendorId;
+        })
+        .addCase(getVendorLedger.rejected, (state, action) => {
+            state.ledger.isLoading = false;
+            state.ledger.isError   = true;
+            state.ledger.message   = action.payload;
+            state.ledger.data      = null;
+        })
     },
 });
 
-export const { reset, clearVendorPayments } = vendorSlice.actions;
+export const { reset, clearVendorPayments, setLedgerClose } = vendorSlice.actions;
 export default vendorSlice.reducer;

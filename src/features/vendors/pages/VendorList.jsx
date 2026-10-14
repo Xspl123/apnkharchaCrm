@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import usePermission from '../../../hooks/usePermission';
+
+
 import {
     getVendors, createVendor, updateVendor,
     deleteVendor, reset,
@@ -66,6 +70,7 @@ const emptyForm = {
     country:         'India',
     gstin:           '',
     pan:             '',
+    opening_balance: '',
     bank_name:       '',
     bank_account_no: '',
     bank_ifsc:       '',
@@ -91,7 +96,9 @@ const FormSection = ({ title, icon }) => (
 // ── Main Component ────────────────────────────────────────
 
 const VendorList = () => {
+    const { can } = usePermission();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const { vendors, isLoading, actionLoading } = useSelector((s) => s.vendors);
@@ -176,6 +183,7 @@ const VendorList = () => {
             country:         vendor.country         || 'India',
             gstin:           vendor.gstin           || '',
             pan:             vendor.pan             || '',
+            opening_balance: vendor.opening_balance || '',
             bank_name:       vendor.bank_name       || '',
             bank_account_no: vendor.bank_account_no || '',
             bank_ifsc:       vendor.bank_ifsc       || '',
@@ -584,6 +592,24 @@ const VendorList = () => {
                                                 />
                                             </Grid>
 
+                                            <Grid item xs={12} sm={6} md={4}>
+                                                <TextField
+                                                    fullWidth size="small"
+                                                    label="Opening Balance"
+                                                    name="opening_balance"
+                                                    type="number"
+                                                    value={formData.opening_balance}
+                                                    onChange={handleChange}
+                                                    helperText="Purana baaki: +ve = Dena hai (Cr) | -ve = Advance (Dr)"
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">₹</InputAdornment>
+                                                        ),
+                                                    }}
+                                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                                />
+                                            </Grid>
+
                                             {/* ── Bank Details ── */}
                                             <Grid item xs={12}>
                                                 <FormSection
@@ -675,7 +701,7 @@ const VendorList = () => {
                             <Table>
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: 'grey.50' }}>
-                                        {['#', 'Vendor', 'Contact', 'GSTIN', 'City', 'Status', 'Actions'].map((h) => (
+                                        {['#', 'Vendor', 'Contact', 'GSTIN', 'Opening Balance','City', 'Status', 'Actions'].map((h) => (
                                             <TableCell key={h} sx={{ fontWeight: 700, py: 2 }}>
                                                 {h}
                                             </TableCell>
@@ -685,13 +711,13 @@ const VendorList = () => {
                                 <TableBody>
                                     {isLoading ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                                                 <Typography color="text.secondary">Loading...</Typography>
                                             </TableCell>
                                         </TableRow>
                                     ) : paginated.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                                            <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
                                                 <Stack alignItems="center" spacing={2}>
                                                     <Avatar sx={{ width: 72, height: 72, bgcolor: '#f1f5f9' }}>
                                                         <BusinessIcon sx={{ fontSize: 40, color: '#94a3b8' }} />
@@ -699,13 +725,18 @@ const VendorList = () => {
                                                     <Typography variant="h6" color="text.secondary">
                                                         No vendors found.
                                                     </Typography>
-                                                    <GradientButton
-                                                        startIcon={<AddIcon />}
-                                                        onClick={handleOpenCreate}
-                                                        gradient="linear-gradient(135deg, #667eea, #764ba2)"
-                                                    >
-                                                        Add Your First Vendor
-                                                    </GradientButton>
+                                                    {can('vendors.create') && (
+                                                        <Grid item xs={6} md={2}>
+                                                            <GradientButton
+                                                                fullWidth
+                                                                startIcon={showForm ? <CloseIcon /> : <AddIcon />}
+                                                                onClick={showForm ? handleCancel : handleOpenCreate}
+                                                                gradient={showForm ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #11998e, #38ef7d)'}
+                                                            >
+                                                                {showForm ? 'Cancel' : 'Add Vendor'}
+                                                            </GradientButton>
+                                                        </Grid>
+                                                    )}
                                                 </Stack>
                                             </TableCell>
                                         </TableRow>
@@ -768,6 +799,40 @@ const VendorList = () => {
                                                     <Typography variant="caption" color="text.disabled">—</Typography>
                                                 )}
                                             </TableCell>
+
+                                            <TableCell>
+                                                    {(() => {
+                                                        const num = parseFloat(vendor.opening_balance || 0);
+                                                        const isPositive = num > 0;
+                                                        const isNegative = num < 0;
+                                                        return (
+                                                            <Tooltip
+                                                                title={
+                                                                    isPositive
+                                                                        ? "Credit: Vendor ko dena baaki hai (Payable)"
+                                                                        : isNegative
+                                                                        ? "Debit: Vendor ko advance diya hua hai (Advance)"
+                                                                        : "Zero Balance: Naya hisaab"
+                                                                }
+                                                                arrow
+                                                            >
+                                                                <Chip
+                                                                    label={
+                                                                        isPositive
+                                                                            ? `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr`
+                                                                            : isNegative
+                                                                            ? `₹${Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2 })} Dr`
+                                                                            : "₹0.00"
+                                                                    }
+                                                                    color={isPositive ? "warning" : isNegative ? "info" : "default"}
+                                                                    size="small"
+                                                                    variant={num === 0 ? "outlined" : "filled"}
+                                                                    sx={{ fontWeight: 600, fontSize: 11 }}
+                                                                />
+                                                            </Tooltip>
+                                                        );
+                                                    })()}
+                                                </TableCell>
                                             <TableCell>
                                                 <Typography variant="body2">
                                                     {vendor.city || '—'}
@@ -788,6 +853,16 @@ const VendorList = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Stack direction="row" spacing={0.5}>
+
+                                                    <Tooltip title="View Ledger" TransitionComponent={Zoom}>
+                                                            <IconButton
+                                                                size="small" color="secondary"
+                                                                onClick={() => navigate(`/vendors/${vendor.id}/ledger`)}
+                                                                sx={{ bgcolor: 'rgba(168,85,247,0.1)' }}
+                                                            >
+                                                                <BankIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
                                                     <Tooltip title="View Details" TransitionComponent={Zoom}>
                                                         <IconButton
                                                             size="small" color="info"
@@ -797,15 +872,18 @@ const VendorList = () => {
                                                             <ViewIcon fontSize="small" />
                                                         </IconButton>
                                                     </Tooltip>
-                                                    <Tooltip title="Edit Vendor" TransitionComponent={Zoom}>
-                                                        <IconButton
-                                                            size="small" color="primary"
-                                                            onClick={() => handleEdit(vendor)}
-                                                            sx={{ bgcolor: 'rgba(102,126,234,0.1)' }}
-                                                        >
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    {can('vendors.edit') && (  
+                                                        <Tooltip title="Edit Vendor" TransitionComponent={Zoom}>
+                                                            <IconButton
+                                                                size="small" color="primary"
+                                                                onClick={() => handleEdit(vendor)}
+                                                                sx={{ bgcolor: 'rgba(102,126,234,0.1)' }}
+                                                            >
+                                                                <EditIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
+                                                {can('vendors.edit') && ( 
                                                     <Tooltip title="Delete Vendor" TransitionComponent={Zoom}>
                                                         <IconButton
                                                             size="small" color="error"
@@ -815,6 +893,7 @@ const VendorList = () => {
                                                             <DeleteIcon fontSize="small" />
                                                         </IconButton>
                                                     </Tooltip>
+                                                )}
                                                 </Stack>
                                             </TableCell>
                                         </StyledTableRow>
@@ -919,6 +998,36 @@ const VendorList = () => {
                                         </Stack>
                                     </Paper>
                                 )}
+
+                                {/* Financial / Opening Balance */}
+                                    <Paper elevation={0} sx={{ p: 2, bgcolor: isDark ? '#1a202c' : '#f8fafc', borderRadius: '12px' }}>
+                                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase' }}>
+                                            Financial / Opening Balance
+                                        </Typography>
+                                        <Stack direction="row" spacing={1.5} alignItems="center" mt={1}>
+                                            <Typography variant="body2" color="text.secondary">Opening Balance:</Typography>
+                                            {(() => {
+                                                const num = parseFloat(viewVendor.opening_balance || 0);
+                                                const isPositive = num > 0;
+                                                const isNegative = num < 0;
+                                                return (
+                                                    <Chip
+                                                        label={
+                                                            isPositive
+                                                                ? `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr (Payable)`
+                                                                : isNegative
+                                                                ? `₹${Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2 })} Dr (Advance)`
+                                                                : "₹0.00"
+                                                        }
+                                                        color={isPositive ? "warning" : isNegative ? "info" : "default"}
+                                                        size="small"
+                                                        variant={num === 0 ? "outlined" : "filled"}
+                                                        sx={{ fontWeight: 700 }}
+                                                    />
+                                                );
+                                            })()}
+                                        </Stack>
+                                    </Paper>
 
                                 {/* Bank */}
                                 {viewVendor.bank_name && (

@@ -1,121 +1,140 @@
 // src/pages/ClientLedgerPage.jsx
-import { useEffect, useRef } from 'react'; // Add useRef
-import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { getClientLedger } from '../redux/features/clientSlice';
-import ClientLedger from '../components/ClientLedger';
-import { Container, Box, CircularProgress, Alert, Button } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { getClients, getClientLedger } from "../redux/features/clientSlice";
+import ClientLedger from "../components/ClientLedger";
+import { Container, Box, CircularProgress, Alert, Button, Stack, Typography, Breadcrumbs, Link } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import BusinessIcon from "@mui/icons-material/Business";
 
 const ClientLedgerPage = () => {
-  const { clientId } = useParams();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { clients, ledger } = useSelector((state) => state.clients);
-  const fetchedRef = useRef(false); // Add ref to prevent multiple fetches
+    const { clientId } = useParams();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const { clients, ledger } = useSelector((state) => state.clients);
+    const fetchedRef = useRef(false);
 
-  // ========== FIXED: Fetch only once ==========
-  useEffect(() => {
-    const currentClientId = parseInt(clientId);
-    
-    // Only fetch if:
-    // 1. clientId exists
-    // 2. Haven't fetched before
-    // 3. Don't have data OR client changed
-    if (clientId) {
-      const hasDataForThisClient = ledger.data && ledger.openClientId === currentClientId;
-      
-      if (!hasDataForThisClient && !fetchedRef.current) {
-        dispatch(getClientLedger(currentClientId));
-        fetchedRef.current = true;
-      }
+    const currentClientId = parseInt(clientId, 10);
+
+    // Agar direct URL refresh ho toh clients list load karein
+    useEffect(() => {
+        if (!clients || clients.length === 0) {
+            dispatch(getClients());
+        }
+    }, [dispatch, clients]);
+
+    // Ledger data fetch
+    useEffect(() => {
+        if (clientId) {
+            const hasDataForThisClient = ledger.data && ledger.openClientId === currentClientId;
+            if (!hasDataForThisClient && !fetchedRef.current) {
+                dispatch(getClientLedger(currentClientId));
+                fetchedRef.current = true;
+            }
+        }
+
+        return () => {
+            fetchedRef.current = false;
+        };
+    }, [clientId, dispatch, ledger.data, ledger.openClientId, currentClientId]);
+
+    // Client name resolve karein (Loading... par atka nahi rahega)
+    const client = (clients || []).find((c) => c.id === currentClientId);
+    const responseData = ledger?.data?.data || ledger?.data;
+    const clientName = client?.company_name || responseData?.client || "Client";
+
+    const handleClose = () => {
+        navigate("/clients");
+    };
+
+    // Loading state
+    if (ledger.isLoading && !ledger.data) {
+        return (
+            <Container maxWidth="xl" sx={{ py: 6 }}>
+                <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "60vh", gap: 2 }}>
+                    <CircularProgress size={48} />
+                    <Typography variant="body1" color="text.secondary">
+                        Loading financial ledger for {clientName}...
+                    </Typography>
+                </Box>
+            </Container>
+        );
     }
 
-    // Reset ref when component unmounts
-    return () => {
-      fetchedRef.current = false;
-    };
-  }, [clientId, dispatch, ledger.data, ledger.openClientId]);
+    // Error state
+    if (ledger.isError) {
+        return (
+            <Container maxWidth="xl" sx={{ py: 4 }}>
+                <Alert
+                    severity="error"
+                    action={
+                        <Button
+                            color="inherit"
+                            size="small"
+                            onClick={() => {
+                                fetchedRef.current = false;
+                                dispatch(getClientLedger(currentClientId));
+                            }}
+                        >
+                            Retry
+                        </Button>
+                    }
+                >
+                    {ledger.message || "Failed to load ledger data"}
+                </Alert>
+                <Button
+                    startIcon={<ArrowBackIcon />}
+                    onClick={() => navigate("/clients")}
+                    sx={{ mt: 2 }}
+                    variant="outlined"
+                >
+                    Back to Clients
+                </Button>
+            </Container>
+        );
+    }
 
-  // Find client name
-  const client = clients.find(c => c.id === parseInt(clientId));
-  const clientName = client?.company_name || 'Loading...';
-
-  const handleClose = () => {
-    navigate('/clients');
-  };
-
-  // Loading state
-  if (ledger.isLoading && !ledger.data) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-          <CircularProgress />
+        <Box sx={{ position: "relative", minHeight: "100vh", bgcolor: "background.default" }}>
+            {/* Background Navigation Header */}
+            <Box sx={{ p: 2.5, borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
+                        <Link
+                            underline="hover"
+                            color="inherit"
+                            onClick={() => navigate("/clients")}
+                            sx={{ display: "flex", alignItems: "center", cursor: "pointer", gap: 0.5 }}
+                        >
+                            <BusinessIcon fontSize="inherit" />
+                            Clients
+                        </Link>
+                        <Typography color="text.primary" fontWeight={600}>
+                            {clientName} Ledger
+                        </Typography>
+                    </Breadcrumbs>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={() => navigate("/clients")}
+                        variant="outlined"
+                        size="small"
+                    >
+                        Back to Clients
+                    </Button>
+                </Stack>
+            </Box>
+
+            {/* Ledger Component */}
+            <ClientLedger
+                open={true}
+                onClose={handleClose}
+                clientId={currentClientId}
+                clientName={clientName}
+            />
         </Box>
-      </Container>
     );
-  }
-
-  // Error state
-  if (ledger.isError) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Alert 
-          severity="error"
-          action={
-            <Button 
-              color="inherit" 
-              size="small" 
-              onClick={() => {
-                fetchedRef.current = false; // Reset ref on retry
-                dispatch(getClientLedger(parseInt(clientId)));
-              }}
-            >
-              Retry
-            </Button>
-          }
-        >
-          {ledger.message || 'Failed to load ledger data'}
-        </Alert>
-        <Button 
-          startIcon={<ArrowBackIcon />} 
-          onClick={() => navigate('/clients')}
-          sx={{ mt: 2 }}
-        >
-          Back to Clients
-        </Button>
-      </Container>
-    );
-  }
-
-  return (
-    <Box sx={{ position: 'relative', minHeight: '100vh' }}>
-      {/* Back Button */}
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate('/clients')}
-        sx={{ 
-          position: 'absolute', 
-          top: 20, 
-          left: 20, 
-          zIndex: 10,
-          bgcolor: 'background.paper',
-          boxShadow: 1,
-          '&:hover': { bgcolor: 'action.hover' }
-        }}
-      >
-        Back to Clients
-      </Button>
-
-      {/* Ledger Component - open is always true for page */}
-      <ClientLedger
-        open={true}
-        onClose={handleClose}
-        clientId={parseInt(clientId)}
-        clientName={clientName}
-      />
-    </Box>
-  );
 };
 
 export default ClientLedgerPage;

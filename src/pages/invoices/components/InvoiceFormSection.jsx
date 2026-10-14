@@ -8,7 +8,6 @@ import {
     Divider,
     FormControlLabel,
     Grid,
-    InputAdornment,
     MenuItem,
     Paper,
     Radio,
@@ -20,19 +19,55 @@ import {
 } from "@mui/material";
 import {
     Add as AddIcon,
-    AttachMoney as AttachMoneyIcon,
     Business as BusinessIcon,
     Close as CloseIcon,
     DateRange as DateRangeIcon,
-    Description as DescriptionIcon,
     Edit as EditIcon,
-    Receipt as ReceiptIcon,
     Save as SaveIcon,
 } from "@mui/icons-material";
 import { AnimatePresence, motion } from "framer-motion";
 import SpeechFieldButton from "../../../components/SpeechFieldButton";
 import InvoiceItemCard from "./InvoiceItemCard";
 import { GlassCard, GradientButton } from "./invoiceStyledComponents";
+
+const INDIAN_STATES = [
+    { code: '01', name: 'Jammu & Kashmir' },
+    { code: '02', name: 'Himachal Pradesh' },
+    { code: '03', name: 'Punjab' },
+    { code: '04', name: 'Chandigarh' },
+    { code: '05', name: 'Uttarakhand' },
+    { code: '06', name: 'Haryana' },
+    { code: '07', name: 'Delhi' },
+    { code: '08', name: 'Rajasthan' },
+    { code: '09', name: 'Uttar Pradesh' },
+    { code: '10', name: 'Bihar' },
+    { code: '11', name: 'Sikkim' },
+    { code: '12', name: 'Arunachal Pradesh' },
+    { code: '13', name: 'Nagaland' },
+    { code: '14', name: 'Manipur' },
+    { code: '15', name: 'Mizoram' },
+    { code: '16', name: 'Tripura' },
+    { code: '17', name: 'Meghalaya' },
+    { code: '18', name: 'Assam' },
+    { code: '19', name: 'West Bengal' },
+    { code: '20', name: 'Jharkhand' },
+    { code: '21', name: 'Odisha' },
+    { code: '22', name: 'Chhattisgarh' },
+    { code: '23', name: 'Madhya Pradesh' },
+    { code: '24', name: 'Gujarat' },
+    { code: '26', name: 'Dadra & Nagar Haveli and Daman & Diu' },
+    { code: '27', name: 'Maharashtra' },
+    { code: '28', name: 'Andhra Pradesh' },
+    { code: '29', name: 'Karnataka' },
+    { code: '30', name: 'Goa' },
+    { code: '31', name: 'Lakshadweep' },
+    { code: '32', name: 'Kerala' },
+    { code: '33', name: 'Tamil Nadu' },
+    { code: '34', name: 'Puducherry' },
+    { code: '36', name: 'Telangana' },
+    { code: '37', name: 'Andhra Pradesh' },
+    { code: '38', name: 'Ladakh' },
+];
 
 const InvoiceFormSection = ({
     appendSpeech,
@@ -57,7 +92,10 @@ const InvoiceFormSection = ({
     setGstType,
     showForm,
     totals,
-}) => (
+}) => {
+    const selectedCompany = companies?.find((c) => String(c.id) === String(formData.company_id));
+
+    return (
         <AnimatePresence>
             {showForm && (
                 <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}
@@ -83,171 +121,266 @@ const InvoiceFormSection = ({
                             <Divider className="invoice-page__form-divider" />
 
                             <form onSubmit={handleSubmit}>
-                                <Grid container spacing={4}>
+                                <Grid container spacing={3}>
 
-                                    {/* Step 1: Company & Client */}
-                                    <Grid item xs={12}>
-                                        <Typography variant="h6" className="invoice-page__section-title">
-                                            <BusinessIcon className="invoice-page__section-icon" />
-                                            1. Company & Client Details
-                                        </Typography>
-                                    </Grid>
-
+                                    {/* Company & Client Details */}
                                     <Grid item xs={12} md={6}>
+                                        <Typography variant="subtitle2" className="invoice-page__field-label">
+                                            Select Company *
+                                        </Typography>
                                         <Select name="company_id" fullWidth required value={formData.company_id}
                                             onChange={handleChange} displayEmpty
                                             className="invoice-page__select-control">
                                             <MenuItem value="" disabled>🏢 Select Your Company *</MenuItem>
                                             {companies.map((company) => (
                                                 <MenuItem key={company.id} value={company.id}>
-                                                    <Stack>
-                                                        <Typography variant="body1">{company.company_name}</Typography>
-                                                        <Typography variant="caption" color="textSecondary">GST: {company.gstin}</Typography>
-                                                    </Stack>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {company.company_name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {company.city ? `${company.city}, ` : ''}{company.state || 'N/A'} | GST: {company.gstin || 'N/A'}
+                                                        </Typography>
+                                                    </Box>
                                                 </MenuItem>
                                             ))}
                                         </Select>
-                                        {editMode && (
-                                            <Typography variant="caption" color="info" className="invoice-page__helper-text">
-                                                Selected Company ID: {formData.company_id || "None"} | Companies Loaded: {companies.length}
+                                        {selectedCompany && (
+                                            <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600, display: 'block', mt: 0.5 }}>
+                                                📍 Supplier Origin: {selectedCompany.city ? `${selectedCompany.city}, ` : ''}{selectedCompany.state || 'N/A'}
                                             </Typography>
                                         )}
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
+                                        <Typography variant="subtitle2" className="invoice-page__field-label">
+                                            Select Client *
+                                        </Typography>
                                         <Select name="client_id" fullWidth required value={formData.client_id}
                                             onChange={handleChange} displayEmpty
                                             className="invoice-page__select-control">
                                             <MenuItem value="" disabled>👤 Select Client *</MenuItem>
                                             {clients.map((client) => (
                                                 <MenuItem key={client.id} value={client.id}>
-                                                    <Stack>
-                                                        <Typography variant="body1">{client.company_name}</Typography>
-                                                        <Typography variant="caption" color="textSecondary">GST: {client.gstin}</Typography>
-                                                    </Stack>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {client.company_name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            GST: {client.gstin || 'N/A'}
+                                                        </Typography>
+                                                    </Box>
                                                 </MenuItem>
                                             ))}
                                         </Select>
                                     </Grid>
 
+                                    {/* Dates Row (50% - 50%) */}
                                     <Grid item xs={12} md={6}>
-                                        <TextField label="Invoice Number" name="invoice_no" fullWidth required
-                                            value={formData.invoice_no} onChange={handleChange}
+                                        <Typography variant="subtitle2" className="invoice-page__field-label">
+                                            Invoice Date *
+                                        </Typography>
+                                        <TextField type="date" name="invoice_date" fullWidth required
+                                            value={formData.invoice_date} onChange={handleChange}
                                             InputProps={{
-                                                startAdornment: <InputAdornment position="start"><ReceiptIcon color="action" /></InputAdornment>,
-                                                endAdornment: <InputAdornment position="end"><SpeechFieldButton onTranscript={(text) => setFormData((prev) => ({ ...prev, invoice_no: appendSpeech(prev.invoice_no, text) }))} /></InputAdornment>,
+                                                startAdornment: <DateRangeIcon color="action" sx={{ mr: 1 }} />,
                                             }}
-                                            className="invoice-page__field-rounded" />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField label="Invoice Date" type="date" name="invoice_date" fullWidth required
-                                            InputLabelProps={{ shrink: true }} value={formData.invoice_date} onChange={handleChange}
-                                            InputProps={{ startAdornment: <InputAdornment position="start"><DateRangeIcon color="action" /></InputAdornment> }}
-                                            className="invoice-page__field-rounded" />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField label="Due Date" type="date" name="due_date" fullWidth required
-                                            InputLabelProps={{ shrink: true }} value={formData.due_date} onChange={handleChange}
-                                            InputProps={{ startAdornment: <InputAdornment position="start"><DateRangeIcon color="action" /></InputAdornment> }}
-                                            className="invoice-page__field-rounded" />
+                                            className="invoice-page__text-field"
+                                        />
                                     </Grid>
 
-                                    {/* GST Type */}
-                                    <Grid item xs={12}>
-                                        <Divider className="invoice-page__section-divider"><Chip label="GST DETAILS" className="invoice-page__section-chip" /></Divider>
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="subtitle2" className="invoice-page__field-label">
+                                            Due Date *
+                                        </Typography>
+                                        <TextField type="date" name="due_date" fullWidth required
+                                            value={formData.due_date} onChange={handleChange}
+                                            InputProps={{
+                                                startAdornment: <DateRangeIcon color="action" sx={{ mr: 1 }} />,
+                                            }}
+                                            className="invoice-page__text-field"
+                                        />
                                     </Grid>
+
+                                    {/* GST Type Selector */}
+                                    <Grid item xs={12}>
+                                        <Divider className="invoice-page__divider">
+                                            <Chip label="GST DETAILS" size="small" className="invoice-page__divider-chip" />
+                                        </Divider>
+                                    </Grid>
+
                                     <Grid item xs={12}>
                                         <RadioGroup row value={gstType} onChange={(e) => setGstType(e.target.value)}>
-                                            <FormControlLabel value="intra" control={<Radio />}
-                                                label={<Stack direction="row" alignItems="center" spacing={1}><span>🏭 Intra-State (CGST + SGST)</span><Chip size="small" label="Local" color="primary" variant="outlined" /></Stack>} />
-                                            <FormControlLabel value="inter" control={<Radio />}
-                                                label={<Stack direction="row" alignItems="center" spacing={1}><span>🚚 Inter-State (IGST)</span><Chip size="small" label="National" color="secondary" variant="outlined" /></Stack>} />
+                                            <FormControlLabel value="intra" control={<Radio color="primary" />}
+                                                sx={{
+                                                    border: '1.5px solid',
+                                                    borderColor: gstType === 'intra' ? '#1976d2' : '#e2e8f0',
+                                                    bgcolor: gstType === 'intra' ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                                                    borderRadius: '8px',
+                                                    px: 2,
+                                                    py: 0.5,
+                                                    m: 0,
+                                                    mr: 2,
+                                                    transition: 'all 0.2s',
+                                                }}
+                                                label={<Stack direction="row" alignItems="center" spacing={1}>
+                                                    <Typography variant="body2" fontWeight={gstType === 'intra' ? 700 : 500} color={gstType === 'intra' ? 'primary.main' : 'text.primary'}>
+                                                        🏭 Intra-State (CGST + SGST)
+                                                    </Typography>
+                                                    <Chip size="small" label={gstType === 'intra' ? "✓ Local (Active)" : "Local"} color={gstType === 'intra' ? "primary" : "default"} variant="outlined" sx={{ fontWeight: 700, fontSize: '10px' }} />
+                                                </Stack>} />
+                                            <FormControlLabel value="inter" control={<Radio color="secondary" />}
+                                                sx={{
+                                                    border: '1.5px solid',
+                                                    borderColor: gstType === 'inter' ? '#9c27b0' : '#e2e8f0',
+                                                    bgcolor: gstType === 'inter' ? 'rgba(156, 39, 176, 0.08)' : 'transparent',
+                                                    borderRadius: '8px',
+                                                    px: 2,
+                                                    py: 0.5,
+                                                    m: 0,
+                                                    transition: 'all 0.2s',
+                                                }}
+                                                label={<Stack direction="row" alignItems="center" spacing={1}>
+                                                    <Typography variant="body2" fontWeight={gstType === 'inter' ? 700 : 500} color={gstType === 'inter' ? 'secondary.main' : 'text.primary'}>
+                                                        🚚 Inter-State (IGST)
+                                                    </Typography>
+                                                    <Chip size="small" label={gstType === 'inter' ? "✓ National (Active)" : "National"} color={gstType === 'inter' ? "secondary" : "default"} variant="outlined" sx={{ fontWeight: 700, fontSize: '10px' }} />
+                                                </Stack>} />
                                         </RadioGroup>
                                     </Grid>
 
-                                    {/* GST Details Box */}
-                                    <Box className="invoice-page__gst-box">
-                                        <Stack direction="row" alignItems="center" spacing={1.5} className="invoice-page__gst-header">
-                                            <Avatar className="invoice-page__gst-avatar"><ReceiptIcon className="invoice-page__gst-avatar-icon" /></Avatar>
-                                            <Typography variant="subtitle1" fontWeight={700}>GST Details</Typography>
-                                            <Chip label="Required for GSTR-1" size="small" color="primary" variant="outlined" className="invoice-page__gst-chip" />
-                                        </Stack>
-                                        <Grid container spacing={3}>
-                                            <Grid item xs={12} sm={4}>
-                                                <Typography variant="caption" fontWeight={700} color="text.secondary" display="block" mb={1} className="invoice-page__gst-label">Invoice Type *</Typography>
-                                                <Select fullWidth size="medium" value={formData.invoice_type}
-                                                    onChange={(e) => setFormData((prev) => ({ ...prev, invoice_type: e.target.value }))}
-                                                    className="invoice-page__select-control"
-                                                    renderValue={(val) => {
-                                                        const map = { b2b: { label: 'B2B', sub: 'Client ke paas GSTIN hai', color: '#1976d2' }, b2cs: { label: 'B2CS', sub: 'No GSTIN, amount < 2.5L', color: '#2e7d32' }, b2cl: { label: 'B2CL', sub: 'No GSTIN, amount ≥ 2.5L', color: '#ed6c02' }, export: { label: 'Export', sub: 'Foreign client ko supply', color: '#9c27b0' } };
-                                                        const item = map[val];
-                                                        return <Stack direction="row" spacing={1.5} alignItems="center"><Chip label={item.label} size="small" sx={{ bgcolor: item.color, color: '#fff', fontWeight: 700, minWidth: 52 }} /><Typography variant="body2" color="text.secondary">{item.sub}</Typography></Stack>;
-                                                    }}>
-                                                    {[{ value: 'b2b', label: 'B2B', sub: 'Client ke paas GSTIN hai', color: '#1976d2' }, { value: 'b2cs', label: 'B2CS', sub: 'No GSTIN, amount < 2.5L', color: '#2e7d32' }, { value: 'b2cl', label: 'B2CL', sub: 'No GSTIN, amount ≥ 2.5L', color: '#ed6c02' }, { value: 'export', label: 'Export', sub: 'Foreign client ko supply', color: '#9c27b0' }].map((opt) => (
-                                                        <MenuItem key={opt.value} value={opt.value} sx={{ py: 1.5 }}>
-                                                            <Stack direction="row" spacing={1.5} alignItems="center"><Chip label={opt.label} size="small" sx={{ bgcolor: opt.color, color: '#fff', fontWeight: 700, minWidth: 52 }} /><Typography variant="body2">{opt.sub}</Typography></Stack>
+                                    {/* Place of Supply & Tax Details */}
+                                    <Grid item xs={12}>
+                                        <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
+                                            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                                                <Avatar sx={{ width: 28, height: 28, bgcolor: 'primary.main', fontSize: '14px' }}>
+                                                    <BusinessIcon fontSize="inherit" />
+                                                </Avatar>
+                                                <Typography variant="subtitle2" fontWeight={700}>
+                                                    GST Details
+                                                </Typography>
+                                                <Chip label="Required for GSTR-1" size="small" color="primary" variant="outlined" sx={{ fontSize: '11px', height: 20 }} />
+                                            </Stack>
+
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12} sm={4}>
+                                                    <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.5}>
+                                                        INVOICE TYPE *
+                                                    </Typography>
+                                                    <Select fullWidth size="medium" name="invoice_type" value={formData.invoice_type || 'b2b'}
+                                                        onChange={handleChange} className="invoice-page__select-control">
+                                                        <MenuItem value="b2b">
+                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                                <Chip label="B2B" size="small" color="primary" sx={{ height: 20, fontSize: '10px', fontWeight: 700 }} />
+                                                                <Typography variant="body2">Client ke paas GSTIN hai</Typography>
+                                                            </Stack>
                                                         </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </Grid>
-                                            <Grid item xs={12} sm={4}>
-                                                <Typography variant="caption" fontWeight={700} color="text.secondary" display="block" mb={1} className="invoice-page__gst-label">Place of Supply</Typography>
-                                                <Select fullWidth size="medium" value={formData.place_of_supply}
-                                                    onChange={(e) => setFormData((prev) => ({ ...prev, place_of_supply: e.target.value }))}
-                                                    displayEmpty className="invoice-page__select-control"
-                                                    renderValue={(val) => val ? <Typography variant="body2">{val}</Typography> : <Typography variant="body2" color="text.disabled">Select State</Typography>}>
-                                                    <MenuItem value=""><em>Select State</em></MenuItem>
-                                                    {['Jammu & Kashmir','Himachal Pradesh','Punjab','Chandigarh','Uttarakhand','Haryana','Delhi','Rajasthan','Uttar Pradesh','Bihar','Assam','West Bengal','Jharkhand','Odisha','Chhattisgarh','Madhya Pradesh','Gujarat','Maharashtra','Karnataka','Goa','Kerala','Tamil Nadu','Telangana','Andhra Pradesh','Ladakh'].map((state) => (
-                                                        <MenuItem key={state} value={state} sx={{ py: 1.2 }}><Typography variant="body2">{state}</Typography></MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </Grid>
-                                            <Grid item xs={12} sm={4}>
-                                                <Typography variant="caption" fontWeight={700} color="text.secondary" display="block" mb={1} className="invoice-page__gst-label">Reverse Charge (RCM)</Typography>
-                                                <Paper elevation={0} onClick={() => setFormData((prev) => ({ ...prev, is_reverse_charge: !prev.is_reverse_charge }))}
-                                                    sx={{ height: 56, px: 2, borderRadius: '12px', border: '1.5px solid', borderColor: formData.is_reverse_charge ? '#ed6c02' : 'rgba(102,126,234,0.4)', bgcolor: formData.is_reverse_charge ? 'rgba(237,108,2,0.06)' : 'background.paper', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.2s ease' }}>
-                                                    <Typography variant="body2" fontWeight={600} color={formData.is_reverse_charge ? '#ed6c02' : 'text.secondary'}>
-                                                        {formData.is_reverse_charge ? '⚠️ RCM Applicable' : 'Not Applicable'}
+                                                        <MenuItem value="b2cl">
+                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                                <Chip label="B2CL" size="small" color="warning" sx={{ height: 20, fontSize: '10px', fontWeight: 700 }} />
+                                                                <Typography variant="body2">B2C Large (&gt; ₹2.5 Lakh Inter-State)</Typography>
+                                                            </Stack>
+                                                        </MenuItem>
+                                                        <MenuItem value="b2cs">
+                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                                <Chip label="B2CS" size="small" color="default" sx={{ height: 20, fontSize: '10px', fontWeight: 700 }} />
+                                                                <Typography variant="body2">B2C Small (Retail / Consumer)</Typography>
+                                                            </Stack>
+                                                        </MenuItem>
+                                                        <MenuItem value="export">
+                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                                <Chip label="EXPORT" size="small" color="secondary" sx={{ height: 20, fontSize: '10px', fontWeight: 700 }} />
+                                                                <Typography variant="body2">Export with / without LUT</Typography>
+                                                            </Stack>
+                                                        </MenuItem>
+                                                    </Select>
+                                                </Grid>
+
+                                                <Grid item xs={12} sm={4}>
+                                                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+                                                        <Typography variant="caption" color="textSecondary" fontWeight={600}>
+                                                            PLACE OF SUPPLY *
+                                                        </Typography>
+                                                        {formData.place_of_supply && (
+                                                            <Chip
+                                                                size="small"
+                                                                label={gstType === 'intra' ? "🏠 Intra (CGST+SGST)" : "🚚 Inter (IGST)"}
+                                                                color={gstType === 'intra' ? "primary" : "secondary"}
+                                                                sx={{ height: 18, fontSize: '10px', fontWeight: 700 }}
+                                                            />
+                                                        )}
+                                                    </Stack>
+                                                    <Select fullWidth size="medium" name="place_of_supply" value={formData.place_of_supply}
+                                                        onChange={handleChange}
+                                                        displayEmpty className="invoice-page__select-control"
+                                                        renderValue={(val) => val ? <Typography variant="body2">{val}</Typography> : <Typography variant="body2" color="text.disabled">Select State</Typography>}>
+                                                        <MenuItem value=""><em>Select State</em></MenuItem>
+                                                        {INDIAN_STATES.map((s) => (
+                                                            <MenuItem key={s.code} value={s.name} sx={{ py: 1.2 }}>
+                                                                <Typography variant="body2">{s.name} ({s.code})</Typography>
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </Grid>
+
+                                                <Grid item xs={12} sm={4}>
+                                                    <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.5}>
+                                                        REVERSE CHARGE (RCM)
                                                     </Typography>
-                                                    <Chip label={formData.is_reverse_charge ? 'YES' : 'NO'} size="small" sx={{ fontWeight: 700, bgcolor: formData.is_reverse_charge ? '#ed6c02' : 'grey.200', color: formData.is_reverse_charge ? '#fff' : 'text.secondary', minWidth: 44 }} />
-                                                </Paper>
+                                                    <Select fullWidth size="medium" name="is_reverse_charge" value={formData.is_reverse_charge ? "yes" : "no"}
+                                                        onChange={(e) => setFormData(p => ({ ...p, is_reverse_charge: e.target.value === "yes" }))}
+                                                        className="invoice-page__select-control">
+                                                        <MenuItem value="no">
+                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                                <Typography variant="body2">Not Applicable</Typography>
+                                                                <Chip label="NO" size="small" sx={{ height: 18, fontSize: '9px' }} />
+                                                            </Stack>
+                                                        </MenuItem>
+                                                        <MenuItem value="yes">
+                                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                                <Typography variant="body2">Yes — Buyer pays tax (RCM)</Typography>
+                                                                <Chip label="RCM" size="small" color="error" sx={{ height: 18, fontSize: '9px', fontWeight: 700 }} />
+                                                            </Stack>
+                                                        </MenuItem>
+                                                    </Select>
+                                                </Grid>
                                             </Grid>
-                                            <Grid item xs={12}>
-                                                <Paper elevation={0} sx={{ px: 2.5, py: 1.5, borderRadius: '10px', borderLeft: '4px solid', borderColor: { b2b: '#1976d2', b2cs: '#2e7d32', b2cl: '#ed6c02', export: '#9c27b0' }[formData.invoice_type], bgcolor: { b2b: 'rgba(25,118,210,0.05)', b2cs: 'rgba(46,125,50,0.05)', b2cl: 'rgba(237,108,2,0.05)', export: 'rgba(156,39,176,0.05)' }[formData.invoice_type] }}>
-                                                    <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                                                        {formData.invoice_type === 'b2b'    && '✅ B2B: The client GSTIN will be reported in GSTR-1. CGST+SGST applies to intra-state supplies; IGST applies to inter-state supplies.'}
-                                                        {formData.invoice_type === 'b2cs'   && '🟢 B2CS: Consumer invoice below ₹2.5 lakh for an intra-state supply. A state-wise summary will appear in GSTR-1.'}
-                                                        {formData.invoice_type === 'b2cl'   && '🟡 B2CL: Consumer invoice of ₹2.5 lakh or more for an inter-state supply. Invoice-level details will be reported separately in GSTR-1.'}
-                                                        {formData.invoice_type === 'export' && '🟣 Export: Supply to a foreign client. Zero-rated or IGST with a refund claim. It will appear in the Export section of GSTR-1.'}
-                                                    </Typography>
-                                                </Paper>
-                                            </Grid>
-                                        </Grid>
-                                    </Box>
 
-                                    {/* Step 2: Items */}
-                                    <Grid item xs={12}>
-                                        <Divider className="invoice-page__section-divider"><Chip label="INVOICE ITEMS" className="invoice-page__section-chip" /></Divider>
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Typography variant="h6" className="invoice-page__section-title">
-                                            <DescriptionIcon className="invoice-page__section-icon" />
-                                            2. Add Items / Services
-                                        </Typography>
+                                            <Box sx={{ mt: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    ℹ️ {formData.invoice_type === 'b2b'
+                                                        ? 'B2B: The client GSTIN will be reported in GSTR-1. CGST+SGST applies to intra-state supplies; IGST applies to inter-state supplies.'
+                                                        : formData.invoice_type === 'b2cl'
+                                                            ? 'B2CL: Invoice-level reporting required in GSTR-1 Table 5.'
+                                                            : formData.invoice_type === 'b2cs'
+                                                                ? 'B2CS: Consolidated state-wise reporting in GSTR-1 Table 7.'
+                                                                : 'Export: Zero-rated supply reported in GSTR-1 Table 6A.'}
+                                                </Typography>
+                                            </Box>
+                                        </Card>
                                     </Grid>
 
-                                    {formData.items.map((item, index) => {
-                                        const linkedProduct = products?.find(p => p.id === item.product_id) || null;
-                                        const stockWarn = linkedProduct && (
-                                            linkedProduct.is_out_of_stock
-                                                ? { msg: `⚠️ Out of Stock! (${linkedProduct.name})`, color: 'error' }
-                                                : Number(item.qty) > Number(linkedProduct.current_stock)
-                                                    ? { msg: `⚠️ Available stock: ${linkedProduct.current_stock} ${linkedProduct.unit}`, color: 'warning' }
-                                                    : null
-                                        );
+                                    {/* Items Section */}
+                                    <Grid item xs={12}>
+                                        <Divider className="invoice-page__divider">
+                                            <Chip label="INVOICE ITEMS" size="small" className="invoice-page__divider-chip" />
+                                        </Divider>
+                                    </Grid>
 
-                                        return (
+                                    <Grid item xs={12}>
+                                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                                            <Typography variant="h6" className="invoice-page__section-subtitle">
+                                                2. Add Items / Services
+                                            </Typography>
+                                            <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddItem}
+                                                className="invoice-page__add-item-button">
+                                                Add Item
+                                            </Button>
+                                        </Stack>
+
+                                        {formData.items.map((item, index) => (
                                             <InvoiceItemCard
+                                                key={index}
                                                 appendSpeech={appendSpeech}
                                                 formatCurrency={formatCurrency}
                                                 handleHsnSelect={handleHsnSelect}
@@ -257,93 +390,100 @@ const InvoiceFormSection = ({
                                                 hsnCodes={hsnCodes}
                                                 index={index}
                                                 item={item}
-                                                itemCount={formData.items.length}
-                                                key={index}
-                                                linkedProduct={linkedProduct}
+                                                itemsCount={formData.items.length}
                                                 products={products}
-                                                stockWarn={stockWarn}
+                                                setFormData={setFormData}
                                             />
-                                        );
-                                    })}
-
-                                    {/* Add Item Button */}
-                                    <Grid item xs={12}>
-                                        <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddItem} fullWidth
-                                            className="invoice-page__add-item">
-                                            Add Another Item
-                                        </Button>
+                                        ))}
                                     </Grid>
 
-                                    {/* Step 3: Summary & Notes */}
-                                    <Grid item xs={12}>
-                                        <Divider className="invoice-page__section-divider"><Chip label="SUMMARY & NOTES" className="invoice-page__section-chip" /></Divider>
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Typography variant="h6" className="invoice-page__section-title">
-                                            <AttachMoneyIcon className="invoice-page__section-icon" />
-                                            3. Invoice Summary
-                                        </Typography>
-                                    </Grid>
-
-                                    {/* Totals */}
-                                    <Grid item xs={12}>
-                                        <Card className="invoice-page__totals-card">
-                                            <Grid container spacing={3} alignItems="center">
-                                                <Grid item xs={12} md={3}>
-                                                    <Typography variant="body2" className="invoice-page__totals-label">Subtotal</Typography>
-                                                    <Typography variant="h5" sx={{ fontWeight: 700 }}>{formatCurrency(totals.subTotal)}</Typography>
-                                                </Grid>
-                                                {gstType === 'intra' ? (
-                                                    <>
-                                                        <Grid item xs={6} md={2}>
-                                                            <Typography variant="body2" className="invoice-page__totals-label">CGST</Typography>
-                                                            <Typography variant="h6" sx={{ fontWeight: 600 }}>{formatCurrency(totals.cgst)}</Typography>
-                                                        </Grid>
-                                                        <Grid item xs={6} md={2}>
-                                                            <Typography variant="body2" className="invoice-page__totals-label">SGST</Typography>
-                                                            <Typography variant="h6" sx={{ fontWeight: 600 }}>{formatCurrency(totals.sgst)}</Typography>
-                                                        </Grid>
-                                                    </>
-                                                ) : (
-                                                    <Grid item xs={12} md={4}>
-                                                        <Typography variant="body2" className="invoice-page__totals-label">IGST</Typography>
-                                                        <Typography variant="h6" sx={{ fontWeight: 600 }}>{formatCurrency(totals.igst)}</Typography>
-                                                    </Grid>
-                                                )}
-                                                <Grid item xs={12} md={3}>
-                                                    <Typography variant="body2" className="invoice-page__totals-label">Grand Total</Typography>
-                                                    <Typography variant="h4" sx={{ fontWeight: 800 }}>{formatCurrency(totals.grandTotal)}</Typography>
-                                                </Grid>
-                                            </Grid>
-                                        </Card>
-                                    </Grid>
-
-                                    {/* Notes */}
-                                    <Grid item xs={12}>
-                                        <TextField label="Notes / Terms & Conditions" name="notes" fullWidth multiline rows={4}
-                                            value={formData.notes} onChange={handleChange}
-                                            InputProps={{
-                                                endAdornment: <InputAdornment position="end"><SpeechFieldButton onTranscript={(text) => setFormData((prev) => ({ ...prev, notes: appendSpeech(prev.notes, text) }))} /></InputAdornment>,
-                                            }}
-                                            placeholder="Payment terms, delivery information, additional notes..."
-                                            className="invoice-page__notes" />
-                                    </Grid>
-
-                                    {/* Action Buttons */}
-                                    <Grid item xs={12}>
-                                        <Divider className="invoice-page__actions-divider" />
-                                        <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                            <Button variant="outlined" color="error" size="large"
-                                                onClick={handleCancel} startIcon={<CloseIcon />}
-                                                className="invoice-page__cancel-action">
-                                                Cancel
-                                            </Button>
-                                            <GradientButton type="submit" size="large" startIcon={<SaveIcon />} className="invoice-page__submit-action">
-                                                {editMode ? "Update Invoice" : "Save Invoice"}
-                                            </GradientButton>
+                                    {/* Terms & Summary */}
+                                    <Grid item xs={12} md={7}>
+                                        <Stack spacing={2}>
+                                            <Box>
+                                                <Typography variant="subtitle2" className="invoice-page__field-label">
+                                                    Terms & Conditions
+                                                </Typography>
+                                                <TextField name="terms_conditions" fullWidth multiline rows={3}
+                                                    value={formData.terms_conditions} onChange={handleChange}
+                                                    placeholder="1. Payment due within 15 days..."
+                                                    className="invoice-page__text-field"
+                                                />
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="subtitle2" className="invoice-page__field-label">
+                                                    Notes
+                                                </Typography>
+                                                <TextField name="notes" fullWidth multiline rows={2}
+                                                    value={formData.notes} onChange={handleChange}
+                                                    placeholder="Additional notes for client..."
+                                                    InputProps={{
+                                                        endAdornment: (
+                                                            <SpeechFieldButton onTranscript={(t) =>
+                                                                setFormData((p) => ({ ...p, notes: appendSpeech(p.notes, t) }))}
+                                                            />
+                                                        ),
+                                                    }}
+                                                    className="invoice-page__text-field"
+                                                />
+                                            </Box>
                                         </Stack>
                                     </Grid>
 
+                                    <Grid item xs={12} md={5}>
+                                        <Paper className="invoice-page__totals-card">
+                                            <Typography variant="h6" className="invoice-page__totals-title">
+                                                Invoice Summary
+                                            </Typography>
+                                            <Stack spacing={2} className="invoice-page__totals-stack">
+                                                <Stack direction="row" justifyContent="space-between">
+                                                    <Typography color="textSecondary">Subtotal:</Typography>
+                                                    <Typography fontWeight={600}>{formatCurrency(totals.subTotal)}</Typography>
+                                                </Stack>
+
+                                                {gstType === 'intra' ? (
+                                                    <>
+                                                        <Stack direction="row" justifyContent="space-between">
+                                                            <Typography color="textSecondary">CGST:</Typography>
+                                                            <Typography fontWeight={600} color="primary.main">{formatCurrency(totals.cgst)}</Typography>
+                                                        </Stack>
+                                                        <Stack direction="row" justifyContent="space-between">
+                                                            <Typography color="textSecondary">SGST:</Typography>
+                                                            <Typography fontWeight={600} color="primary.main">{formatCurrency(totals.sgst)}</Typography>
+                                                        </Stack>
+                                                    </>
+                                                ) : (
+                                                    <Stack direction="row" justifyContent="space-between">
+                                                        <Typography color="textSecondary">IGST (Inter-State):</Typography>
+                                                        <Typography fontWeight={600} color="secondary.main">{formatCurrency(totals.igst)}</Typography>
+                                                    </Stack>
+                                                )}
+
+                                                <Divider />
+
+                                                <Stack direction="row" justifyContent="space-between" className="invoice-page__grand-total-row">
+                                                    <Typography variant="h6" fontWeight={700}>Total Amount:</Typography>
+                                                    <Typography variant="h6" fontWeight={700} color="primary.main">
+                                                        {formatCurrency(totals.grandTotal)}
+                                                    </Typography>
+                                                </Stack>
+                                            </Stack>
+                                        </Paper>
+                                    </Grid>
+
+                                    <Grid item xs={12}>
+                                        <Divider sx={{ my: 2 }} />
+                                        <Stack direction="row" spacing={2} justifyContent="flex-end">
+                                            <Button variant="outlined" startIcon={<CloseIcon />} onClick={handleCancel}
+                                                className="invoice-page__cancel-button">
+                                                Cancel
+                                            </Button>
+                                            <GradientButton type="submit" startIcon={<SaveIcon />}
+                                                className="invoice-page__submit-button">
+                                                {editMode ? "Update Invoice" : "Create Invoice"}
+                                            </GradientButton>
+                                        </Stack>
+                                    </Grid>
                                 </Grid>
                             </form>
                         </CardContent>
@@ -351,6 +491,7 @@ const InvoiceFormSection = ({
                 </motion.div>
             )}
         </AnimatePresence>
-);
+    );
+};
 
 export default InvoiceFormSection;

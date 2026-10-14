@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import usePermission from '../../../hooks/usePermission';
 import {
     createVendorPayment,
     deleteVendorPayment,
     clearVendorPayments,
     reset,
 } from '../state/vendorSlice';
+import { getOrgAccounts } from '../../finance/state/orgFinanceSlice';
 import vendorService from '../services/vendorService';
 import {
     Box, Container, Grid, Card, CardContent, Typography, Paper, Stack,
     TextField, InputAdornment, Avatar, Chip, Button, Dialog, DialogTitle,
     DialogContent, DialogActions, IconButton, Snackbar, Alert, LinearProgress,
-    Divider,
+    Divider, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import {
     Payment as PaymentIcon,
@@ -61,6 +63,7 @@ const generateReference = () =>
 
 const createEmptyPayment = (poId = '') => ({
     purchase_order_id: poId,
+    account_id: '',
     amount: '',
     payment_date: new Date().toISOString().split('T')[0],
     payment_method: 'bank_transfer',
@@ -70,6 +73,8 @@ const createEmptyPayment = (poId = '') => ({
 
 const VendorPayments = () => {
     const dispatch = useDispatch();
+    const { can } = usePermission();
+    const { accounts: orgAccounts = [] } = useSelector((s) => s.orgFinance || {});
 
     const [purchaseOrders, setPurchaseOrders] = useState([]);
     const [payments, setPayments] = useState([]);
@@ -133,6 +138,7 @@ const VendorPayments = () => {
     }, []);
 
     useEffect(() => {
+        dispatch(getOrgAccounts());
         loadPurchaseOrders();
         return () => {
             dispatch(clearVendorPayments());
@@ -172,8 +178,10 @@ const VendorPayments = () => {
 
     const handleOpenPayment = (po) => {
         setSelectedPO(po);
+        const defAcc = orgAccounts.find((a) => a.is_default) || orgAccounts[0];
         setPaymentForm({
             ...createEmptyPayment(po.id),
+            account_id: defAcc ? defAcc.id : '',
             amount: po.balance_amount || '',
         });
         setPaymentDialog(true);
@@ -202,6 +210,7 @@ const VendorPayments = () => {
             setLoading(true);
             await dispatch(createVendorPayment({
                 ...paymentForm,
+                account_id: paymentForm.account_id ? Number(paymentForm.account_id) : undefined,
                 amount,
                 purchase_order_id: selectedPO.id,
             })).unwrap();
@@ -404,7 +413,7 @@ const VendorPayments = () => {
                                                 </Typography>
                                             )}
                                         </Box>
-                                        {Number(selectedPO.balance_amount) > 0 && selectedPO.status !== 'cancelled' && (
+                                        {can('vendor_payments.create') && Number(selectedPO.balance_amount) > 0 && selectedPO.status !== 'cancelled' && (
                                             <GradientButton
                                                 startIcon={<PaymentIcon />}
                                                 onClick={() => handleOpenPayment(selectedPO)}
@@ -453,24 +462,32 @@ const VendorPayments = () => {
                                                                 <Typography variant="body2" fontWeight={700} color="success.main">
                                                                     {fmt(payment.amount)}
                                                                 </Typography>
-                                                                <Chip label={payment.payment_method_label || payment.payment_method} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+                                                                <Chip 
+                                                                    label={payment.payment_method_label || payment.payment_method} 
+                                                                    size="small" 
+                                                                    variant="outlined" 
+                                                                    sx={{ fontSize: 11 }} 
+                                                                />
                                                             </Stack>
                                                             <Typography variant="caption" color="text.secondary">
                                                                 {payment.payment_date_formatted || payment.payment_date}
                                                                 {payment.reference_no && ` · Ref: ${payment.reference_no}`}
                                                             </Typography>
                                                         </Stack>
-                                                        <IconButton
-                                                            size="small"
-                                                            color="error"
-                                                            onClick={() => {
-                                                                setPaymentToDelete(payment);
-                                                                setDeleteDialog(true);
-                                                            }}
-                                                            sx={{ bgcolor: 'rgba(239,68,68,0.08)' }}
-                                                        >
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
+
+                                                        {can('vendor_payments.delete') && (
+                                                            <IconButton
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => {
+                                                                    setPaymentToDelete(payment);
+                                                                    setDeleteDialog(true);
+                                                                }}
+                                                                sx={{ bgcolor: 'rgba(239,68,68,0.08)' }}
+                                                            >
+                                                                <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                        )}
                                                     </Stack>
                                                 </Paper>
                                             ))}
@@ -483,6 +500,7 @@ const VendorPayments = () => {
                 </Grid>
             </Grid>
 
+            {/* Payment Dialog */}
             <Dialog
                 open={paymentDialog}
                 onClose={() => setPaymentDialog(false)}
@@ -543,6 +561,26 @@ const VendorPayments = () => {
                                 onChange={(e) => setPaymentForm((prev) => ({ ...prev, payment_method: e.target.value }))}
                                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
                             />
+
+                            {/* Pay From Account (Cashbook Auto-sync) */}
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Pay From Account (Auto-sync Cashbook)</InputLabel>
+                                <Select
+                                    value={paymentForm.account_id || ''}
+                                    label="Pay From Account (Auto-sync Cashbook)"
+                                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, account_id: e.target.value }))}
+                                    sx={{ borderRadius: '10px' }}
+                                >
+                                    <MenuItem value=""><em>-- Don't link to Org Account --</em></MenuItem>
+                                    {orgAccounts.map((a) => (
+                                        <MenuItem key={a.id} value={a.id}>
+                                            {a.account_type === 'cash' ? '💵 ' : '🏦 '}
+                                            {a.account_name || a.name} ({fmt(a.current_balance)})
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            
                             <TextField
                                 fullWidth
                                 size="small"
@@ -574,6 +612,7 @@ const VendorPayments = () => {
                 </DialogActions>
             </Dialog>
 
+            {/* Delete Dialog */}
             <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)} PaperProps={{ sx: { borderRadius: '18px' } }}>
                 <DialogTitle>Delete payment?</DialogTitle>
                 <DialogContent>
@@ -593,6 +632,7 @@ const VendorPayments = () => {
                 </DialogActions>
             </Dialog>
 
+            {/* Snackbar */}
             <Snackbar
                 open={snackbar.open}
                 autoHideDuration={4000}

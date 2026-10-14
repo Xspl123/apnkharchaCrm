@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { getErrorMessage } from "../../utils/getErrorMessage";
 import axiosClient from '../../api/axiosClient';
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 
 const initialState = {
   payments: [],
@@ -81,6 +82,20 @@ export const deletePayment = createAsyncThunk(
     }
   }
 );
+
+
+  export const refundPayment = createAsyncThunk(
+    'invoicePayments/refund',
+      async ({ id, data = {} }, thunkAPI) => {
+        try {
+          const response = await axiosClient.post(`/invoice-payments/${id}/refund`, data);
+          return response.data;
+        } catch (error) {
+          const message = getErrorMessage(error);
+          return thunkAPI.rejectWithValue(message);
+        }
+      }
+  );
 
 export const invoicePaymentSlice = createSlice({
   name: 'invoicePayments',
@@ -179,6 +194,8 @@ export const invoicePaymentSlice = createSlice({
         state.message = action.payload;
       });
   },
+
+
 });
 
 export const { reset } = invoicePaymentSlice.actions;

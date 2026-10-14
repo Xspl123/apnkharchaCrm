@@ -2,7 +2,7 @@
 import { getErrorMessage } from "../utils/getErrorMessage";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom"; // Add this
+import { useNavigate } from "react-router-dom";
 
 import {
     getClients,
@@ -43,13 +43,13 @@ import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
 import EmailIcon from "@mui/icons-material/Email";
 import ReceiptIcon from "@mui/icons-material/Receipt";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance"; // Add this
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import { ConfirmDialog, DataTable, FormSection, PageHeader, SearchFilterBar } from "../components/common";
 import "./ClientList.css";
 
 const ClientList = () => {
     const dispatch = useDispatch();
-    const navigate = useNavigate(); // Add this
+    const navigate = useNavigate();
     const { clients } = useSelector((state) => state.clients);
     
     const [showForm, setShowForm] = useState(false);
@@ -205,7 +205,6 @@ const ClientList = () => {
         setViewDialog(true);
     };
 
-    // NEW: Handle Ledger View
     const handleViewLedger = (clientId, _clientName) => {
         navigate(`/clients/${clientId}/ledger`);
     };
@@ -250,7 +249,6 @@ const ClientList = () => {
         setPage(0);
     };
 
-    // Format currency
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
@@ -376,7 +374,7 @@ const ClientList = () => {
                                 />
                             </Grid>
 
-                            {/* Opening Balance */}
+                            {/* Opening Balance with Helper Text */}
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     label="Opening Balance"
@@ -385,6 +383,7 @@ const ClientList = () => {
                                     fullWidth
                                     value={formData.opening_balance}
                                     onChange={handleChange}
+                                    helperText="Purana baaki hisaab: +ve = Lena baaki (Dr) | -ve = Advance mila (Cr)"
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">₹</InputAdornment>
@@ -477,14 +476,38 @@ const ClientList = () => {
                         {
                             field: "opening_balance",
                             headerName: "Opening Balance",
-                            render: (value) => (
-                                <Chip
-                                    label={formatCurrency(value)}
-                                    color={parseFloat(value) > 0 ? "success" : "default"}
-                                    size="small"
-                                    className="client-page__balance-chip"
-                                />
-                            ),
+                            render: (value) => {
+                                const num = parseFloat(value || 0);
+                                const isPositive = num > 0;
+                                const isNegative = num < 0;
+                                return (
+                                    <Tooltip
+                                        title={
+                                            isPositive
+                                                ? "Debit: Client se lena baaki hai (Receivable)"
+                                                : isNegative
+                                                ? "Credit: Client ka advance jama hai"
+                                                : "Zero Balance: Day-1 se naya hisaab"
+                                        }
+                                        arrow
+                                    >
+                                        <Chip
+                                            label={
+                                                isPositive
+                                                    ? `${formatCurrency(num)} Dr`
+                                                    : isNegative
+                                                    ? `${formatCurrency(Math.abs(num))} Cr`
+                                                    : "₹0.00"
+                                            }
+                                            color={isPositive ? "warning" : isNegative ? "info" : "default"}
+                                            size="small"
+                                            variant={num === 0 ? "outlined" : "filled"}
+                                            className="client-page__balance-chip"
+                                            sx={{ fontWeight: 600 }}
+                                        />
+                                    </Tooltip>
+                                );
+                            },
                         },
                         {
                             id: "actions",
@@ -492,22 +515,22 @@ const ClientList = () => {
                             align: "center",
                             render: (_, client) => (
                                 <Stack direction="row" spacing={1} justifyContent="center" className="client-page__action-stack">
-                                    <Tooltip title="View Ledger">
+                                    <Tooltip title="View Financial Ledger & Statement" arrow>
                                         <IconButton size="small" color="secondary" onClick={() => handleViewLedger(client.id, client.company_name)}>
                                             <AccountBalanceIcon fontSize="small" />
                                         </IconButton>
                                     </Tooltip>
-                                    <Tooltip title="View Details">
+                                    <Tooltip title="View Details" arrow>
                                         <IconButton size="small" color="info" onClick={() => handleView(client)}>
                                             <VisibilityIcon fontSize="small" />
                                         </IconButton>
                                     </Tooltip>
-                                    <Tooltip title="Edit Client">
+                                    <Tooltip title="Edit Client" arrow>
                                         <IconButton size="small" color="primary" onClick={() => handleEdit(client)}>
                                             <EditIcon fontSize="small" />
                                         </IconButton>
                                     </Tooltip>
-                                    <Tooltip title="Delete Client">
+                                    <Tooltip title="Delete Client" arrow>
                                         <IconButton size="small" color="error" onClick={() => handleDeleteConfirm(client)}>
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
@@ -575,7 +598,14 @@ const ClientList = () => {
                             <Grid item xs={12}>
                                 <Typography variant="body1">
                                     <strong>Opening Balance:</strong>{" "}
-                                    {formatCurrency(clientToView.opening_balance)}
+                                    {formatCurrency(clientToView.opening_balance)}{" "}
+                                    <Typography component="span" variant="caption" color="text.secondary">
+                                        ({parseFloat(clientToView.opening_balance || 0) > 0
+                                            ? "Receivable / Dr (Lena baaki)"
+                                            : parseFloat(clientToView.opening_balance || 0) < 0
+                                            ? "Advance / Cr (Jama)"
+                                            : "Naya client / No dues"})
+                                    </Typography>
                                 </Typography>
                             </Grid>
                             <Grid item xs={12}>

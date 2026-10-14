@@ -1,3 +1,4 @@
+// src/pages/HsnCodeList.jsx
 import { getErrorMessage } from "../utils/getErrorMessage";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -21,8 +22,10 @@ import {
     Card,
     CardContent,
     Grid,
+    Stack,
 } from "@mui/material";
 
+import usePermission from "../hooks/usePermission";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -36,6 +39,8 @@ import {
 
 const HsnCodeList = () => {
     const dispatch = useDispatch();
+    const { can } = usePermission();
+
     const hsnCodeState = useSelector((state) => state.hsnCodes);
     const hsnCodes = hsnCodeState?.hsnCodes || [];
 
@@ -174,13 +179,17 @@ const HsnCodeList = () => {
                 title="HSN Code Master"
                 subtitle="Maintain GST HSN codes and tax rates used in invoices."
                 meta={`${hsnCodes.length} HSN Codes`}
-                actions={[
-                    {
-                        label: showForm ? "Cancel" : "Add HSN Code",
-                        icon: <AddIcon />,
-                        onClick: () => setShowForm(!showForm),
-                    },
-                ]}
+                actions={
+                    can("hsn_codes.create")
+                        ? [
+                              {
+                                  label: showForm ? "Cancel" : "Add HSN Code",
+                                  icon: <AddIcon />,
+                                  onClick: () => setShowForm(!showForm),
+                              },
+                          ]
+                        : []
+                }
             />
 
             {/* Statistics */}
@@ -324,24 +333,33 @@ const HsnCodeList = () => {
                             headerName: "Actions",
                             align: "center",
                             render: (_, hsn) => (
-                                <>
-                                    <IconButton
-                                        size="small"
-                                        color="primary"
-                                        onClick={() => handleEdit(hsn)}
-                                        title="Edit"
-                                    >
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleDeleteConfirm(hsn)}
-                                        title="Delete"
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </>
+                                <Stack direction="row" spacing={0.5} justifyContent="center">
+                                    {can("hsn_codes.edit") && (
+                                        <IconButton
+                                            size="small"
+                                            color="primary"
+                                            onClick={() => handleEdit(hsn)}
+                                            title="Edit"
+                                        >
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                    {can("hsn_codes.delete") && (
+                                        <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={() => handleDeleteConfirm(hsn)}
+                                            title="Delete"
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                    {!can("hsn_codes.edit") && !can("hsn_codes.delete") && (
+                                        <Typography variant="caption" color="text.secondary">
+                                            -
+                                        </Typography>
+                                    )}
+                                </Stack>
                             ),
                         },
                     ]}

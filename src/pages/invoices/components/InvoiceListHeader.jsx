@@ -60,15 +60,17 @@ const InvoiceListHeader = ({
             />
         </motion.div>
 
+        {/* Top KPI Cards with PARTIAL Card */}
         <Grid container spacing={1.5} className="invoice-page__stats">
             {[
-                { label: 'TOTAL',  value: statistics.total,   color: '#667eea', variant: 'h5' },
-                { label: 'PAID',   value: statistics.paid,    color: '#10b981', variant: 'h5' },
-                { label: 'RETURN', value: statistics.return, color: '#f59e0b', variant: 'h5' },
-                { label: 'UNPAID', value: statistics.unpaid,  color: '#ef4444', variant: 'h5' },
-                { label: 'VALUE',  value: formatCurrency(statistics.totalAmount), color: '#764ba2', variant: 'body1' },
+                { label: 'TOTAL',   value: statistics.total,              color: '#667eea', variant: 'h5' },
+                { label: 'PAID',    value: statistics.paid,               color: '#10b981', variant: 'h5' },
+                { label: 'PARTIAL', value: statistics.partial || 0,       color: '#f59e0b', variant: 'h5' },
+                { label: 'UNPAID',  value: statistics.unpaid,             color: '#ef4444', variant: 'h5' },
+                { label: 'RETURN',  value: statistics.return,             color: '#8b5cf6', variant: 'h5' },
+                { label: 'VALUE',   value: formatCurrency(statistics.totalAmount), color: '#764ba2', variant: 'body1' },
             ].map((s, i) => (
-                <Grid item xs={12} sm={6} md={3} key={i}>
+                <Grid item xs={6} sm={4} md={2} key={i}>
                     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
                         <GlassCard className="invoice-page__stat-card">
                             <CardContent className="invoice-page__stat-content">
@@ -111,9 +113,9 @@ const InvoiceListHeader = ({
                         displayEmpty sx={{ borderRadius: '12px' }}>
                         <MenuItem value="all">📋 All Status</MenuItem>
                         <MenuItem value="paid">✅ Paid</MenuItem>
+                        <MenuItem value="partial">⏳ Partial</MenuItem>
                         <MenuItem value="unpaid">❌ Unpaid</MenuItem>
                         <MenuItem value="return">🔄 Return</MenuItem>
-                        <MenuItem value="partial">⏳ Partial</MenuItem>
                         <MenuItem value="overdue">⚠️ Overdue</MenuItem>
                     </Select>
                 </Grid>

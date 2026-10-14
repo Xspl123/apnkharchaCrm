@@ -1,7 +1,7 @@
 import { getErrorMessage } from "../utils/getErrorMessage";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Container, LinearProgress } from "@mui/material";
+import { Container, LinearProgress } from "@mui/material";
 import {
     getInvoices,
     getNextInvoiceNumber,
@@ -16,6 +16,7 @@ import { getHsnCodes } from "../redux/features/hsnCodeSlice";
 import { getProducts } from "../features/inventory/state/inventorySlice";
 import { getAttributeGroups, getProductAttributes } from "../redux/features/attributeSlice";
 import { createProductAttributeSnapshot } from "../utils/productAttributeSnapshot";
+import { createPayment } from "../redux/features/invoicePaymentSlice";
 import InvoiceDialogs from "./invoices/components/InvoiceDialogs";
 import InvoiceFormSection from "./invoices/components/InvoiceFormSection";
 import InvoiceListHeader from "./invoices/components/InvoiceListHeader";
@@ -34,6 +35,76 @@ const defaultInvoiceItem = () => ({
     tax_amount: 0,
     product_id: null,
 });
+
+const GST_STATE_CODE_MAP = {
+    '01': 'Jammu & Kashmir',
+    '02': 'Himachal Pradesh',
+    '03': 'Punjab',
+    '04': 'Chandigarh',
+    '05': 'Uttarakhand',
+    '06': 'Haryana',
+    '07': 'Delhi',
+    '08': 'Rajasthan',
+    '09': 'Uttar Pradesh',
+    '10': 'Bihar',
+    '11': 'Sikkim',
+    '12': 'Arunachal Pradesh',
+    '13': 'Nagaland',
+    '14': 'Manipur',
+    '15': 'Mizoram',
+    '16': 'Tripura',
+    '17': 'Meghalaya',
+    '18': 'Assam',
+    '19': 'West Bengal',
+    '20': 'Jharkhand',
+    '21': 'Odisha',
+    '22': 'Chhattisgarh',
+    '23': 'Madhya Pradesh',
+    '24': 'Gujarat',
+    '26': 'Dadra & Nagar Haveli and Daman & Diu',
+    '27': 'Maharashtra',
+    '28': 'Andhra Pradesh',
+    '29': 'Karnataka',
+    '30': 'Goa',
+    '31': 'Lakshadweep',
+    '32': 'Kerala',
+    '33': 'Tamil Nadu',
+    '34': 'Puducherry',
+    '36': 'Telangana',
+    '37': 'Andhra Pradesh',
+    '38': 'Ladakh',
+};
+
+const resolveState = (entity) => {
+    if (!entity) return '';
+    if (entity.gstin && typeof entity.gstin === 'string' && entity.gstin.trim().length >= 2) {
+        const code = entity.gstin.trim().substring(0, 2);
+        if (GST_STATE_CODE_MAP[code]) {
+            return GST_STATE_CODE_MAP[code];
+        }
+    }
+    if (entity.state && typeof entity.state === 'string' && entity.state.trim()) {
+        const cleanState = entity.state.trim().toLowerCase();
+        const exactMatch = Object.values(GST_STATE_CODE_MAP).find(
+            s => s.toLowerCase() === cleanState
+        );
+        if (exactMatch) return exactMatch;
+        const subMatch = Object.values(GST_STATE_CODE_MAP).find(
+            s => cleanState.includes(s.toLowerCase())
+        );
+        if (subMatch) return subMatch;
+        return entity.state.trim();
+    }
+    const combined = [entity.city, entity.address].filter(Boolean).join(' ').toLowerCase();
+    if (combined) {
+        for (const s of Object.values(GST_STATE_CODE_MAP)) {
+            if (combined.includes(s.toLowerCase())) {
+                return s;
+            }
+        }
+    }
+    return '';
+};
 
 const defaultDates = () => ({
     invoice_date: new Date().toISOString().split("T")[0],
@@ -61,8 +132,8 @@ const InvoiceList = () => {
     const hsnCodeState = useSelector((state) => state.hsnCodes);
     const hsnCodes = hsnCodeState?.hsnCodes || [];
 
-    const { products } = useSelector((state) => state.inventory);
-    const { groups: attributeGroups = [] } = useSelector((state) => state.attributes || {});
+    const products = useSelector((state) => state.inventory?.products) || [];
+    const attributeGroups = useSelector((state) => state.attributes?.groups) || [];
 
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -74,6 +145,10 @@ const InvoiceList = () => {
     const [dateFilter, setDateFilter] = useState('all');
     const [returnDialog, setReturnDialog] = useState(false);
     const [invoiceToReturn, setInvoiceToReturn] = useState(null);
+
+    // Payment Dialog state
+    const [paymentDialog, setPaymentDialog] = useState(false);
+    const [invoiceForPayment, setInvoiceForPayment] = useState(null);
 
     const [formData, setFormData] = useState({
         company_id: "",
@@ -175,9 +250,98 @@ const InvoiceList = () => {
         };
     };
 
+    const autoDetectGstType = (companyId, placeOfSupply) => {
+        const company = companies.find(c => String(c.id) === String(companyId)) || (companies.length > 0 ? companies[0] : null);
+        const companyState = resolveState(company);
+        const supplyState = (placeOfSupply || '').trim();
+
+        if (!companyState || !supplyState) {
+            return 'intra';
+        }
+
+        const compMatch = Object.values(GST_STATE_CODE_MAP).find(s => s.toLowerCase() === companyState.toLowerCase()) || companyState;
+        const supplyMatch = Object.values(GST_STATE_CODE_MAP).find(s => s.toLowerCase() === supplyState.toLowerCase()) || supplyState;
+
+        return compMatch.toLowerCase() === supplyMatch.toLowerCase() ? 'intra' : 'inter';
+    };
+
+    useEffect(() => {
+        if (!formData.place_of_supply) return;
+        const detected = autoDetectGstType(formData.company_id, formData.place_of_supply);
+        setGstType(detected);
+    }, [formData.company_id, formData.place_of_supply, companies]);
+
+    const handlePlaceOfSupplyChange = (newPlace) => {
+        const detectedGstType = autoDetectGstType(formData.company_id, newPlace);
+        setFormData(prev => ({ ...prev, place_of_supply: newPlace }));
+        setGstType(detectedGstType);
+
+        if (newPlace) {
+            const comp = companies.find(c => String(c.id) === String(formData.company_id)) || (companies.length > 0 ? companies[0] : null);
+            const compState = resolveState(comp);
+            if (detectedGstType === 'intra') {
+                showSnackbar('Intra-State (CGST + SGST) selected (' + (compState || 'Local') + ')', 'info');
+            } else {
+                showSnackbar('Inter-State (IGST) selected: ' + (compState || 'Origin') + ' ➔ ' + newPlace, 'info');
+            }
+        }
+    };
+
+    const handleClientChange = (clientId) => {
+        const selectedClient = clients.find(c => String(c.id) === String(clientId));
+        const clientState = resolveState(selectedClient);
+
+        let newPlace = formData.place_of_supply;
+        if (clientState) {
+            newPlace = clientState;
+        }
+
+        const detectedGstType = autoDetectGstType(formData.company_id, newPlace);
+
+        setFormData(prev => ({
+            ...prev,
+            client_id: clientId,
+            ...(newPlace ? { place_of_supply: newPlace } : {}),
+            ...(selectedClient?.gstin ? { invoice_type: 'b2b' } : { invoice_type: 'b2cs' }),
+        }));
+
+        setGstType(detectedGstType);
+
+        if (clientState) {
+            showSnackbar('Client state (' + clientState + ') detected: Place of Supply & GST auto-updated ✅', 'info');
+        }
+    };
+
+    const handleCompanyChange = (companyId) => {
+        const company = companies.find(c => String(c.id) === String(companyId));
+        const companyState = resolveState(company);
+        let newPlace = formData.place_of_supply;
+        if (!newPlace && companyState) {
+            newPlace = companyState;
+        }
+        const detectedGstType = autoDetectGstType(companyId, newPlace);
+
+        setFormData(prev => ({
+            ...prev,
+            company_id: companyId,
+            ...(newPlace ? { place_of_supply: newPlace } : {})
+        }));
+        if (newPlace) {
+            setGstType(detectedGstType);
+        }
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        if (name === 'company_id') {
+            handleCompanyChange(value);
+        } else if (name === 'client_id') {
+            handleClientChange(value);
+        } else if (name === 'place_of_supply') {
+            handlePlaceOfSupplyChange(value);
+        } else {
+            setFormData((prev) => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleItemChange = (index, field, value) => {
@@ -250,7 +414,7 @@ const InvoiceList = () => {
         } catch {
             // Keep the product selection usable if its optional attributes cannot load.
         }
-        showSnackbar(`${product.name} — auto filled! ✅`, 'success');
+        showSnackbar(product.name + ' — auto filled! ✅', 'success');
     };
 
     const handleAddItem = () => {
@@ -269,15 +433,19 @@ const InvoiceList = () => {
         }
     };
 
-    const handleOpenForm = async () => {
+    const handleToggleForm = () => {
         if (!showForm) {
-            setActiveStep(0);
-            await dispatch(getNextInvoiceNumber());
+            const defaultComp = companies.length > 0 ? companies[0] : null;
+            const compState = resolveState(defaultComp);
             setFormData((prev) => ({
                 ...prev,
-                invoice_no: nextInvoiceNumber || `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, '0')}`,
+                company_id: defaultComp?.id || prev.company_id || "",
+                place_of_supply: compState || prev.place_of_supply || "",
+                invoice_no: "",
                 ...defaultDates(),
+                items: [defaultInvoiceItem()],
             }));
+            setGstType("intra");
         }
         setShowForm(!showForm);
         setEditMode(false);
@@ -298,12 +466,12 @@ const InvoiceList = () => {
             if (!linkedProduct) continue;
 
             if (linkedProduct.is_out_of_stock || linkedProduct.current_stock <= 0) {
-                showSnackbar(`❌ "${linkedProduct.name}" is out of stock. The invoice cannot be created.`, "error");
+                showSnackbar('❌ "' + linkedProduct.name + '" is out of stock. The invoice cannot be created.', "error");
                 return;
             }
             if (Number(item.qty) > Number(linkedProduct.current_stock)) {
                 showSnackbar(
-                    `❌ "${linkedProduct.name}" — Requested: ${item.qty} ${linkedProduct.unit}, Available: ${linkedProduct.current_stock} ${linkedProduct.unit}`,
+                    '❌ "' + linkedProduct.name + '" — Requested: ' + item.qty + ' ' + linkedProduct.unit + ', Available: ' + linkedProduct.current_stock + ' ' + linkedProduct.unit,
                     "error"
                 );
                 return;
@@ -355,24 +523,25 @@ const InvoiceList = () => {
                     c.company_name.toLowerCase().includes(clientName.toLowerCase()) ||
                     clientName.toLowerCase().includes(c.company_name.toLowerCase())
                 );
-                companyId = matchedCompany?.id || companies[0]?.id || "";
+                companyId = matchedCompany ? matchedCompany.id : companies[0].id;
             } else {
-                companyId = companies[0]?.id || "";
+                companyId = companies[0].id;
             }
         }
-        const fmtD = (d) => d ? new Date(d).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
-        const processedItems = invoice.items?.map(item => ({
+
+        const fmtD = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+        const items = invoice.items?.map(item => ({
             item_name: item.item_name || "",
             description: item.description || "",
             hsn_code: item.hsn_code || "",
-            qty: parseFloat(item.qty) || 1,
+            qty: item.qty || 1,
             unit: item.unit || "pcs",
-            rate: parseFloat(String(item.rate).replace(/,/g, '')) || 0,
-            tax_rate: parseFloat(item.tax_rate) || 18,
-            amount: parseFloat(String(item.amount).replace(/,/g, '')) || 0,
-            tax_amount: parseFloat(String(item.tax_amount).replace(/,/g, '')) || 0,
+            rate: item.rate || 0,
+            tax_rate: item.tax_rate || 0,
+            amount: item.amount || 0,
+            tax_amount: item.tax_amount || 0,
             product_id: item.product_id || null,
-            attributes: item.attributes || item.attribute_values || [],
+            attributes: item.attributes || [],
         })) || [];
         setFormData({
             company_id: companyId,
@@ -380,15 +549,15 @@ const InvoiceList = () => {
             invoice_no: invoice.invoice_no || "",
             invoice_date: fmtD(invoice.invoice_date),
             due_date: fmtD(invoice.due_date),
-            cgst: parseFloat(invoice.cgst) || 0,
-            sgst: parseFloat(invoice.sgst) || 0,
-            igst: parseFloat(invoice.igst) || 0,
+            cgst: invoice.cgst || 0,
+            sgst: invoice.sgst || 0,
+            igst: invoice.igst || 0,
             notes: invoice.notes || "",
             terms_conditions: invoice.terms_conditions || "",
             invoice_type: invoice.invoice_type || "b2b",
             place_of_supply: invoice.place_of_supply || "",
             is_reverse_charge: invoice.is_reverse_charge || false,
-            items: processedItems,
+            items: items.length > 0 ? items : [defaultInvoiceItem()],
         });
         setGstType(parseFloat(invoice.igst) > 0 ? 'inter' : 'intra');
         setShowForm(true);
@@ -406,22 +575,12 @@ const InvoiceList = () => {
             showSnackbar("Invoice deleted successfully!", "success");
             setDeleteDialog(false);
             setInvoiceToDelete(null);
-            await dispatch(getInvoices());
+            dispatch(getInvoices());
         } catch (err) {
-            showSnackbar(getErrorMessage(err, "Failed to delete invoice!"), "error");
+            showSnackbar(getErrorMessage(err, "Delete failed!"), "error");
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleView = (invoice) => {
-        setInvoiceToView(invoice);
-        setViewDialog(true);
-    };
-
-    const handleReturnClick = (invoice) => {
-        setInvoiceToReturn(invoice);
-        setReturnDialog(true);
     };
 
     const handleCancel = () => {
@@ -447,70 +606,173 @@ const InvoiceList = () => {
         }));
     };
 
-    const handlePrint = async () => {
-        const { default: InvoicePrintPDF } = await loadInvoicePrintModule();
-        return InvoicePrintPDF.handlePrint(invoiceToView, setLoading, showSnackbar);
+    const handlePrintPDF = async (invoice = invoiceToView) => {
+        const inv = invoice || invoiceToView;
+        if (!inv) return;
+        try {
+            const { default: InvoicePrintPDF } = await loadInvoicePrintModule();
+            await InvoicePrintPDF.print(inv, companies);
+        } catch (error) {
+            console.error("Failed to load or print invoice PDF:", error);
+            showSnackbar("Failed to print invoice PDF", "error");
+        }
     };
 
-    const handleExportPDF = async () => {
-        const [{ default: InvoicePrintPDF }, { default: html2pdf }] = await Promise.all([
-            loadInvoicePrintModule(),
-            import("html2pdf.js"),
-        ]);
-        return InvoicePrintPDF.handleExportPDF(
-            invoiceToView,
-            setLoading,
-            showSnackbar,
-            html2pdf
-        );
+    const handleExportPDF = async (invoice = invoiceToView) => {
+        const inv = invoice || invoiceToView;
+        if (!inv) return;
+        try {
+            setLoading(true);
+            const [{ default: InvoicePrintPDF }, { default: html2pdf }] = await Promise.all([
+                loadInvoicePrintModule(),
+                import("html2pdf.js"),
+            ]);
+            await InvoicePrintPDF.handleExportPDF(
+                inv,
+                setLoading,
+                showSnackbar,
+                html2pdf,
+                companies
+            );
+        } catch (error) {
+            console.error("Failed to export PDF:", error);
+            showSnackbar("Failed to download PDF: " + (error?.message || "Error"), "error");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const filteredInvoices = invoices.filter((invoice) => {
-        const searchLower = searchQuery.toLowerCase();
-        const matchesSearch =
-            invoice.invoice_no?.toLowerCase().includes(searchLower) ||
-            invoice.client?.company_name?.toLowerCase().includes(searchLower) ||
-            invoice.status?.toLowerCase().includes(searchLower) ||
-            formatCurrency(invoice.total_amount).includes(searchLower);
-        const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    const handleOpenReturnDialog = (invoice) => {
+        setInvoiceToReturn(invoice);
+        setReturnDialog(true);
+    };
 
-    const paginatedInvoices = filteredInvoices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-    const handleChangePage = (_, newPage) => setPage(newPage);
-    const handleChangeRowsPerPage = (e) => {
-        setRowsPerPage(parseInt(e.target.value, 10));
+    const handleCloseReturnDialog = () => {
+        setInvoiceToReturn(null);
+        setReturnDialog(false);
+    };
+
+    // Payment Handlers (Component ke andar)
+    const handleOpenPaymentDialog = (invoice) => {
+        setInvoiceForPayment(invoice);
+        setPaymentDialog(true);
+    };
+
+    const handleSavePayment = async (paymentData) => {
+        try {
+            setLoading(true);
+            await dispatch(createPayment(paymentData)).unwrap();
+            showSnackbar("Payment recorded successfully! ✅", "success");
+            setPaymentDialog(false);
+            setInvoiceForPayment(null);
+            await dispatch(getInvoices());
+        } catch (err) {
+            showSnackbar(getErrorMessage(err, "Failed to record payment"), "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleViewInvoice = (invoice) => {
+        setInvoiceToView(invoice);
+        setViewDialog(true);
+    };
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
     };
 
-    const totals = calculateInvoiceTotals();
+    const filteredInvoices = useMemo(() => {
+        return invoices.filter((invoice) => {
+            const matchesSearch =
+                invoice.invoice_no?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                invoice.client?.company_name?.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+            let matchesDate = true;
+            if (dateFilter !== 'all') {
+                const invoiceDate = new Date(invoice.invoice_date);
+                const now = new Date();
+                if (dateFilter === 'this_month' || dateFilter === 'month') {
+                    matchesDate = invoiceDate.getMonth() === now.getMonth() && invoiceDate.getFullYear() === now.getFullYear();
+                } else if (dateFilter === 'last_month') {
+                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    matchesDate = invoiceDate.getMonth() === lastMonth.getMonth() && invoiceDate.getFullYear() === lastMonth.getFullYear();
+                } else if (dateFilter === 'today') {
+                    matchesDate = invoiceDate.toISOString().split('T')[0] === now.toISOString().split('T')[0];
+                } else if (dateFilter === 'week') {
+                    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    matchesDate = invoiceDate >= oneWeekAgo && invoiceDate <= now;
+                } else if (dateFilter === 'this_year') {
+                    matchesDate = invoiceDate.getFullYear() === now.getFullYear();
+                }
+            }
+            return matchesSearch && matchesStatus && matchesDate;
+        });
+    }, [invoices, searchQuery, statusFilter, dateFilter]);
 
-    const statistics = {
-        total: invoices.length,
-        paid: invoices.filter(i => i.status === "paid").length,
-        unpaid: invoices.filter(i => i.status === "unpaid").length,
-        return: invoices.filter(i => i.status === "return").length,
-        partial: invoices.filter(i => i.status === "partial").length,
-        overdue: invoices.filter(i => i.status === "overdue").length,
-        totalAmount: invoices.reduce((s, i) => s + parseFloat(i.total_amount || 0), 0),
-        totalPaid: invoices.reduce((s, i) => s + parseFloat(i.paid_amount || 0), 0),
-        totalBalance: invoices.reduce((s, i) => s + parseFloat(i.balance_amount || 0), 0),
-    };
+    const paginatedInvoices = useMemo(() => {
+        return filteredInvoices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    }, [filteredInvoices, page, rowsPerPage]);
+
+    const statistics = useMemo(() => {
+        const isReturn = (i) => {
+            const s = String(i.status || '').toLowerCase();
+            return s === 'return' || Boolean(i.is_return);
+        };
+
+        const isCancelled = (i) => {
+            const s = String(i.status || '').toLowerCase();
+            return s === 'cancelled';
+        };
+
+        const isPaid = (i) => {
+            const s = String(i.status || '').toLowerCase();
+            const bal = parseFloat(i.balance_amount || 0);
+            const tot = parseFloat(i.total_amount || 0);
+            return !isReturn(i) && !isCancelled(i) && (s === 'paid' || (tot > 0 && bal <= 0));
+        };
+
+        const isPartial = (i) => {
+            const s = String(i.status || '').toLowerCase();
+            const paid = parseFloat(i.paid_amount || 0);
+            const bal = parseFloat(i.balance_amount || 0);
+            return !isReturn(i) && !isCancelled(i) && !isPaid(i) && (s === 'partial' || (paid > 0 && bal > 0));
+        };
+
+        const isUnpaid = (i) => {
+            return !isReturn(i) && !isCancelled(i) && !isPaid(i) && !isPartial(i);
+        };
+
+        const activeInvoices = invoices.filter((i) => !isReturn(i) && !isCancelled(i));
+
+        return {
+            total: invoices.length,
+            paid: invoices.filter(isPaid).length,
+            partial: invoices.filter(isPartial).length,
+            unpaid: invoices.filter(isUnpaid).length,
+            return: invoices.filter(isReturn).length,
+            totalAmount: activeInvoices.reduce((sum, i) => sum + (parseFloat(i.total_amount) || 0), 0),
+        };
+    }, [invoices]);
+
+    const totals = calculateInvoiceTotals();
 
     return (
         <>
-            {loading && (
-                <Box className="invoice-page__loader">
-                    <LinearProgress color="primary" />
-                </Box>
-            )}
+            <div ref={invoicePrintRef} style={{ display: 'none' }} />
+            <Container maxWidth="xl" className="invoice-page__container">
+                {loading && <LinearProgress className="invoice-page__progress" />}
 
-            <Container maxWidth="xl" className="invoice-page__shell">
                 <InvoiceListHeader
                     appendSpeech={appendSpeech}
                     dateFilter={dateFilter}
                     formatCurrency={formatCurrency}
-                    handleOpenForm={handleOpenForm}
+                    handleOpenForm={handleToggleForm}
                     loadData={loadData}
                     searchQuery={searchQuery}
                     setDateFilter={setDateFilter}
@@ -554,9 +816,10 @@ const InvoiceList = () => {
                     handleChangeRowsPerPage={handleChangeRowsPerPage}
                     handleDeleteConfirm={handleDeleteConfirm}
                     handleEdit={handleEdit}
-                    handleOpenForm={handleOpenForm}
-                    handleReturnClick={handleReturnClick}
-                    handleView={handleView}
+                    handleOpenForm={handleToggleForm}
+                    handleReturnClick={handleOpenReturnDialog}
+                    handleOpenPaymentDialog={handleOpenPaymentDialog}
+                    handleView={handleViewInvoice}
                     page={page}
                     paginatedInvoices={paginatedInvoices}
                     rowsPerPage={rowsPerPage}
@@ -569,9 +832,9 @@ const InvoiceList = () => {
                     formatCurrency={formatCurrency}
                     formatDate={formatDate}
                     handleDelete={handleDelete}
-                    handleExportPDF={handleExportPDF}
-                    handlePrint={handlePrint}
-                    handleReturnClick={handleReturnClick}
+                    handleExportPDF={() => invoiceToView && handleExportPDF(invoiceToView)}
+                    handlePrint={() => invoiceToView && handlePrintPDF(invoiceToView)}
+                    handleReturnClick={handleOpenReturnDialog}
                     invoicePrintRef={invoicePrintRef}
                     invoiceToDelete={invoiceToDelete}
                     invoiceToReturn={invoiceToReturn}
@@ -584,6 +847,11 @@ const InvoiceList = () => {
                     showSnackbar={showSnackbar}
                     snackbar={snackbar}
                     viewDialog={viewDialog}
+                    paymentDialog={paymentDialog}
+                    setPaymentDialog={setPaymentDialog}
+                    invoiceForPayment={invoiceForPayment}
+                    handleSavePayment={handleSavePayment}
+                    loading={loading}
                 />
             </Container>
         </>

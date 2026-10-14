@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     getProductSummary, getLowStock,
@@ -8,6 +9,7 @@ import {
     Box, Grid, Card, CardContent, Typography, Paper, Stack,
     Avatar, Chip, Divider, LinearProgress, CircularProgress,
     Table, TableHead, TableRow, TableCell, TableBody,
+    ShoppingCart as CartIcon,
     TableContainer, Alert,
 } from '@mui/material';
 import {
@@ -16,6 +18,7 @@ import {
     CheckCircle as OkIcon,
     TrendingUp as ValueIcon,
     Category as CategoryIcon,
+    Button
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { styled } from '@mui/material/styles';
@@ -101,6 +104,7 @@ const StockBadge = ({ status }) => {
 // ── Main Component ────────────────────────────────────────
 
 const InventoryDashboard = () => {
+    const navigate = useNavigate();
     const dispatch = useDispatch();
     const {
         productSummary, lowStockItems,
@@ -290,7 +294,7 @@ const InventoryDashboard = () => {
                                         <Table size="small" sx={{ minWidth: { xs: 520, sm: 0 } }}>
                                             <TableHead>
                                                 <TableRow sx={{ bgcolor: 'grey.50' }}>
-                                                    {['Product', 'Stock', 'Alert', 'Status'].map((h) => (
+                                                    {['Product', 'Stock', 'Alert', 'Status','Actions'].map((h) => (
                                                         <TableCell key={h}
                                                             sx={{ fontWeight: 700, fontSize: 11, py: 1.5 }}>
                                                             {h}
@@ -345,6 +349,27 @@ const InventoryDashboard = () => {
                                                                     item.current_stock <= 0
                                                                         ? 'out_of_stock' : 'low_stock'
                                                                 } />
+                                                            </TableCell>
+
+                                                            <TableCell align="right">
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="contained"
+                                                                    startIcon={<CartIcon fontSize="small" />}
+                                                                    onClick={() => navigate('/vendors/purchase-orders', { state: { prefillProduct: item } })}
+                                                                    sx={{
+                                                                        borderRadius: '8px',
+                                                                        textTransform: 'none',
+                                                                        fontSize: 11,
+                                                                        fontWeight: 700,
+                                                                        bgcolor: '#11998e',
+                                                                        py: 0.4,
+                                                                        px: 1.2,
+                                                                        '&:hover': { bgcolor: '#0f766e' },
+                                                                    }}
+                                                                >
+                                                                    Order
+                                                                </Button>
                                                             </TableCell>
                                                         </TableRow>
                                                     );

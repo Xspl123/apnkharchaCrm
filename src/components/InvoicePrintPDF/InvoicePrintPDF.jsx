@@ -3,6 +3,18 @@ import { getItemAttributeSnapshot } from '../../utils/productAttributeSnapshot';
 
 class InvoicePrintPDF {
 
+    // ── HTML entity escape helper (XSS & syntax safety) ───
+    static escapeHtml = (str) => {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/[&<>"']/g, (m) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;',
+        }[m]));
+    };
+
     // ── Format currency ───────────────────────────────────
     static formatCurrency = (amount) => {
         if (amount === null || amount === undefined || isNaN(amount)) return '0.00';
@@ -18,6 +30,43 @@ class InvoicePrintPDF {
             month: 'short',
             year: 'numeric'
         });
+    };
+
+    // ── Dynamic UPI String (NPCI Deep-Link Standard) ──────
+    static generateUpiString = (company, invoice, payableAmount) => {
+        const upiId = (company?.upi_id || company?.upi || '').trim();
+        if (!upiId) return null;
+
+        const payeeName = encodeURIComponent(company?.company_name || 'Merchant');
+        const amountNum = Number(payableAmount ?? invoice?.balance_amount ?? invoice?.total_amount ?? 0);
+        const amount = amountNum > 0 ? amountNum.toFixed(2) : '0.00';
+        const invoiceNo = (invoice?.invoice_no || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const note = encodeURIComponent(`Invoice_${invoiceNo}`);
+
+        return `upi://pay?pa=${upiId}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}`;
+    };
+
+    // ── Dynamic QR Code Data URL Generator (Crash-Proof) ──
+    static getUpiQrDataUrl = async (upiString) => {
+        if (!upiString) return null;
+        try {
+            const qrcodeModule = await import('qrcode').catch(() => null);
+            const QRCode = qrcodeModule?.default || qrcodeModule;
+            if (QRCode && typeof QRCode.toDataURL === 'function') {
+                return await QRCode.toDataURL(upiString, {
+                    width: 140,
+                    margin: 1,
+                    color: {
+                        dark: '#0f172a',
+                        light: '#ffffff'
+                    }
+                });
+            }
+        } catch {
+            // Offline import fallback
+        }
+
+        return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=4&data=${encodeURIComponent(upiString)}`;
     };
 
     // ── Calculate GST % from actual values ────────────────
@@ -44,7 +93,6 @@ class InvoicePrintPDF {
         let sgst     = 0;
         let igst     = 0;
 
-        // supply_type invoice se lo — default 'intra'
         const isInter = (invoice?.supply_type || 'intra') === 'inter';
 
         items.forEach(item => {
@@ -59,10 +107,8 @@ class InvoicePrintPDF {
                 const taxAmount = (amount * taxRate) / 100;
 
                 if (isInter) {
-                    // Inter-state → sirf IGST
                     igst += taxAmount;
                 } else {
-                    // Intra-state → CGST + SGST equally
                     cgst += taxAmount / 2;
                     sgst += taxAmount / 2;
                 }
@@ -121,7 +167,7 @@ class InvoicePrintPDF {
     };
 
     // ── Generate full print HTML ──────────────────────────
-    static generatePrintHTML = (invoice, logoBase64) => {
+    static generatePrintHTML = (invoice, logoBase64, qrCodeUrl = null) => {
         const company  = invoice?.company  || {};
         const client   = invoice?.client   || {};
         const items    = invoice?.items    || [];
@@ -129,10 +175,11 @@ class InvoicePrintPDF {
         const { subtotal, cgst, sgst, igst, total, paid, balance } =
             this.calculateTotals(items, invoice);
 
-        const typeStyle   = this.getInvoiceTypeStyle(invoice?.invoice_type);
-        const isInter     = (invoice?.supply_type || 'intra') === 'inter';
-        const hasRCM      = !!invoice?.is_reverse_charge;
-        const hasGSTInfo  = !!(invoice?.invoice_type || invoice?.supply_type || invoice?.place_of_supply);
+        const payableAmount = balance > 0 ? balance : total;
+        const typeStyle     = this.getInvoiceTypeStyle(invoice?.invoice_type);
+        const isInter       = (invoice?.supply_type || 'intra') === 'inter';
+        const hasRCM        = !!invoice?.is_reverse_charge;
+        const hasGSTInfo    = !!(invoice?.invoice_type || invoice?.supply_type || invoice?.place_of_supply);
 
         return `
             <!DOCTYPE html>
@@ -140,7 +187,7 @@ class InvoicePrintPDF {
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Invoice ${invoice?.invoice_no}</title>
+                    <title>Invoice ${this.escapeHtml(invoice?.invoice_no)}</title>
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
                     <style>${this.getCSS()}</style>
                 </head>
@@ -156,19 +203,19 @@ class InvoicePrintPDF {
                                     </div>
                                 ` : `
                                     <div class="logo-fallback">
-                                        ${company?.company_name?.charAt(0) || 'A'}
+                                        ${this.escapeHtml(company?.company_name?.charAt(0) || 'A')}
                                     </div>
                                 `}
                                 <div class="company-info">
-                                    <h1>${company?.company_name || 'Company Name'}</h1>
+                                    <h1>${this.escapeHtml(company?.company_name || 'Company Name')}</h1>
                                     <div class="company-details">
-                                        <span class="detail-chip">📍 ${company?.address?.split(',').slice(0, 2).join(',') || 'Address'}</span>
-                                        <span class="detail-chip">📞 ${company?.phone || 'N/A'}</span>
-                                        <span class="detail-chip">✉️ ${company?.email || 'N/A'}</span>
+                                        <span class="detail-chip">📍 ${this.escapeHtml(company?.address?.split(',').slice(0, 2).join(',') || 'Address')}</span>
+                                        <span class="detail-chip">📞 ${this.escapeHtml(company?.phone || 'N/A')}</span>
+                                        <span class="detail-chip">✉️ ${this.escapeHtml(company?.email || 'N/A')}</span>
                                     </div>
                                     <div class="company-details" style="margin-top:5px;">
-                                        <span class="detail-chip gst-chip">GST: ${company?.gstin || 'N/A'}</span>
-                                        ${company?.pan ? `<span class="detail-chip pan-chip">PAN: ${company.pan}</span>` : ''}
+                                        <span class="detail-chip gst-chip">GST: ${this.escapeHtml(company?.gstin || 'N/A')}</span>
+                                        ${company?.pan ? `<span class="detail-chip pan-chip">PAN: ${this.escapeHtml(company.pan)}</span>` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -178,7 +225,7 @@ class InvoicePrintPDF {
                                 <div class="invoice-meta">
                                     <div class="meta-row">
                                         <span class="meta-label">Invoice No:</span>
-                                        <span class="meta-value">${invoice?.invoice_no || 'N/A'}</span>
+                                        <span class="meta-value">${this.escapeHtml(invoice?.invoice_no || 'N/A')}</span>
                                     </div>
                                     <div class="meta-row">
                                         <span class="meta-label">Date:</span>
@@ -189,7 +236,6 @@ class InvoicePrintPDF {
                                         <span class="meta-value">${this.formatDate(invoice?.due_date)}</span>
                                     </div>
 
-                                    <!-- ── GST Info rows (new) ── -->
                                     ${hasGSTInfo ? `
                                         <div class="meta-divider"></div>
                                         ${invoice?.invoice_type ? `
@@ -215,7 +261,7 @@ class InvoicePrintPDF {
                                             <div class="meta-row">
                                                 <span class="meta-label">Place of Supply:</span>
                                                 <span class="meta-value" style="font-size:10px;">
-                                                    ${invoice.place_of_supply}
+                                                    ${this.escapeHtml(invoice.place_of_supply)}
                                                 </span>
                                             </div>
                                         ` : ''}
@@ -234,7 +280,7 @@ class InvoicePrintPDF {
                                     ${invoice?.status === 'paid'    ? '✓ PAID'    :
                                       invoice?.status === 'unpaid'  ? '⏳ UNPAID' :
                                       invoice?.status === 'partial' ? '⚠️ PARTIAL':
-                                      (invoice?.status || 'UNPAID').toUpperCase()}
+                                      this.escapeHtml((invoice?.status || 'UNPAID').toUpperCase())}
                                 </div>
                             </div>
                         </div>
@@ -247,36 +293,36 @@ class InvoicePrintPDF {
                             </div>
                             <div class="client-card">
                                 <div>
-                                    <div class="client-name">${client?.company_name || 'Client Name'}</div>
+                                    <div class="client-name">${this.escapeHtml(client?.company_name || 'Client Name')}</div>
                                     ${client?.contact_person ? `
                                         <div class="info-row">
                                             <span class="info-label">Attn:</span>
-                                            <span class="info-value">${client.contact_person}</span>
+                                            <span class="info-value">${this.escapeHtml(client.contact_person)}</span>
                                         </div>
                                     ` : ''}
                                     <div class="info-row">
                                         <span class="info-label">Address:</span>
-                                        <span class="info-value">${client?.address || 'N/A'}</span>
+                                        <span class="info-value">${this.escapeHtml(client?.address || 'N/A')}</span>
                                     </div>
                                     <div class="info-row">
                                         <span class="info-label">City:</span>
                                         <span class="info-value">
-                                            ${client?.city || ''} ${client?.state || ''} ${client?.pincode ? '- ' + client.pincode : ''}
+                                            ${this.escapeHtml(client?.city || '')} ${this.escapeHtml(client?.state || '')} ${client?.pincode ? '- ' + this.escapeHtml(client.pincode) : ''}
                                         </span>
                                     </div>
                                 </div>
                                 <div>
                                     <div class="info-row">
                                         <span class="info-label">📞</span>
-                                        <span class="info-value">${client?.phone || 'N/A'}</span>
+                                        <span class="info-value">${this.escapeHtml(client?.phone || 'N/A')}</span>
                                     </div>
                                     <div class="info-row">
                                         <span class="info-label">✉️</span>
-                                        <span class="info-value">${client?.email || 'N/A'}</span>
+                                        <span class="info-value">${this.escapeHtml(client?.email || 'N/A')}</span>
                                     </div>
                                     ${client?.gstin ? `
                                         <div style="margin-top:8px;">
-                                            <span class="detail-chip gst-chip">GST: ${client.gstin}</span>
+                                            <span class="detail-chip gst-chip">GST: ${this.escapeHtml(client.gstin)}</span>
                                         </div>
                                     ` : ''}
                                 </div>
@@ -302,16 +348,16 @@ class InvoicePrintPDF {
                                         const qty    = parseFloat(item.qty) || 1;
                                         const rate   = Number((item.rate   || '0').toString().replace(/,/g, '')) || 0;
                                         const amount = Number((item.amount || '0').toString().replace(/,/g, '')) || (qty * rate);
+                                        const attributes = getItemAttributeSnapshot(item);
                                         return `
                                             <tr>
                                                 <td>${String(index + 1).padStart(2, '0')}</td>
                                                 <td>
-                                                    <div class="item-name">${item.item_name || 'Item'}</div>
-                                                    ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
-                                                    ${getItemAttributeSnapshot(item).length ? `<div class="item-desc">${getItemAttributeSnapshot(item).map((attribute) => `${attribute.attribute_name || attribute.name || 'Attribute'}: ${attribute.value}`).join(' · ')}</div>` : ''}
+                                                    <div class="item-name">${this.escapeHtml(item.item_name || 'Item')}</div>${item.description ? `<div class="item-desc">${this.escapeHtml(item.description)}</div>` : ''}
+                                                    ${attributes.length ? `<div class="item-desc">${attributes.map((attr) => `${this.escapeHtml(attr.attribute_name || attr.name || 'Attribute')}:${this.escapeHtml(attr.value)}`).join(' · ')}</div>` : ''}
                                                 </td>
-                                                <td>${item.hsn_code || '—'}</td>
-                                                <td class="text-center">${qty.toFixed(2)} ${item.unit || 'pcs'}</td>
+                                                <td>${this.escapeHtml(item.hsn_code || '—')}</td>
+                                                <td class="text-center">${qty.toFixed(2)} ${this.escapeHtml(item.unit || 'pcs')}</td>
                                                 <td class="text-right">₹${this.formatCurrency(rate)}</td>
                                                 <td class="text-right">${item.tax_rate || 0}%</td>
                                                 <td class="text-right amount-cell">₹${this.formatCurrency(amount)}</td>
@@ -391,30 +437,49 @@ class InvoicePrintPDF {
                             </div>
                         </div>
 
-                        <!-- ═══ BANK DETAILS ═══ -->
-                        <div class="bank-section">
-                            <div class="bank-accent"></div>
-                            <div class="bank-title">
-                                <span>🏦</span> BANK DETAILS FOR PAYMENT
+                        <!-- ═══ PAYMENT & BANK DETAILS (WITH DYNAMIC UPI QR) ═══ -->
+                        <div class="payment-section-container">
+                            <div class="bank-section">
+                                <div class="bank-accent"></div>
+                                <div class="bank-title">
+                                    <span>🏦</span> BANK DETAILS FOR PAYMENT
+                                </div>
+                                <div class="bank-grid">
+                                    <div class="bank-item">
+                                        <span class="label">BANK NAME</span>
+                                        <span class="value">${this.escapeHtml(company?.bank_name || 'N/A')}</span>
+                                    </div>
+                                    <div class="bank-item">
+                                        <span class="label">ACCOUNT NO</span>
+                                        <span class="value">${this.escapeHtml(company?.bank_account_no || 'N/A')}</span>
+                                    </div>
+                                    <div class="bank-item">
+                                        <span class="label">IFSC CODE</span>
+                                        <span class="value">${this.escapeHtml(company?.bank_ifsc || 'N/A')}</span>
+                                    </div>
+                                    <div class="bank-item">
+                                        <span class="label">BRANCH</span>
+                                        <span class="value">${this.escapeHtml(company?.bank_branch || 'N/A')}</span>
+                                    </div>
+                                    ${company?.upi_id ? `
+                                        <div class="bank-item upi-full-row">
+                                            <span class="label">UPI ID</span>
+                                            <span class="value upi-val">${this.escapeHtml(company.upi_id)}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
                             </div>
-                            <div class="bank-grid">
-                                <div class="bank-item">
-                                    <span class="label">BANK NAME</span>
-                                    <span class="value">${company?.bank_name || 'N/A'}</span>
+
+                            ${qrCodeUrl ? `
+                                <div class="upi-qr-card">
+                                    <div class="upi-qr-title">SCAN & PAY VIA UPI</div>
+                                    <div class="upi-qr-box">
+                                        <img src="${qrCodeUrl}" alt="Scan to Pay via UPI" class="upi-qr-img" />
+                                    </div>
+                                    <div class="upi-amount-pill">Amount: ₹${this.formatCurrency(payableAmount)}</div>
+                                    <div class="upi-apps-hint">GPay · PhonePe · Paytm · BHIM</div>
                                 </div>
-                                <div class="bank-item">
-                                    <span class="label">ACCOUNT NO</span>
-                                    <span class="value">${company?.bank_account_no || 'N/A'}</span>
-                                </div>
-                                <div class="bank-item">
-                                    <span class="label">IFSC CODE</span>
-                                    <span class="value">${company?.bank_ifsc || 'N/A'}</span>
-                                </div>
-                                <div class="bank-item">
-                                    <span class="label">BRANCH</span>
-                                    <span class="value">${company?.bank_branch || 'N/A'}</span>
-                                </div>
-                            </div>
+                            ` : ''}
                         </div>
 
                         <!-- ═══ NOTES ═══ -->
@@ -424,7 +489,7 @@ class InvoicePrintPDF {
                                     <span>📝</span>
                                     <span>NOTES</span>
                                 </div>
-                                <div class="notes-content">${invoice.notes}</div>
+                                <div class="notes-content">${this.escapeHtml(invoice.notes)}</div>
                             </div>
                         ` : ''}
 
@@ -436,7 +501,7 @@ class InvoicePrintPDF {
                             </div>
                             <div class="signature-box right">
                                 <div class="signature-title">AUTHORIZED SIGNATURE</div>
-                                <div class="signature-company">${company?.company_name || 'Company Name'}</div>
+                                <div class="signature-company">${this.escapeHtml(company?.company_name || 'Company Name')}</div>
                                 <div class="signature-sub">Authorized Signatory</div>
                             </div>
                         </div>
@@ -445,9 +510,9 @@ class InvoicePrintPDF {
                         <div class="footer">
                             <div class="thankyou">THANK YOU FOR YOUR BUSINESS!</div>
                             <div class="footer-text">This is a computer-generated invoice. No physical signature required.</div>
-                            <div class="footer-email">📧 For any queries: ${company?.email || 'N/A'}</div>
-                            <div class="footer-phone">📞 ${company?.phone || 'N/A'}</div>
-                            <div class="footer-watermark">${(company?.company_name || 'COMPANY').toUpperCase()} · EST. 2020</div>
+                            <div class="footer-email">📧 For any queries: ${this.escapeHtml(company?.email || 'N/A')}</div>
+                            <div class="footer-phone">📞 ${this.escapeHtml(company?.phone || 'N/A')}</div>
+                            <div class="footer-watermark">${this.escapeHtml((company?.company_name || 'COMPANY').toUpperCase())} · EST. 2020</div>
                         </div>
 
                     </div>
@@ -563,9 +628,19 @@ class InvoicePrintPDF {
             .total-item.sub   { background: #f8fafc; }
             .total-item.grand { background: #f1f5f9; font-weight: 800; font-size: 12px; padding: 8px 10px; }
             .total-item.balance { color: #b91c1c; font-weight: 700; border-top: 1px dashed #e2e8f0; }
+
+            /* ── Payment Container with Side-by-Side UPI QR ── */
+            .payment-section-container {
+                display: flex;
+                gap: 12px;
+                margin: 12px 0;
+                align-items: stretch;
+            }
             .bank-section {
-                margin: 12px 0; padding: 12px; border: 1px solid #e2e8f0;
+                flex: 1;
+                margin: 0; padding: 12px; border: 1px solid #e2e8f0;
                 border-radius: 8px; position: relative;
+                background: white;
             }
             .bank-accent {
                 position: absolute; left: 0; top: 0; width: 4px; height: 100%;
@@ -585,6 +660,64 @@ class InvoicePrintPDF {
                 text-transform: uppercase; margin-bottom: 2px; display: block;
             }
             .bank-item .value { font-weight: 600; color: #0f172a; font-size: 11px; }
+            .bank-item.upi-full-row { grid-column: span 4; margin-top: 4px; border-top: 1px dashed #e2e8f0; padding-top: 4px; }
+            .bank-item .value.upi-val { color: #4338ca; font-weight: 700; }
+
+            /* ── UPI QR Card (Zoho/Vyapar style) ── */
+            .upi-qr-card {
+                width: 175px;
+                min-width: 175px;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                padding: 8px;
+                background: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
+            .upi-qr-title {
+                font-size: 10px;
+                font-weight: 800;
+                color: #0f172a;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+            }
+            .upi-qr-box {
+                background: white;
+                padding: 4px;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .upi-qr-img {
+                width: 105px;
+                height: 105px;
+                display: block;
+                object-fit: contain;
+            }
+            .upi-amount-pill {
+                font-size: 10px;
+                font-weight: 700;
+                color: #166534;
+                margin-top: 4px;
+                background: #dcfce7;
+                padding: 2px 8px;
+                border-radius: 12px;
+                border: 1px solid #bbf7d0;
+            }
+            .upi-apps-hint {
+                font-size: 8px;
+                font-weight: 600;
+                color: #64748b;
+                margin-top: 4px;
+                letter-spacing: 0.3px;
+            }
+
             .notes {
                 margin: 12px 0; padding: 10px; background: #f8fafc;
                 border-radius: 6px; border: 1px solid #e2e8f0;
@@ -612,56 +745,91 @@ class InvoicePrintPDF {
                 body { padding: 0.1in; }
                 .print-container { border: none; box-shadow: none; }
                 .header, .bill-to, .table-container, .totals,
-                .bank-section, .notes, .signature, .footer {
+                .payment-section-container, .bank-section, .upi-qr-card, .notes, .signature, .footer {
                     page-break-inside: avoid; break-inside: avoid;
                 }
             }
         `;
     };
 
+    // ── Static Print Method (supports InvoicePrintPDF.print(invoice, companies)) ──
+    static print = async (invoiceToView, companies = [], setLoading = () => {}) => {
+        if (!invoiceToView) return;
+        const enrichedInvoice = {
+            ...invoiceToView,
+            company: invoiceToView?.company || (Array.isArray(companies) && companies.find(c => String(c.id) === String(invoiceToView?.company_id))) || (Array.isArray(companies) && companies.length > 0 ? companies[0] : null) || {},
+        };
+        return this.handlePrint(enrichedInvoice, setLoading);
+    };
+
     // ── Handle Print ──────────────────────────────────────
-    static handlePrint = async (invoiceToView, setLoading) => {
+    static handlePrint = async (invoiceToView, setLoading = () => {}) => {
         if (!invoiceToView) return;
         try {
-            setLoading(true);
+            if (typeof setLoading === 'function') setLoading(true);
             const logoBase64 = await this.loadLogo(invoiceToView?.company?.logo_url);
-            const printHTML  = this.generatePrintHTML(invoiceToView, logoBase64);
+            const { balance, total } = this.calculateTotals(invoiceToView?.items || [], invoiceToView);
+            const payableAmount = balance > 0 ? balance : total;
+            const upiString  = this.generateUpiString(invoiceToView?.company, invoiceToView, payableAmount);
+            const qrCodeUrl  = await this.getUpiQrDataUrl(upiString);
+
+            const printHTML  = this.generatePrintHTML(invoiceToView, logoBase64, qrCodeUrl);
             const printWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
-            printWindow.document.write(printHTML);
-            printWindow.document.close();
-            setTimeout(() => {
-                printWindow.focus();
-                printWindow.print();
-                printWindow.onafterprint = () => printWindow.close();
-            }, 1000);
+            if (printWindow) {
+                printWindow.document.write(printHTML);
+                printWindow.document.close();
+                setTimeout(() => {
+                    printWindow.focus();
+                    printWindow.print();
+                    printWindow.onafterprint = () => printWindow.close();
+                }, 1000);
+            }
         } catch {
-            const fallbackHTML  = this.generatePrintHTML(invoiceToView, null);
+            const fallbackHTML  = this.generatePrintHTML(invoiceToView, null, null);
             const printWindow   = window.open('', '_blank', 'width=1200,height=800');
-            printWindow.document.write(fallbackHTML);
-            printWindow.document.close();
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 500);
+            if (printWindow) {
+                printWindow.document.write(fallbackHTML);
+                printWindow.document.close();
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                }, 500);
+            }
         } finally {
-            setLoading(false);
+            if (typeof setLoading === 'function') setLoading(false);
         }
     };
 
-    // ── Handle PDF Export ─────────────────────────────────
-    static handleExportPDF = async (invoiceToView, setLoading, showSnackbar, html2pdf) => {
+    // ── Handle PDF Export (Direct .pdf download via html2pdf) ──
+    static handleExportPDF = async (invoiceToView, setLoading = () => {}, showSnackbar = () => {}, html2pdf = null, companies = []) => {
         if (!invoiceToView) return;
-        setLoading(true);
+        if (typeof setLoading === 'function') setLoading(true);
         try {
-            const logoBase64 = await this.loadLogo(invoiceToView?.company?.logo_url);
+            const enrichedInvoice = {
+                ...invoiceToView,
+                company: invoiceToView?.company || (Array.isArray(companies) && companies.find(c => String(c.id) === String(invoiceToView?.company_id))) || (Array.isArray(companies) && companies.length > 0 ? companies[0] : null) || {},
+            };
+
+            const logoBase64 = await this.loadLogo(enrichedInvoice?.company?.logo_url);
+            const { balance, total } = this.calculateTotals(enrichedInvoice?.items || [], enrichedInvoice);
+            const payableAmount = balance > 0 ? balance : total;
+            const upiString  = this.generateUpiString(enrichedInvoice?.company, enrichedInvoice, payableAmount);
+            const qrCodeUrl  = await this.getUpiQrDataUrl(upiString);
+
             const element    = document.createElement('div');
-            element.innerHTML = this.generatePrintHTML(invoiceToView, logoBase64);
+            element.innerHTML = this.generatePrintHTML(enrichedInvoice, logoBase64, qrCodeUrl);
             document.body.appendChild(element);
+
+            let html2pdfLib = html2pdf;
+            if (!html2pdfLib) {
+                const mod = await import('html2pdf.js');
+                html2pdfLib = mod.default || mod;
+            }
 
             const opt = {
                 margin:     [0.1, 0.1, 0.1, 0.1],
-                filename:   `Invoice_${invoiceToView?.invoice_no || 'INV'}.pdf`,
-                image:      { type: 'jpeg', quality: 1.0 },
+                filename:   `Invoice_${enrichedInvoice?.invoice_no || 'INV'}.pdf`,
+                image:      { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
                     scale: 2, logging: false, allowTaint: true,
                     useCORS: true, letterRendering: true,
@@ -675,13 +843,18 @@ class InvoicePrintPDF {
                 pagebreak: { mode: 'avoid-all' },
             };
 
-            await html2pdf().set(opt).from(element).save();
+            await html2pdfLib().set(opt).from(element).save();
             document.body.removeChild(element);
-            showSnackbar("PDF downloaded successfully!", "success");
+            if (typeof showSnackbar === 'function') {
+                showSnackbar("PDF downloaded successfully! 📄", "success");
+            }
         } catch (error) {
-            showSnackbar("Error generating PDF: " + error.message, "error");
+            console.error("PDF generation failed:", error);
+            if (typeof showSnackbar === 'function') {
+                showSnackbar("Error generating PDF: " + (error?.message || "Error"), "error");
+            }
         } finally {
-            setLoading(false);
+            if (typeof setLoading === 'function') setLoading(false);
         }
     };
 }

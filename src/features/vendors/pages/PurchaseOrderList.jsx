@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useState,useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getProducts, getCategories } from '../../inventory/state/inventorySlice';
 import { Inventory as InventoryIcon, Undo as ReturnIcon } from '@mui/icons-material';
@@ -34,6 +35,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { styled, useTheme } from '@mui/material/styles';
 import SpeechFieldButton from '../../../components/SpeechFieldButton';
+import usePermission from '../../../hooks/usePermission';
 
 // ── Styled Components ─────────────────────────────────────
 
@@ -119,6 +121,8 @@ const emptyForm = {
     vendor_id:              '',
     po_date:                new Date().toISOString().split('T')[0],
     expected_delivery_date: '',
+    vendor_invoice_no:      '',
+    vendor_invoice_date:    '',
     supply_type:            'intra',
     place_of_supply:        '',
     is_reverse_charge:      false,
@@ -160,6 +164,7 @@ const StatusChip = ({ status }) => {
 
 const PurchaseOrderList = () => {
     const dispatch = useDispatch();
+    const { can } = usePermission();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const { purchaseOrders, vendors, payments, isLoading, actionLoading } =
@@ -176,6 +181,98 @@ const PurchaseOrderList = () => {
     const [page,          setPage]          = useState(0);
     const [rowsPerPage,   setRowsPerPage]   = useState(10);
     const [formData,      setFormData]      = useState({ ...emptyForm, items: [{ ...emptyItem }] });
+    const location = useLocation();
+
+    // ── Low Stock Products in Inventory ───────────────────
+    const lowStockProducts = useMemo(() => {
+        return (products || []).filter(
+            (p) => p.is_low_stock || p.is_out_of_stock || (p.low_stock_alert > 0 && p.current_stock <= p.low_stock_alert)
+        );
+    }, [products]);
+
+    // ── Auto-Fill from Location State (e.g. from Inventory Dashboard) ──
+    useEffect(() => {
+        if (location.state?.prefillProduct) {
+            const p = location.state.prefillProduct;
+            setShowForm(true);
+            const rate = Number(p.purchase_price || 0);
+            const taxRate = Number(p.tax_rate ?? 18);
+            const defTarget = (p.low_stock_alert || 0) * 2;
+            const reorderQty = Math.max(1, defTarget > p.current_stock ? Math.ceil(defTarget - p.current_stock) : 10);
+            const amount = Number((reorderQty * rate).toFixed(2));
+            const taxAmount = Number(((amount * taxRate) / 100).toFixed(2));
+
+            setFormData((prev) => ({
+                ...prev,
+                items: [
+                    {
+                        ...emptyItem,
+                        product_id: p.id,
+                        item_name: p.name,
+                        hsn_code: p.hsn_code || '',
+                        category_id: p.product_category_id || p.category_id || '',
+                        qty: reorderQty,
+                        unit: p.unit || 'pcs',
+                        rate: rate > 0 ? rate : '',
+                        tax_rate: taxRate,
+                        amount: amount,
+                        tax_amount: taxAmount,
+                    },
+                ],
+            }));
+            showSnackbar(`${p.name} pre-filled for Purchase Order! ✅`, 'info');
+        }
+    }, [location.state]);
+
+    // ── Auto-Add All Low Stock Items ───────────────────────
+    const handleAutoAddLowStock = () => {
+        if (!lowStockProducts.length) {
+            showSnackbar('No low stock or out-of-stock items found in inventory.', 'info');
+            return;
+        }
+
+        const existingIds = new Set(formData.items.map((it) => it.product_id).filter(Boolean));
+        const itemsToAdd = lowStockProducts.filter((p) => !existingIds.has(p.id));
+
+        if (!itemsToAdd.length) {
+            showSnackbar('All low stock items are already added to this PO.', 'info');
+            return;
+        }
+
+        const newItems = itemsToAdd.map((p) => {
+            const defTarget = (p.low_stock_alert || 0) * 2;
+            const reorderQty = Math.max(1, defTarget > p.current_stock ? Math.ceil(defTarget - p.current_stock) : 10);
+            const rate = Number(p.purchase_price || 0);
+            const taxRate = Number(p.tax_rate ?? 18);
+            const amount = Number((reorderQty * rate).toFixed(2));
+            const taxAmount = Number(((amount * taxRate) / 100).toFixed(2));
+
+            return {
+                ...emptyItem,
+                product_id: p.id,
+                item_name: p.name,
+                hsn_code: p.hsn_code || '',
+                category_id: p.product_category_id || p.category_id || '',
+                qty: reorderQty,
+                unit: p.unit || 'pcs',
+                rate: rate > 0 ? rate : '',
+                tax_rate: taxRate,
+                amount: amount,
+                tax_amount: taxAmount,
+            };
+        });
+
+        const currentItems = formData.items.length === 1 && !formData.items[0].item_name.trim() && !formData.items[0].product_id
+            ? []
+            : formData.items;
+
+        setFormData((prev) => ({
+            ...prev,
+            items: [...currentItems, ...newItems],
+        }));
+
+        showSnackbar(`⚡ Auto-added ${newItems.length} low stock items to PO!`, 'success');
+    };
     const [snackbar,      setSnackbar]      = useState({ open: false, message: '', severity: 'success' });
     const [viewDialog,    setViewDialog]    = useState(false);
     const [viewPO,        setViewPO]        = useState(null);
@@ -995,7 +1092,8 @@ const PurchaseOrderList = () => {
                                 Refresh
                             </GradientButton>
                         </Grid>
-                        <Grid item xs={6} md={2}>
+                        {can('purchase_orders.create') && (
+<Grid item xs={6} md={2}>
                             <GradientButton fullWidth
                                 startIcon={showForm ? <CloseIcon /> : <AddIcon />}
                                 onClick={showForm ? handleCancel : () => setShowForm(true)}
@@ -1005,6 +1103,7 @@ const PurchaseOrderList = () => {
                                 {showForm ? 'Cancel' : 'New PO'}
                             </GradientButton>
                         </Grid>
+                        )}
                     </Grid>
                 </Paper>
 
@@ -1082,6 +1181,33 @@ const PurchaseOrderList = () => {
                                                     InputProps={{
                                                         endAdornment: <InputAdornment position="end"><SpeechFieldButton onTranscript={(text) => setFormData((prev) => ({ ...prev, notes: appendSpeech(prev.notes, text) }))} /></InputAdornment>,
                                                     }}
+                                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                                />
+                                            </Grid>
+
+                                            {/* Vendor Tax Invoice Details */}
+                                            <Grid item xs={12}>
+                                                <FormSection title="Vendor Invoice Details (Optional for ITC / GSTR-2B)" icon={<DescriptionIcon sx={{ fontSize: 14 }} />} />
+                                            </Grid>
+                                            <Grid item xs={12} sm={6} md={6}>
+                                                <TextField fullWidth size="small"
+                                                    label="Vendor Invoice / Bill No"
+                                                    name="vendor_invoice_no"
+                                                    value={formData.vendor_invoice_no}
+                                                    onChange={handleChange}
+                                                    placeholder="e.g. INV/2026/089"
+                                                    helperText="Original tax invoice number from Vendor"
+                                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                                />
+                                            </Grid>
+                                            <Grid item xs={12} sm={6} md={6}>
+                                                <TextField fullWidth size="small"
+                                                    label="Vendor Bill Date" type="date"
+                                                    name="vendor_invoice_date"
+                                                    value={formData.vendor_invoice_date}
+                                                    onChange={handleChange}
+                                                    InputLabelProps={{ shrink: true }}
+                                                    helperText="Bill issue date as per vendor invoice"
                                                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
                                                 />
                                             </Grid>
@@ -1228,10 +1354,23 @@ const PurchaseOrderList = () => {
                                                     </Table>
                                                 </TableContainer>
 
-                                                <Button startIcon={<AddIcon />} onClick={handleAddItem}
-                                                    size="small" sx={{ mt: 1.5, borderRadius: '8px', textTransform: 'none' }}>
-                                                    Add Item
-                                                </Button>
+                                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                                                    <Button startIcon={<AddIcon />} onClick={handleAddItem}
+                                                        variant="outlined" size="small" sx={{ borderRadius: '8px', textTransform: 'none' }}>
+                                                        Add Item
+                                                    </Button>
+                                                    {lowStockProducts.length > 0 && (
+                                                        <GradientButton
+                                                            startIcon={<AutoIcon />}
+                                                            onClick={handleAutoAddLowStock}
+                                                            size="small"
+                                                            gradient="linear-gradient(135deg, #f59e0b, #d97706)"
+                                                            sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                                                        >
+                                                            ⚡ Auto-Add Low Stock Items ({lowStockProducts.length})
+                                                        </GradientButton>
+                                                    )}
+                                                </Stack>
                                             </Grid>
 
                                             {/* Totals */}
@@ -1316,11 +1455,13 @@ const PurchaseOrderList = () => {
                                                     <Typography variant="h6" color="text.secondary">
                                                         No purchase orders found.
                                                     </Typography>
-                                                    <GradientButton startIcon={<AddIcon />}
+                                                    {can('purchase_orders.create') && (
+<GradientButton startIcon={<AddIcon />}
                                                         onClick={() => setShowForm(true)}
                                                         gradient="linear-gradient(135deg, #11998e, #38ef7d)">
                                                         Create Your First Purchase Order
                                                     </GradientButton>
+                                                    )}
                                                 </Stack>
                                             </TableCell>
                                         </TableRow>
@@ -1330,6 +1471,11 @@ const PurchaseOrderList = () => {
                                                 <Typography variant="body2" fontWeight={700} color="#11998e">
                                                     {po.po_number}
                                                 </Typography>
+                                                {po.vendor_invoice_no && (
+                                                    <Typography variant="caption" sx={{ color: '#059669', display: 'block', fontWeight: 600 }}>
+                                                        Bill: {po.vendor_invoice_no}
+                                                    </Typography>
+                                                )}
                                                 <Typography variant="caption" color="text.secondary">
                                                     {fmtDate(po.po_date)}
                                                 </Typography>
@@ -1379,7 +1525,7 @@ const PurchaseOrderList = () => {
                                                             <ViewIcon fontSize="small" />
                                                         </IconButton>
                                                     </Tooltip>
-                                                    {po.can_approve && (
+                                                    {can('purchase_orders.edit') && po.can_approve && (
                                                         <Tooltip title="Approve" TransitionComponent={Zoom}>
                                                             <IconButton size="small" color="info"
                                                                 onClick={() => handleStatusClick(po, 'approved')}
@@ -1388,7 +1534,7 @@ const PurchaseOrderList = () => {
                                                             </IconButton>
                                                         </Tooltip>
                                                     )}
-                                                    {po.can_receive && (
+                                                    {can('purchase_orders.edit') && po.can_receive && (
                                                         <Tooltip title="Mark Received" TransitionComponent={Zoom}>
                                                             <IconButton size="small" color="success"
                                                                 onClick={() => handleStatusClick(po, 'received')}
@@ -1397,7 +1543,7 @@ const PurchaseOrderList = () => {
                                                             </IconButton>
                                                         </Tooltip>
                                                     )}
-                                                    {po.status !== 'cancelled' && po.balance_amount > 0 && (
+                                                    {can('vendor_payments.create') && po.status !== 'cancelled' && po.balance_amount > 0 && (
                                                         <Tooltip title="Add Payment" TransitionComponent={Zoom}>
                                                             <IconButton size="small" color="success"
                                                                 onClick={() => handleOpenPayment(po)}
@@ -1406,7 +1552,7 @@ const PurchaseOrderList = () => {
                                                             </IconButton>
                                                         </Tooltip>
                                                     )}
-                                                    {po.can_cancel && (
+                                                    {can('purchase_orders.edit') && po.can_cancel && (
                                                         <Tooltip title="Cancel PO" TransitionComponent={Zoom}>
                                                             <IconButton size="small" color="warning"
                                                                 onClick={() => handleStatusClick(po, 'cancelled')}
@@ -1415,7 +1561,7 @@ const PurchaseOrderList = () => {
                                                             </IconButton>
                                                         </Tooltip>
                                                     )}
-                                                    {po.status === 'pending' && (
+                                                    {can('purchase_orders.delete') && po.status === 'pending' && (!po.paid_amount || Number(po.paid_amount) === 0) && (
                                                         <Tooltip title="Delete PO" TransitionComponent={Zoom}>
                                                             <IconButton size="small" color="error"
                                                                 onClick={() => handleDeleteConfirm(po)}
@@ -1653,6 +1799,8 @@ const PurchaseOrderList = () => {
                                         }}>
                                             {[
                                                 ['PO Number', viewPO?.po_number],
+                                                ...(viewPO?.vendor_invoice_no ? [['Vendor Bill No', viewPO.vendor_invoice_no]] : []),
+                                                ...(viewPO?.vendor_invoice_date ? [['Vendor Bill Date', fmtDate(viewPO.vendor_invoice_date)]] : []),
                                                 ['PO Date', fmtDate(viewPO?.po_date)],
                                                 ['Expected Delivery', fmtDate(viewPO?.expected_delivery_date)],
                                             ].map(([label, value]) => (
@@ -2158,14 +2306,14 @@ const PurchaseOrderList = () => {
                         )}
                     </DialogContent>
                     <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: 2, gap: 1, flexWrap: 'wrap' }}>
-                        {viewPO?.can_approve && (
+                        {can('purchase_orders.edit') && viewPO?.can_approve && (
                             <GradientButton size="small" startIcon={<ApproveIcon />}
                                 onClick={() => handleStatusClick(viewPO, 'approved')}
                                 gradient="linear-gradient(135deg, #1976d2, #42a5f5)">
                                 Approve
                             </GradientButton>
                         )}
-                        {viewPO?.can_receive && (
+                        {can('purchase_orders.edit') && viewPO?.can_receive && (
                             <GradientButton size="small" startIcon={<ReceiveIcon />}
                                 onClick={() => handleStatusClick(viewPO, 'received')}
                                 gradient="linear-gradient(135deg, #2e7d32, #43a047)">
@@ -2173,7 +2321,7 @@ const PurchaseOrderList = () => {
                             </GradientButton>
                         )}
                         {/* ✅ Purchase Return — sirf received PO pe */}
-                        {viewPO?.status === 'received' && (
+                        {can('purchase_returns.create') && viewPO?.status === 'received' && (
                             <GradientButton size="small" startIcon={<ReturnIcon />}
                                 onClick={() => {
                                     setViewDialog(false);
@@ -2185,7 +2333,7 @@ const PurchaseOrderList = () => {
                                 Return to Vendor
                             </GradientButton>
                         )}
-                        {viewPO?.can_cancel && (
+                        {can('purchase_orders.edit') && viewPO?.can_cancel && (
                             <Button size="small" color="error" variant="outlined"
                                 startIcon={<CancelIcon />}
                                 onClick={() => handleStatusClick(viewPO, 'cancelled')}

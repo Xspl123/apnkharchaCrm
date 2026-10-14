@@ -18,8 +18,10 @@ import BusinessIcon from "@mui/icons-material/Business";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { matchPath } from "react-router-dom";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import { isCrmEnabled, isCrmOnlyEdition, isExpenseOnlyEdition } from "./moduleConfig";
-
+const VendorLedgerPage = lazy(() => import("../features/vendors/pages/VendorLedgerPage"));
 const Login = lazy(() => import("../features/auth/pages/Login"));
 const Register = lazy(() => import("../features/auth/pages/Register"));
 const VerifyOtp = lazy(() => import("../features/auth/pages/VerifyOtp"));
@@ -47,7 +49,6 @@ const VendorDashboard = lazy(() => import("../features/vendors/pages/VendorDashb
 const VendorList = lazy(() => import("../features/vendors/pages/VendorList"));
 const VendorPayments = lazy(() => import("../features/vendors/pages/VendorPayments"));
 const SuperAdminDashboard = lazy(() => import("../pages/admin/SuperAdminDashboard"));
-
 const PurchaseOrderList = lazy(() =>
   import("../features/vendors/pages/PurchaseOrderList")
 );
@@ -64,6 +65,8 @@ const LeadList = lazy(() => import("../features/crm/pages/LeadList"));
 const LeadDetail = lazy(() => import("../features/crm/pages/LeadDetail"));
 const LeadPipeline = lazy(() => import("../features/crm/pages/LeadPipeline"));
 const CampaignList = lazy(() => import("../features/crm/pages/CampaignList"));
+const OrgAccountsList = lazy(() => import("../features/finance/pages/OrgAccountsList"));
+const OrgCashbook = lazy(() => import("../features/finance/pages/OrgCashbook"));
 
 
 export const publicRoutes = [
@@ -88,6 +91,28 @@ export const menuSections = [
 ];
 
 const allProtectedRoutes = [
+
+  {
+    key: "org-accounts",
+    path: "/org/accounts",
+    label: "Org Accounts",
+    icon: <AccountBalanceWalletIcon />,
+    element: <OrgAccountsList />,
+    group: "finance",
+    showInSidebar: true,
+    requiresOrg: true,
+  },
+  {
+    key: "org-cashbook",
+    path: "/org/cashbook",
+    label: "Cash & Bank Book",
+    icon: <ReceiptLongIcon />,
+    element: <OrgCashbook />,
+    group: "finance",
+    showInSidebar: true,
+    requiresOrg: true,
+  },
+
   {
     key: "dashboard",
     path: "/dashboard",
@@ -241,15 +266,15 @@ const allProtectedRoutes = [
     showInSidebar: true,
   },
   {
-    key: "hsn-codes",
-    path: "/hsn-codes",
-    label: "Hsn Codes",
-    icon: <CategoryIcon />,
-    element: <HsnCodeList />,
-    permission: "products.view",
-    group: "sales",
-    showInSidebar: true,
-    allowSuperAdmin: true,
+      key: "hsn-codes",
+      path: "/hsn-codes",
+      label: "Hsn Codes",
+      icon: <CategoryIcon />,
+      element: <HsnCodeList />,
+      permission: "hsn_codes.view",
+      group: "sales",
+      showInSidebar: true,
+      allowSuperAdmin: true,
   },
   {
     key: "vendors-dashboard",
@@ -271,6 +296,22 @@ const allProtectedRoutes = [
     group: "purchase",
     showInSidebar: true,
   },
+
+    {
+    key: "vendor-ledger",
+    path: "/vendors/:vendorId/ledger",
+    label: "Vendor Ledger",
+    element: <VendorLedgerPage />,
+    permission: "vendors.view",
+    group: "purchase",
+    showInSidebar: false,
+    breadcrumbs: [
+      { label: "Purchase" },
+      { label: "Vendors", path: "/vendors/list" },
+      { label: "Vendor Ledger", current: true },
+    ],
+  },
+
   {
     key: "purchase-orders",
     path: "/vendors/purchase-orders",
@@ -287,9 +328,10 @@ const allProtectedRoutes = [
     label: "Vendor Payments",
     icon: <AccountBalanceIcon />,
     element: <VendorPayments />,
+    permission: "vendor_payments.view",
     permission: "purchase_orders.view",
     group: "purchase",
-    showInSidebar: false,
+    showInSidebar: true,
     breadcrumbs: [
       { label: "Purchase" },
       { label: "Vendor Payments", current: true },
