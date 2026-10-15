@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
+import VoucherSlipModal from '../components/VoucherSlipModal';
 import {
     getOrgAccounts,
     getOrgTransactions,
     getOrgCashflowSummary,
     createOrgTransaction,
+    getOrgCategories,
+    createOrgCategory,
 } from '../state/orgFinanceSlice';
 import {
     Box, Container, Grid, Card, CardContent, Typography, Paper, Stack,
@@ -47,30 +50,93 @@ const GradientButton = styled(Button)(({ gradient }) => ({
     '&:hover': { transform: 'scale(1.02)', opacity: 0.95 },
 }));
 
-const fmt = (val) =>
-    `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
-const CATEGORY_LABELS = {
-    client_payment:   { label: 'Client Receipt', color: 'success' },
-    vendor_payment:   { label: 'Vendor Payment', color: 'error' },
-    office_expense:   { label: 'Office Expense', color: 'warning' },
-    owner_capital:    { label: 'Capital In',     color: 'info' },
-    transfer:         { label: 'Transfer (Contra)', color: 'secondary' },
-    opening_balance:  { label: 'Opening Balance', color: 'default' },
-    other_income:     { label: 'Other Income',   color: 'success' },
-    other_expense:    { label: 'Other Expense',  color: 'error' },
-    refund:           { label: 'Refund',         color: 'warning' },
-};
+// Standard Out-of-the-Box Business Categories
+const DEFAULT_INCOME_CATEGORIES = [
+    { key: 'client_payment',   slug: 'client_payment',   name: 'Client Payment (Invoice)',       label: 'Client Receipt', color: 'success', icon: '💵' },
+    { key: 'purchase_return',  slug: 'purchase_return',  name: 'Purchase Return Refund',         label: 'Purchase Return', color: 'success', icon: '↩️' },
+    { key: 'owner_capital',    slug: 'owner_capital',    name: 'Owner Capital Infusion',         label: 'Capital In',     color: 'info',    icon: '💼' },
+    { key: 'interest_income',  slug: 'interest_income',  name: 'Bank / FD Interest',             label: 'Bank Interest',  color: 'success', icon: '🏦' },
+    { key: 'other_income',     slug: 'other_income',     name: 'Other Direct Income',            label: 'Other Income',   color: 'success', icon: '➕' },
+];
+
+const DEFAULT_EXPENSE_CATEGORIES = [
+    { key: 'vendor_payment',   slug: 'vendor_payment',   name: 'Vendor Payout (PO)',             label: 'Vendor Payment', color: 'error',   icon: '🧾' },
+    { key: 'sales_return',     slug: 'sales_return',     name: 'Sales Return Refund',            label: 'Sales Return',   color: 'error',   icon: '↩️' },
+    { key: 'office_rent',      slug: 'office_rent',      name: 'Office / Shop Rent',             label: 'Office Rent',    color: 'warning', icon: '🏢' },
+    { key: 'salary',           slug: 'salary',           name: 'Staff Salary & Wages',           label: 'Staff Salary',   color: 'info',    icon: '👥' },
+    { key: 'electricity_bill', slug: 'electricity_bill', name: 'Electricity & Utilities',       label: 'Electricity',    color: 'warning', icon: '⚡' },
+    { key: 'tea_snacks',       slug: 'tea_snacks',       name: 'Tea, Pantry & Refreshments',     label: 'Tea & Snacks',   color: 'warning', icon: '☕' },
+    { key: 'office_expense',   slug: 'office_expense',   name: 'Office Supplies & Stationery',   label: 'Office Supplies',color: 'warning', icon: '📦' },
+    { key: 'freight_logistics',slug: 'freight_logistics',name: 'Freight & Transportation',       label: 'Freight',        color: 'warning', icon: '🚚' },
+    { key: 'marketing_ads',    slug: 'marketing_ads',    name: 'Marketing & Advertising',        label: 'Marketing',      color: 'warning', icon: '📢' },
+    { key: 'repairs',          slug: 'repairs',          name: 'Repairs & Maintenance',          label: 'Repairs',        color: 'warning', icon: '🛠️' },
+    { key: 'other_expense',    slug: 'other_expense',    name: 'Other Business Expense',         label: 'Other Expense',  color: 'error',   icon: '📌' },
+];
 
 const OrgCashbook = () => {
+    const [voucherModal, setVoucherModal] = useState({ open: false, transaction: null });
+    const companies = useSelector((s) => s.companies?.companies || []);
+    const { user } = useSelector((s) => s.auth || {});
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
 
-    const { accounts = [], transactions = [], cashflowSummary, isLoading } =
-        useSelector((s) => s.orgFinance || {});
+    // ── Safe Destructuring with Guaranteed Non-Null Fallbacks ────────
+    const {
+        accounts = [],
+        transactions = [],
+        categories: rawCategories,
+        cashflowSummary: rawSummary,
+        isLoading,
+    } = useSelector((s) => s.orgFinance || {});
+
+    const cashflowSummary = rawSummary || {};
+
+    // Merge Backend Categories with Defaults dynamically
+    const incomeCategories = useMemo(() => {
+        const fromBackend = rawCategories?.income || [];
+        const merged = [...DEFAULT_INCOME_CATEGORIES];
+        fromBackend.forEach(cat => {
+            if (!merged.some(m => (m.slug || m.key) === (cat.slug || cat.key || cat.name))) {
+                merged.push({
+                    key: cat.slug || cat.name,
+                    slug: cat.slug || cat.name,
+                    name: cat.name,
+                    label: cat.name,
+                    color: cat.color || 'success',
+                    icon: cat.icon || '➕',
+                });
+            }
+        });
+        return merged;
+    }, [rawCategories]);
+
+    const expenseCategories = useMemo(() => {
+        const fromBackend = rawCategories?.expense || [];
+        const merged = [...DEFAULT_EXPENSE_CATEGORIES];
+        fromBackend.forEach(cat => {
+            if (!merged.some(m => (m.slug || m.key) === (cat.slug || cat.key || cat.name))) {
+                merged.push({
+                    key: cat.slug || cat.name,
+                    slug: cat.slug || cat.name,
+                    name: cat.name,
+                    label: cat.name,
+                    color: cat.color || 'warning',
+                    icon: cat.icon || '📌',
+                });
+            }
+        });
+        return merged;
+    }, [rawCategories]);
+
+    // Quick Category Modal State (Zero Developer Dependency)
+    const [quickCatModal, setQuickCatModal] = useState({ open: false, type: 'expense' });
+    const [quickCatName, setQuickCatName] = useState('');
+    const [savingCat, setSavingCat] = useState(false);
 
     const [selectedAccountId, setSelectedAccountId] = useState(
         location.state?.selectedAccountId ? String(location.state.selectedAccountId) : 'all'
@@ -87,19 +153,22 @@ const OrgCashbook = () => {
     const [snackbar, setSnackbar]             = useState({ open: false, message: '', severity: 'success' });
 
     const [trxForm, setTrxForm] = useState({
-        account_id:          '',
-        transaction_date:    new Date().toISOString().split('T')[0],
-        type:                'debit',
-        category:            'office_expense',
-        amount:              '',
-        payment_method:      'bank_transfer',
-        reference_no:        '',
-        description:         '',
+        account_id: '',
+        transaction_date: new Date().toISOString().split('T')[0],
+        type: 'debit',
+        category: 'office_rent',
+        amount: '',
+        payment_method: 'bank_transfer',
+        reference_no: '',
+        description: '',
         transfer_account_id: '',
     });
 
     const loadData = () => {
         dispatch(getOrgAccounts());
+        if (typeof getOrgCategories === 'function') {
+            dispatch(getOrgCategories());
+        }
         dispatch(getOrgTransactions({
             account_id: selectedAccountId !== 'all' ? selectedAccountId : undefined,
             type: filterType !== 'all' ? filterType : undefined,
@@ -121,70 +190,121 @@ const OrgCashbook = () => {
     const showSnackbar = (message, severity = 'success') =>
         setSnackbar({ open: true, message, severity });
 
-    const defaultAccId = accounts.find(a => a.is_default)?.id || accounts[0]?.id || '';
+    const defaultAccId = (accounts || []).find(a => a.is_default)?.id || accounts?.[0]?.id || '';
 
     const handleOpenExpense = () => {
+        const defCat = expenseCategories[2]?.slug || 'office_rent';
+        const defDesc = expenseCategories[2]?.name || 'Office / Shop Rent';
         setTrxForm({
-            account_id:       selectedAccountId !== 'all' ? selectedAccountId : defaultAccId,
+            account_id: defaultAccId,
             transaction_date: new Date().toISOString().split('T')[0],
-            type:             'debit',
-            category:         'office_expense',
-            amount:           '',
-            payment_method:   'cash',
-            reference_no:     '',
-            description:      '',
+            type: 'debit',
+            category: defCat,
+            amount: '',
+            payment_method: 'bank_transfer',
+            reference_no: '',
+            description: defDesc,
             transfer_account_id: '',
         });
         setExpenseDialog(true);
     };
 
     const handleOpenIncome = () => {
+        const defCat = incomeCategories[4]?.slug || 'other_income';
+        const defDesc = incomeCategories[4]?.name || 'Other Direct Income';
         setTrxForm({
-            account_id:       selectedAccountId !== 'all' ? selectedAccountId : defaultAccId,
+            account_id: defaultAccId,
             transaction_date: new Date().toISOString().split('T')[0],
-            type:             'credit',
-            category:         'owner_capital',
-            amount:           '',
-            payment_method:   'bank_transfer',
-            reference_no:     '',
-            description:      '',
+            type: 'credit',
+            category: defCat,
+            amount: '',
+            payment_method: 'bank_transfer',
+            reference_no: '',
+            description: defDesc,
             transfer_account_id: '',
         });
         setIncomeDialog(true);
     };
 
     const handleOpenTransfer = () => {
+        const destAccId = (accounts || []).find(a => a.id !== defaultAccId)?.id || '';
         setTrxForm({
-            account_id:          accounts[0]?.id || '',
-            transaction_date:    new Date().toISOString().split('T')[0],
-            type:                'debit',
-            category:            'transfer',
-            amount:              '',
-            payment_method:      'bank_transfer',
-            reference_no:        '',
-            description:         'Internal Transfer / Contra',
-            transfer_account_id: accounts[1]?.id || '',
+            account_id: defaultAccId,
+            transaction_date: new Date().toISOString().split('T')[0],
+            type: 'debit',
+            category: 'transfer',
+            amount: '',
+            payment_method: 'bank_transfer',
+            reference_no: '',
+            description: 'Internal Transfer / Contra',
+            transfer_account_id: destAccId,
         });
         setTransferDialog(true);
     };
 
-    const handleSubmitTrx = async (e, dialogSetter) => {
-        e.preventDefault();
-        const amt = parseFloat(trxForm.amount);
-        if (!amt || amt <= 0) {
-            showSnackbar('Enter a valid amount', 'error'); return;
+    // Quick Save Custom Category (On the fly in dialog)
+    const handleSaveQuickCategory = async () => {
+        if (!quickCatName.trim()) return;
+        setSavingCat(true);
+        try {
+            if (typeof createOrgCategory === 'function') {
+                const res = await dispatch(createOrgCategory({
+                    name: quickCatName.trim(),
+                    type: quickCatModal.type,
+                })).unwrap();
+                showSnackbar(`Category "${res.name}" created! 🎉`);
+                const chosenKey = res.slug || res.name;
+                setTrxForm(p => ({
+                    ...p,
+                    category: chosenKey,
+                    description: res.name,
+                }));
+            } else {
+                // Local fallback if redux action not hooked yet
+                showSnackbar(`Category "${quickCatName}" selected!`);
+                setTrxForm(p => ({
+                    ...p,
+                    category: quickCatName.toLowerCase().replace(/\\s+/g, '_'),
+                    description: quickCatName.trim(),
+                }));
+            }
+            setQuickCatName('');
+            setQuickCatModal({ open: false, type: 'expense' });
+        } catch (err) {
+            showSnackbar(typeof err === 'string' ? err : 'Failed to create category', 'error');
+        } finally {
+            setSavingCat(false);
         }
-        if (!trxForm.account_id) {
-            showSnackbar('Select an account', 'error'); return;
+    };
+
+    const handleSubmitTrx = async (e, closeDialog) => {
+        e.preventDefault();
+        if (!trxForm.account_id || !trxForm.amount || parseFloat(trxForm.amount) <= 0) {
+            showSnackbar('Please enter a valid account and positive amount', 'error');
+            return;
+        }
+
+        // Auto-fill description if left blank by user
+        let autoDesc = trxForm.description?.trim();
+        if (!autoDesc) {
+            const allCats = [...incomeCategories, ...expenseCategories];
+            const matched = allCats.find(c => (c.slug || c.key) === trxForm.category);
+            autoDesc = matched?.name || matched?.label || trxForm.category;
         }
 
         try {
-            await dispatch(createOrgTransaction(trxForm)).unwrap();
-            showSnackbar('Transaction recorded successfully!');
-            dialogSetter(false);
+            await dispatch(createOrgTransaction({
+                ...trxForm,
+                description: autoDesc,
+                amount: parseFloat(trxForm.amount),
+                transfer_account_id: trxForm.transfer_account_id ? Number(trxForm.transfer_account_id) : undefined,
+            })).unwrap();
+
+            showSnackbar('Transaction recorded successfully! 🎉');
+            closeDialog(false);
             loadData();
         } catch (err) {
-            showSnackbar(typeof err === 'string' ? err : 'Transaction failed!', 'error');
+            showSnackbar(typeof err === 'string' ? err : 'Failed to record transaction', 'error');
         }
     };
 
@@ -193,113 +313,147 @@ const OrgCashbook = () => {
     };
 
     return (
-        <Container maxWidth="xl" sx={{ py: 4 }}>
-            {/* Header */}
-            <Paper elevation={0} sx={{
-                p: 3, mb: 3, borderRadius: '16px',
-                background: isDark
-                    ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-                    : 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                color: 'white',
-            }}>
-                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={2}>
+        <Container maxWidth="xl" sx={{ py: 3 }}>
+            {/* Header Banner */}
+            <Paper
+                elevation={0}
+                sx={{
+                    p: { xs: 2.5, md: 3 },
+                    mb: 3,
+                    borderRadius: '24px',
+                    background: isDark
+                        ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+                        : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                }}
+            >
+                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
                     <Box>
-                        <Typography variant="h5" fontWeight={800} letterSpacing={0.5}>
+                        <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: -0.5 }}>
                             📖 Company Cash & Bank Book
                         </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.5 }}>
+                        <Typography variant="body2" sx={{ opacity: 0.8, mt: 0.5 }}>
                             Paisa Kahan Se Aaya, Kahan Gaya — Complete organisation fund flow and bank statement.
                         </Typography>
                     </Box>
-                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
+
+                    <Stack direction="row" spacing={1.5} flexWrap="wrap">
                         <Button
                             variant="outlined"
                             startIcon={<TransferIcon />}
                             onClick={handleOpenTransfer}
-                            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)', borderRadius: '10px', textTransform: 'none' }}
+                            sx={{
+                                color: '#ffffff',
+                                borderColor: 'rgba(255,255,255,0.3)',
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                '&:hover': { borderColor: '#ffffff', bgcolor: 'rgba(255,255,255,0.08)' },
+                            }}
                         >
-                            Transfer Funds
+                            ⇄ Transfer Funds
                         </Button>
-                        <GradientButton
+                        <Button
+                            variant="contained"
                             startIcon={<IncomeIcon />}
                             onClick={handleOpenIncome}
-                            gradient="linear-gradient(135deg, #10b981, #059669)"
+                            sx={{
+                                bgcolor: '#10b981',
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                '&:hover': { bgcolor: '#059669' },
+                            }}
                         >
                             + Add Income
-                        </GradientButton>
-                        <GradientButton
+                        </Button>
+                        <Button
+                            variant="contained"
                             startIcon={<ExpenseIcon />}
                             onClick={handleOpenExpense}
-                            gradient="linear-gradient(135deg, #ef4444, #dc2626)"
+                            sx={{
+                                bgcolor: '#ef4444',
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                '&:hover': { bgcolor: '#dc2626' },
+                            }}
                         >
-                            + Record Expense
-                        </GradientButton>
+                            − Record Expense
+                        </Button>
                     </Stack>
                 </Stack>
             </Paper>
 
             {/* Cashflow Summary Cards */}
-            <Grid container spacing={2.5} mb={3}>
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={4}>
                     <GlassCard>
-                        <CardContent>
+                        <CardContent sx={{ p: 2.5 }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                                        TOTAL MONEY IN (CREDIT)
+                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        Total Money In (Credit)
                                     </Typography>
-                                    <Typography variant="h4" fontWeight={800} color="#10b981" mt={0.5}>
-                                        {fmt(cashflowSummary?.total_inflow)}
+                                    <Typography variant="h5" fontWeight={800} color="#10b981" sx={{ mt: 0.5 }}>
+                                        {fmt(cashflowSummary?.total_inflow || 0)}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         Client receipts & direct deposits
                                     </Typography>
                                 </Box>
-                                <Avatar sx={{ bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', width: 48, height: 48 }}>
+                                <Avatar sx={{ bgcolor: 'rgba(16, 185, 129, 0.12)', color: '#10b981', width: 44, height: 44 }}>
                                     <InflowIcon />
                                 </Avatar>
                             </Stack>
                         </CardContent>
                     </GlassCard>
                 </Grid>
+
                 <Grid item xs={12} sm={4}>
                     <GlassCard>
-                        <CardContent>
+                        <CardContent sx={{ p: 2.5 }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                                        TOTAL MONEY OUT (DEBIT)
+                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        Total Money Out (Debit)
                                     </Typography>
-                                    <Typography variant="h4" fontWeight={800} color="#ef4444" mt={0.5}>
-                                        {fmt(cashflowSummary?.total_outflow)}
+                                    <Typography variant="h5" fontWeight={800} color="#ef4444" sx={{ mt: 0.5 }}>
+                                        {fmt(cashflowSummary?.total_outflow || 0)}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         Vendor payouts & office expenses
                                     </Typography>
                                 </Box>
-                                <Avatar sx={{ bgcolor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', width: 48, height: 48 }}>
+                                <Avatar sx={{ bgcolor: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', width: 44, height: 44 }}>
                                     <OutflowIcon />
                                 </Avatar>
                             </Stack>
                         </CardContent>
                     </GlassCard>
                 </Grid>
+
                 <Grid item xs={12} sm={4}>
                     <GlassCard>
-                        <CardContent>
+                        <CardContent sx={{ p: 2.5 }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                                        NET CASHFLOW PERIOD
+                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        Net Cashflow Period
                                     </Typography>
-                                    <Typography variant="h4" fontWeight={800} color={Number(cashflowSummary?.net_flow) >= 0 ? '#10b981' : '#ef4444'} mt={0.5}>
-                                        {fmt(cashflowSummary?.net_flow)}
+                                    <Typography
+                                        variant="h5"
+                                        fontWeight={800}
+                                        sx={{ mt: 0.5, color: Number(cashflowSummary?.net_flow || 0) >= 0 ? '#10b981' : '#ef4444' }}
+                                    >
+                                        {fmt(cashflowSummary?.net_flow || 0)}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         Net surplus / deficit
                                     </Typography>
                                 </Box>
-                                <Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', width: 48, height: 48 }}>
+                                <Avatar sx={{ bgcolor: 'rgba(14, 165, 233, 0.12)', color: '#0ea5e9', width: 44, height: 44 }}>
                                     <BalanceIcon />
                                 </Avatar>
                             </Stack>
@@ -309,10 +463,10 @@ const OrgCashbook = () => {
             </Grid>
 
             {/* Filter Bar */}
-            <GlassCard sx={{ p: 2.5, mb: 3 }}>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} sm={6} md={3}>
-                        <FormControl fullWidth size="small">
+            <GlassCard sx={{ mb: 3 }}>
+                <CardContent sx={{ p: 2 }}>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+                        <FormControl size="small" sx={{ minWidth: 200, flex: 1 }}>
                             <InputLabel>Account</InputLabel>
                             <Select
                                 value={selectedAccountId}
@@ -320,16 +474,16 @@ const OrgCashbook = () => {
                                 onChange={(e) => setSelectedAccountId(e.target.value)}
                             >
                                 <MenuItem value="all">🌐 All Accounts Consolidated</MenuItem>
-                                {accounts.map(a => (
-                                    <MenuItem key={a.id} value={String(a.id)}>
-                                        {a.account_type === 'cash' ? '💵 ' : '🏦 '}{a.account_name || a.name} ({fmt(a.current_balance)})
+                                {(accounts || []).map(a => (
+                                    <MenuItem key={a.id} value={a.id}>
+                                        {a.account_type === 'cash' ? '💵 ' : '🏦 '}
+                                        {a.account_name || a.name} ({fmt(a.current_balance)})
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
-                    </Grid>
-                    <Grid item xs={6} sm={3} md={2}>
-                        <FormControl fullWidth size="small">
+
+                        <FormControl size="small" sx={{ minWidth: 150 }}>
                             <InputLabel>Type</InputLabel>
                             <Select
                                 value={filterType}
@@ -337,38 +491,48 @@ const OrgCashbook = () => {
                                 onChange={(e) => setFilterType(e.target.value)}
                             >
                                 <MenuItem value="all">All Types</MenuItem>
-                                <MenuItem value="credit">Money In (+)</MenuItem>
-                                <MenuItem value="debit">Money Out (-)</MenuItem>
+                                <MenuItem value="credit">Money In (Credit)</MenuItem>
+                                <MenuItem value="debit">Money Out (Debit)</MenuItem>
                             </Select>
                         </FormControl>
-                    </Grid>
-                    <Grid item xs={6} sm={3} md={2}>
+
                         <TextField
-                            fullWidth size="small" type="date"
+                            size="small"
+                            type="date"
                             label="From Date"
                             value={fromDate}
                             onChange={(e) => setFromDate(e.target.value)}
                             InputLabelProps={{ shrink: true }}
+                            sx={{ minWidth: 140 }}
                         />
-                    </Grid>
-                    <Grid item xs={6} sm={3} md={2}>
+
                         <TextField
-                            fullWidth size="small" type="date"
+                            size="small"
+                            type="date"
                             label="To Date"
                             value={toDate}
                             onChange={(e) => setToDate(e.target.value)}
                             InputLabelProps={{ shrink: true }}
+                            sx={{ minWidth: 140 }}
                         />
-                    </Grid>
-                    <Grid item xs={6} sm={3} md={3}>
+
+                        <TextField
+                            size="small"
+                            placeholder="Search note / ref..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && loadData()}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon fontSize="small" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{ flex: 1.5 }}
+                        />
+
                         <Stack direction="row" spacing={1}>
-                            <TextField
-                                fullWidth size="small"
-                                placeholder="Search note / ref..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                InputProps={{ startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1, fontSize: 18 }} /> }}
-                            />
                             <Tooltip title="Print Statement">
                                 <IconButton onClick={handlePrint} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '10px' }}>
                                     <PrintIcon />
@@ -380,8 +544,8 @@ const OrgCashbook = () => {
                                 </IconButton>
                             </Tooltip>
                         </Stack>
-                    </Grid>
-                </Grid>
+                    </Stack>
+                </CardContent>
             </GlassCard>
 
             {/* Statement Table */}
@@ -390,71 +554,110 @@ const OrgCashbook = () => {
                     <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Voucher #</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Account</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Description / Ref</TableCell>
                             <TableCell sx={{ fontWeight: 700 }} align="right">Debit (- Out)</TableCell>
                             <TableCell sx={{ fontWeight: 700 }} align="right">Credit (+ In)</TableCell>
                             <TableCell sx={{ fontWeight: 700 }} align="right">Running Balance</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }} align="center">Action</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                                     <CircularProgress size={30} />
                                 </TableCell>
                             </TableRow>
-                        ) : transactions.length === 0 ? (
+                        ) : (transactions || []).length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                                <TableCell colSpan={9} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                     No transactions found matching criteria.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            transactions.map((t) => {
+                            (transactions || []).map((t) => {
                                 const isCredit = t.type === 'credit';
-                                const catInfo = CATEGORY_LABELS[t.category] || { label: t.category, color: 'default' };
+                                const allCats = [...incomeCategories, ...expenseCategories];
+                                const matchedCat = allCats.find(c => (c.slug || c.key) === t.category);
+
+                                const catLabel = matchedCat?.name || matchedCat?.label || t.category;
+                                const catColor = matchedCat?.color || (t.category === 'transfer' ? 'secondary' : isCredit ? 'success' : 'warning');
 
                                 return (
                                     <TableRow key={t.id} hover>
-                                        <TableCell sx={{ fontSize: 13, fontWeight: 500 }}>
-                                            {t.transaction_date}
+                                        <TableCell sx={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                            {t.transaction_date_fmt || t.transaction_date}
                                         </TableCell>
+
+                                        {/* Voucher # Tag */}
+                                        <TableCell>
+                                            <Chip
+                                                label={t.voucher_no || ('TX-' + t.id)}
+                                                size="small"
+                                                sx={{
+                                                    fontWeight: 700,
+                                                    fontSize: 11,
+                                                    bgcolor: t.category === 'transfer' ? 'rgba(99, 102, 241, 0.1)' : isCredit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                    color: t.category === 'transfer' ? '#4f46e5' : isCredit ? '#059669' : '#dc2626',
+                                                }}
+                                            />
+                                        </TableCell>
+
                                         <TableCell>
                                             <Chip
                                                 size="small"
-                                                label={t.account_name || t.account?.name || 'Account'}
+                                                label={t.account_name || t.account?.name || t.account?.account_name || 'Account'}
                                                 sx={{ fontSize: 11, fontWeight: 600 }}
                                             />
                                         </TableCell>
+
                                         <TableCell>
                                             <Chip
                                                 size="small"
-                                                label={catInfo.label}
-                                                color={catInfo.color}
+                                                label={catLabel}
+                                                color={catColor}
                                                 variant="outlined"
                                                 sx={{ fontSize: 11, fontWeight: 600 }}
                                             />
                                         </TableCell>
+
                                         <TableCell>
                                             <Typography variant="body2" fontWeight={500}>
-                                                {t.description || '—'}
+                                                {t.description || catLabel}
                                             </Typography>
                                             {t.reference_no && (
                                                 <Typography variant="caption" color="text.secondary">
-                                                    Ref: {t.reference_no} ({t.payment_method})
+                                                    Ref: {t.reference_no} ({t.payment_method ? t.payment_method.toUpperCase() : 'N/A'})
                                                 </Typography>
                                             )}
                                         </TableCell>
+
                                         <TableCell align="right" sx={{ fontWeight: 700, color: '#ef4444' }}>
                                             {!isCredit ? fmt(t.amount) : '—'}
                                         </TableCell>
+
                                         <TableCell align="right" sx={{ fontWeight: 700, color: '#10b981' }}>
                                             {isCredit ? fmt(t.amount) : '—'}
                                         </TableCell>
+
                                         <TableCell align="right" sx={{ fontWeight: 800 }}>
                                             {fmt(t.balance_after)}
+                                        </TableCell>
+
+                                        {/* Print Voucher Action */}
+                                        <TableCell align="center">
+                                            <Tooltip title="Print Signed Voucher Slip" arrow>
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    onClick={() => setVoucherModal({ open: true, transaction: t })}
+                                                >
+                                                    <PrintIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
                                         </TableCell>
                                     </TableRow>
                                 );
@@ -464,7 +667,7 @@ const OrgCashbook = () => {
                 </Table>
             </TableContainer>
 
-            {/* Modal: Record Expense */}
+            {/* Modal: Record Expense (Money Out) */}
             <Dialog open={expenseDialog} onClose={() => setExpenseDialog(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}>
                 <DialogTitle>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -482,55 +685,95 @@ const OrgCashbook = () => {
                                     label="Pay From Account"
                                     onChange={(e) => setTrxForm(p => ({ ...p, account_id: e.target.value }))}
                                 >
-                                    {accounts.map(a => (
+                                    {(accounts || []).map(a => (
                                         <MenuItem key={a.id} value={a.id}>
-                                            {a.account_type === 'cash' ? '💵 ' : '🏦 '}{a.account_name || a.name} ({fmt(a.current_balance)})
+                                            {a.account_type === 'cash' ? '💵 ' : '🏦 '}
+                                            {a.account_name || a.name} ({fmt(a.current_balance)})
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
+
+                            {/* Dynamic Expense Categories with Quick Add */}
                             <FormControl fullWidth size="small">
-                                <InputLabel>Expense Category</InputLabel>
+                                <InputLabel>Category</InputLabel>
                                 <Select
                                     value={trxForm.category}
-                                    label="Expense Category"
-                                    onChange={(e) => setTrxForm(p => ({ ...p, category: e.target.value }))}
+                                    label="Category"
+                                    onChange={(e) => {
+                                        if (e.target.value === '__add_new__') {
+                                            setQuickCatModal({ open: true, type: 'expense' });
+                                        } else {
+                                            const selected = expenseCategories.find(c => (c.slug || c.key) === e.target.value);
+                                            setTrxForm(p => ({
+                                                ...p,
+                                                category: e.target.value,
+                                                description: selected?.name || p.description,
+                                            }));
+                                        }
+                                    }}
                                 >
-                                    <MenuItem value="office_expense">Office Expense</MenuItem>
-                                    <MenuItem value="rent">Rent</MenuItem>
-                                    <MenuItem value="salary">Staff Salary</MenuItem>
-                                    <MenuItem value="utilities">Electricity / Internet Bill</MenuItem>
-                                    <MenuItem value="tea_snacks">Tea & Refreshment</MenuItem>
-                                    <MenuItem value="freight">Courier / Freight</MenuItem>
-                                    <MenuItem value="other_expense">Other Expense</MenuItem>
+                                    {expenseCategories.map(cat => (
+                                        <MenuItem key={cat.slug || cat.key} value={cat.slug || cat.key}>
+                                            {cat.icon || '📌'} {cat.name}
+                                        </MenuItem>
+                                    ))}
+                                    <MenuItem
+                                        value="__add_new__"
+                                        sx={{
+                                            color: '#ef4444',
+                                            fontWeight: 700,
+                                            borderTop: '1px dashed #cbd5e1',
+                                            mt: 1,
+                                        }}
+                                    >
+                                        ➕ + Add Custom Expense Category...
+                                    </MenuItem>
                                 </Select>
                             </FormControl>
+
                             <TextField
-                                fullWidth size="small" type="number" required
-                                label="Amount"
+                                fullWidth
+                                size="small"
+                                label="Expense Amount (₹)"
+                                type="number"
+                                required
                                 value={trxForm.amount}
                                 onChange={(e) => setTrxForm(p => ({ ...p, amount: e.target.value }))}
-                                InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
                             />
+
                             <TextField
-                                fullWidth size="small" type="date" required
+                                fullWidth
+                                size="small"
                                 label="Date"
+                                type="date"
+                                required
                                 value={trxForm.transaction_date}
                                 onChange={(e) => setTrxForm(p => ({ ...p, transaction_date: e.target.value }))}
                                 InputLabelProps={{ shrink: true }}
                             />
+
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Payment Mode</InputLabel>
+                                <Select
+                                    value={trxForm.payment_method}
+                                    label="Payment Mode"
+                                    onChange={(e) => setTrxForm(p => ({ ...p, payment_method: e.target.value }))}
+                                >
+                                    <MenuItem value="bank_transfer">🏦 Bank Transfer</MenuItem>
+                                    <MenuItem value="upi">📱 UPI</MenuItem>
+                                    <MenuItem value="cash">💵 Cash</MenuItem>
+                                    <MenuItem value="cheque">📝 Cheque</MenuItem>
+                                </Select>
+                            </FormControl>
+
                             <TextField
-                                fullWidth size="small"
-                                label="Description"
+                                fullWidth
+                                size="small"
+                                label="Description / Narration"
+                                placeholder="e.g. October office rent, tea snacks"
                                 value={trxForm.description}
                                 onChange={(e) => setTrxForm(p => ({ ...p, description: e.target.value }))}
-                                placeholder="e.g. October office rent, tea snacks"
-                            />
-                            <TextField
-                                fullWidth size="small"
-                                label="Reference / Bill No"
-                                value={trxForm.reference_no}
-                                onChange={(e) => setTrxForm(p => ({ ...p, reference_no: e.target.value }))}
                             />
                         </Stack>
                     </Box>
@@ -538,12 +781,12 @@ const OrgCashbook = () => {
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setExpenseDialog(false)} variant="outlined">Cancel</Button>
                     <GradientButton type="submit" form="expense-form" gradient="linear-gradient(135deg, #ef4444, #dc2626)">
-                        Debit & Save
+                        Save Expense
                     </GradientButton>
                 </DialogActions>
             </Dialog>
 
-            {/* Modal: Add Direct Income */}
+            {/* Modal: Add Income (Money In) */}
             <Dialog open={incomeDialog} onClose={() => setIncomeDialog(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}>
                 <DialogTitle>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -561,46 +804,95 @@ const OrgCashbook = () => {
                                     label="Deposit To Account"
                                     onChange={(e) => setTrxForm(p => ({ ...p, account_id: e.target.value }))}
                                 >
-                                    {accounts.map(a => (
+                                    {(accounts || []).map(a => (
                                         <MenuItem key={a.id} value={a.id}>
-                                            {a.account_type === 'cash' ? '💵 ' : '🏦 '}{a.account_name || a.name} ({fmt(a.current_balance)})
+                                            {a.account_type === 'cash' ? '💵 ' : '🏦 '}
+                                            {a.account_name || a.name} ({fmt(a.current_balance)})
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
+
+                            {/* Dynamic Income Categories with Quick Add */}
                             <FormControl fullWidth size="small">
-                                <InputLabel>Income Category</InputLabel>
+                                <InputLabel>Category</InputLabel>
                                 <Select
                                     value={trxForm.category}
-                                    label="Income Category"
-                                    onChange={(e) => setTrxForm(p => ({ ...p, category: e.target.value }))}
+                                    label="Category"
+                                    onChange={(e) => {
+                                        if (e.target.value === '__add_new__') {
+                                            setQuickCatModal({ open: true, type: 'income' });
+                                        } else {
+                                            const selected = incomeCategories.find(c => (c.slug || c.key) === e.target.value);
+                                            setTrxForm(p => ({
+                                                ...p,
+                                                category: e.target.value,
+                                                description: selected?.name || p.description,
+                                            }));
+                                        }
+                                    }}
                                 >
-                                    <MenuItem value="owner_capital">Owner / Partner Capital</MenuItem>
-                                    <MenuItem value="loan_receipt">Loan Disbursal</MenuItem>
-                                    <MenuItem value="interest_income">Interest Received</MenuItem>
-                                    <MenuItem value="other_income">Other Income</MenuItem>
+                                    {incomeCategories.map(cat => (
+                                        <MenuItem key={cat.slug || cat.key} value={cat.slug || cat.key}>
+                                            {cat.icon || '➕'} {cat.name}
+                                        </MenuItem>
+                                    ))}
+                                    <MenuItem
+                                        value="__add_new__"
+                                        sx={{
+                                            color: '#10b981',
+                                            fontWeight: 700,
+                                            borderTop: '1px dashed #cbd5e1',
+                                            mt: 1,
+                                        }}
+                                    >
+                                        ➕ + Add Custom Income Category...
+                                    </MenuItem>
                                 </Select>
                             </FormControl>
+
                             <TextField
-                                fullWidth size="small" type="number" required
-                                label="Amount"
+                                fullWidth
+                                size="small"
+                                label="Amount (₹)"
+                                type="number"
+                                required
                                 value={trxForm.amount}
                                 onChange={(e) => setTrxForm(p => ({ ...p, amount: e.target.value }))}
-                                InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
                             />
+
                             <TextField
-                                fullWidth size="small" type="date" required
+                                fullWidth
+                                size="small"
                                 label="Date"
+                                type="date"
+                                required
                                 value={trxForm.transaction_date}
                                 onChange={(e) => setTrxForm(p => ({ ...p, transaction_date: e.target.value }))}
                                 InputLabelProps={{ shrink: true }}
                             />
+
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Deposit Mode</InputLabel>
+                                <Select
+                                    value={trxForm.payment_method}
+                                    label="Deposit Mode"
+                                    onChange={(e) => setTrxForm(p => ({ ...p, payment_method: e.target.value }))}
+                                >
+                                    <MenuItem value="bank_transfer">🏦 Bank Transfer</MenuItem>
+                                    <MenuItem value="upi">📱 UPI</MenuItem>
+                                    <MenuItem value="cash">💵 Cash</MenuItem>
+                                    <MenuItem value="cheque">📝 Cheque</MenuItem>
+                                </Select>
+                            </FormControl>
+
                             <TextField
-                                fullWidth size="small"
-                                label="Description"
+                                fullWidth
+                                size="small"
+                                label="Description / Narration"
+                                placeholder="e.g. Interest received, capital added"
                                 value={trxForm.description}
                                 onChange={(e) => setTrxForm(p => ({ ...p, description: e.target.value }))}
-                                placeholder="e.g. Initial capital deposited"
                             />
                         </Stack>
                     </Box>
@@ -608,7 +900,7 @@ const OrgCashbook = () => {
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setIncomeDialog(false)} variant="outlined">Cancel</Button>
                     <GradientButton type="submit" form="income-form" gradient="linear-gradient(135deg, #10b981, #059669)">
-                        Credit & Save
+                        Save Income
                     </GradientButton>
                 </DialogActions>
             </Dialog>
@@ -617,7 +909,7 @@ const OrgCashbook = () => {
             <Dialog open={transferDialog} onClose={() => setTransferDialog(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}>
                 <DialogTitle>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="h6" fontWeight={700}>Transfer Between Accounts</Typography>
+                        <Typography variant="h6" fontWeight={700} color="#8b5cf6">⇄ Transfer Funds (Contra)</Typography>
                         <IconButton onClick={() => setTransferDialog(false)}><CloseIcon /></IconButton>
                     </Stack>
                 </DialogTitle>
@@ -625,52 +917,66 @@ const OrgCashbook = () => {
                     <Box component="form" id="transfer-form" onSubmit={(e) => handleSubmitTrx(e, setTransferDialog)}>
                         <Stack spacing={2} mt={1}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Transfer From</InputLabel>
+                                <InputLabel>From Account (Deduct)</InputLabel>
                                 <Select
                                     value={trxForm.account_id}
-                                    label="Transfer From"
+                                    label="From Account (Deduct)"
                                     onChange={(e) => setTrxForm(p => ({ ...p, account_id: e.target.value }))}
                                 >
-                                    {accounts.map(a => (
+                                    {(accounts || []).map(a => (
                                         <MenuItem key={a.id} value={a.id}>
+                                            {a.account_type === 'cash' ? '💵 ' : '🏦 '}
                                             {a.account_name || a.name} ({fmt(a.current_balance)})
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
+
                             <FormControl fullWidth size="small">
-                                <InputLabel>Transfer To</InputLabel>
+                                <InputLabel>To Account (Deposit)</InputLabel>
                                 <Select
                                     value={trxForm.transfer_account_id}
-                                    label="Transfer To"
+                                    label="To Account (Deposit)"
                                     onChange={(e) => setTrxForm(p => ({ ...p, transfer_account_id: e.target.value }))}
                                 >
-                                    {accounts.filter(a => a.id !== trxForm.account_id).map(a => (
-                                        <MenuItem key={a.id} value={a.id}>
-                                            {a.account_name || a.name} ({fmt(a.current_balance)})
-                                        </MenuItem>
-                                    ))}
+                                    {(accounts || [])
+                                        .filter(a => a.id !== trxForm.account_id)
+                                        .map(a => (
+                                            <MenuItem key={a.id} value={a.id}>
+                                                {a.account_type === 'cash' ? '💵 ' : '🏦 '}
+                                                {a.account_name || a.name} ({fmt(a.current_balance)})
+                                            </MenuItem>
+                                        ))}
                                 </Select>
                             </FormControl>
+
                             <TextField
-                                fullWidth size="small" type="number" required
-                                label="Transfer Amount"
+                                fullWidth
+                                size="small"
+                                label="Transfer Amount (₹)"
+                                type="number"
+                                required
                                 value={trxForm.amount}
                                 onChange={(e) => setTrxForm(p => ({ ...p, amount: e.target.value }))}
-                                InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
                             />
+
                             <TextField
-                                fullWidth size="small" type="date" required
+                                fullWidth
+                                size="small"
                                 label="Date"
+                                type="date"
+                                required
                                 value={trxForm.transaction_date}
                                 onChange={(e) => setTrxForm(p => ({ ...p, transaction_date: e.target.value }))}
                                 InputLabelProps={{ shrink: true }}
                             />
+
                             <TextField
-                                fullWidth size="small"
-                                label="Note / Cheque / UTR"
-                                value={trxForm.reference_no}
-                                onChange={(e) => setTrxForm(p => ({ ...p, reference_no: e.target.value }))}
+                                fullWidth
+                                size="small"
+                                label="Remarks"
+                                value={trxForm.description}
+                                onChange={(e) => setTrxForm(p => ({ ...p, description: e.target.value }))}
                                 placeholder="e.g. ATM withdrawal for office cash"
                             />
                         </Stack>
@@ -683,6 +989,62 @@ const OrgCashbook = () => {
                     </GradientButton>
                 </DialogActions>
             </Dialog>
+
+            {/* Quick Add Custom Category Dialog (Zero Developer Dependency) */}
+            <Dialog
+                open={quickCatModal.open}
+                onClose={() => setQuickCatModal({ open: false, type: 'expense' })}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: '16px' } }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Typography variant="h6" fontWeight={700}>
+                        Add New {quickCatModal.type === 'income' ? 'Income' : 'Expense'} Category
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        This category will be saved to your company accounts permanently.
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        fullWidth
+                        size="small"
+                        label="Category Name *"
+                        placeholder="e.g. Factory Diesel, Legal Fees, Pooja Expense"
+                        value={quickCatName}
+                        onChange={(e) => setQuickCatName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveQuickCategory()}
+                        sx={{ mt: 1.5 }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                    <Button onClick={() => setQuickCatModal({ open: false, type: 'expense' })}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSaveQuickCategory}
+                        disabled={savingCat || !quickCatName.trim()}
+                        sx={{
+                            bgcolor: quickCatModal.type === 'income' ? '#10b981' : '#ef4444',
+                            '&:hover': { opacity: 0.9 },
+                        }}
+                    >
+                        {savingCat ? 'Saving...' : 'Create Category'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Voucher Slip Modal */}
+            <VoucherSlipModal
+                open={voucherModal.open}
+                onClose={() => setVoucherModal({ open: false, transaction: null })}
+                transaction={voucherModal.transaction}
+                company={companies?.[0] || {}}
+                user={user || {}}
+            />
 
             {/* Snackbar */}
             <Snackbar

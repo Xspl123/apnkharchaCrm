@@ -102,6 +102,30 @@ export const createOrgTransaction = createAsyncThunk(
     }
 );
 
+    export const getOrgCategories = createAsyncThunk(
+    'orgFinance/getCategories',
+    async (params = {}, { rejectWithValue }) => {
+        try {
+            const res = await orgFinanceService.getCategories(params);
+            return res.data?.data || res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed to fetch categories');
+        }
+    }
+);
+
+export const createOrgCategory = createAsyncThunk(
+    'orgFinance/createCategory',
+    async (data, { rejectWithValue }) => {
+        try {
+            const res = await orgFinanceService.createCategory(data);
+            return res.data?.data || res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.message || 'Failed to create category');
+        }
+    }
+);
+
 // ── Initial State ─────────────────────────────────────────
 
 const initialState = {
@@ -113,6 +137,7 @@ const initialState = {
     actionLoading:   false,
     isError:         false,
     message:         '',
+    categories: { income: [], expense: [] },
 };
 
 // ── Slice ─────────────────────────────────────────────────
@@ -130,6 +155,17 @@ const orgFinanceSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
+
+            .addCase(getOrgCategories.fulfilled, (state, action) => {
+                state.categories = action.payload || { income: [], expense: [] };
+            })
+            .addCase(createOrgCategory.fulfilled, (state, action) => {
+                const newCat = action.payload;
+                if (newCat?.type && state.categories[newCat.type]) {
+                    state.categories[newCat.type].push(newCat);
+                }
+            })
+            
             // Accounts
             .addCase(getOrgAccounts.pending, (state) => { state.isLoading = true; })
             .addCase(getOrgAccounts.fulfilled, (state, action) => {
@@ -190,6 +226,9 @@ const orgFinanceSlice = createSlice({
                 state.actionLoading = false;
                 state.message       = action.payload;
             });
+
+           
+            
     },
 });
 

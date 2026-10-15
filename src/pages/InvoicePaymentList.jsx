@@ -11,6 +11,7 @@ import {
     reset,
 } from "../redux/features/invoicePaymentSlice";
 import { getInvoices } from "../redux/features/invoiceSlice";
+import { getOrgAccounts } from "../features/finance/state/orgFinanceSlice";
 
 import {
     Alert,
@@ -45,6 +46,7 @@ import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 import { ConfirmDialog, DataTable, FormSection, PageHeader, SearchFilterBar, StatusChip } from "../components/common";
 
 const InvoicePaymentList = () => {
+
     const dispatch = useDispatch();
 
     const paymentState = useSelector((state) => state.invoicePayments);
@@ -56,7 +58,7 @@ const InvoicePaymentList = () => {
     const [showForm, setShowForm] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState(null);
-
+    const { accounts: orgAccounts = [] } = useSelector((s) => s.orgFinance || {});
     const [formData, setFormData] = useState({
         invoice_id: "",
         amount: "",
@@ -93,6 +95,7 @@ const InvoicePaymentList = () => {
     useEffect(() => {
         dispatch(getPayments());
         dispatch(getInvoices());
+        dispatch(getOrgAccounts());
 
         return () => {
             dispatch(reset());
@@ -174,6 +177,7 @@ const InvoicePaymentList = () => {
             refund_date: new Date().toISOString().split("T")[0],
             refund_method: payment.payment_method || "cash",
             notes: `Refund for invoice #${payment.invoice?.invoice_no || payment.invoice_no || ""}`,
+            account_id: payment.account_id || (orgAccounts[0]?.id || ""),
         });
         setRefundDialog(true);
     };
@@ -207,13 +211,13 @@ const InvoicePaymentList = () => {
         }
     };
 
-    // Helper: Check if payment belongs to a returned invoice
+    // Helper to check if payment belongs to a returned invoice or was already refunded
     const isPaymentReturned = (payment) => {
         if (payment.is_refunded) return true;
+        if (payment.notes && typeof payment.notes === "string" && payment.notes.includes("[REFUNDED:")) return true;
         if (payment.is_invoice_returned || payment.invoice_status === "return") return true;
         const inv = invoices.find(
-            (i) => String(i.id) === String(payment.invoice_id) || 
-                   (i.invoice_no && i.invoice_no === (payment.invoice?.invoice_no || payment.invoice_no))
+            (i) => i.id === payment.invoice_id || i.invoice_no === (payment.invoice?.invoice_no || payment.invoice_no)
         );
         return inv?.status === "return" || Boolean(inv?.is_return);
     };
@@ -603,30 +607,48 @@ const InvoicePaymentList = () => {
                             id: "actions",
                             headerName: "Actions",
                             align: "center",
-                            render: (_, payment) => (
-                                <Stack direction="row" spacing={0.5} justifyContent="center">
-                                    <IconButton size="small" color="info" onClick={() => handleView(payment)} title="View">
-                                        <VisibilityIcon fontSize="small" />
-                                    </IconButton>
-                                    {!payment.is_refunded && (
-                                        <Tooltip title="Refund to Client" arrow>
-                                            <IconButton
+                            render: (_, payment) => {
+                                const isRet = isPaymentReturned(payment);
+                                return (
+                                    <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+                                        <IconButton size="small" color="info" onClick={() => handleView(payment)} title="View">
+                                            <VisibilityIcon fontSize="small" />
+                                        </IconButton>
+                                        {!isRet ? (
+                                            <>
+                                                <Tooltip title="Refund to Client" arrow>
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: "#f59e0b", "&:hover": { bgcolor: "rgba(245, 158, 11, 0.1)" } }}
+                                                        onClick={() => handleOpenRefund(payment)}
+                                                    >
+                                                        <AssignmentReturnIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <IconButton size="small" color="primary" onClick={() => handleEdit(payment)} title="Edit">
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                            </>
+                                        ) : (
+                                            <Chip
+                                                label="Settled / Returned"
                                                 size="small"
-                                                sx={{ color: "#f59e0b", "&:hover": { bgcolor: "rgba(245, 158, 11, 0.1)" } }}
-                                                onClick={() => handleOpenRefund(payment)}
-                                            >
-                                                <AssignmentReturnIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                    )}
-                                    <IconButton size="small" color="primary" onClick={() => handleEdit(payment)} title="Edit">
-                                        <EditIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton size="small" color="error" onClick={() => handleDeleteConfirm(payment)} title="Delete">
-                                        <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                </Stack>
-                            ),
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: "0.65rem",
+                                                    fontWeight: 700,
+                                                    bgcolor: "rgba(100, 116, 139, 0.1)",
+                                                    color: "#64748b",
+                                                    border: "1px solid rgba(100, 116, 139, 0.2)",
+                                                }}
+                                            />
+                                        )}
+                                        <IconButton size="small" color="error" onClick={() => handleDeleteConfirm(payment)} title="Delete">
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </Stack>
+                                );
+                            },
                         },
                     ]}
                 />
@@ -762,6 +784,25 @@ const InvoicePaymentList = () => {
                                     <strong>Amount:</strong> ₹{formatPaymentAmount(paymentToView.amount)}
                                 </Typography>
                             </Grid>
+
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" fontWeight={600} color="text.secondary" display="block" mb={0.5}>
+                                        Refund From Account *
+                                    </Typography>
+                                    <Select
+                                        fullWidth
+                                        size="small"
+                                        value={refundForm.account_id}
+                                        onChange={(e) => setRefundForm({ ...refundForm, account_id: e.target.value })}
+                                    >
+                                        {orgAccounts.map((a) => (
+                                            <MenuItem key={a.id} value={a.id}>
+                                                {a.account_type === "cash" ? "💵 " : "🏦 "}
+                                                {a.account_name || a.name} (₹{Number(a.current_balance || 0).toLocaleString("en-IN")})
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </Grid>
                             <Grid item xs={12}>
                                 <Typography variant="body1">
                                     <strong>Payment Date:</strong> {paymentToView.payment_date}

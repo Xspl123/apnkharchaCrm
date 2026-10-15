@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createPurchaseReturn, getPurchaseReturnsByPO } from '../../../redux/features/purchaseReturnSlice';
+import { getOrgAccounts } from '../../finance/state/orgFinanceSlice';
+import usePermission from '../../../hooks/usePermission';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Box, Stack, Typography, Avatar, Divider, Button,
     Table, TableHead, TableRow, TableCell, TableBody,
     TableContainer, Paper, TextField, Chip, Alert,
+    FormControl, FormControlLabel, Switch, InputLabel, Select, MenuItem,
     CircularProgress, IconButton,
 } from '@mui/material';
 import {
@@ -33,16 +36,26 @@ const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractio
 const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((s) => s.purchaseReturns);
+    const { accounts: orgAccounts = [] } = useSelector((s) => s.orgFinance || {});
 
-    const [returnDate,  setReturnDate]  = useState(new Date().toISOString().split('T')[0]);
-    const [notes,       setNotes]       = useState('');
-    const [returnItems, setReturnItems] = useState([]);
-    const [snackMsg,    setSnackMsg]    = useState('');
-    const [submitting,  setSubmitting]  = useState(false);
+    const permissionApi = usePermission();
+    const canViewBalance = permissionApi.can('org_accounts.view');
+
+    const [returnDate,          setReturnDate]          = useState(new Date().toISOString().split('T')[0]);
+    const [notes,               setNotes]               = useState('');
+    const [returnItems,         setReturnItems]         = useState([]);
+    const [snackMsg,            setSnackMsg]            = useState('');
+    const [submitting,          setSubmitting]          = useState(false);
+
+    // ── Instant Vendor Refund States ───────────────────────────
+    const [isRefunded,          setIsRefunded]          = useState(false);
+    const [refundAccountId,     setRefundAccountId]     = useState('');
+    const [refundPaymentMethod, setRefundPaymentMethod] = useState('bank_transfer');
 
     useEffect(() => {
         if (open && po) {
             dispatch(getPurchaseReturnsByPO(po.id));
+            dispatch(getOrgAccounts());
 
             const items = (po.items || []).map((item) => ({
                 product_id:   item.product_id,
@@ -60,13 +73,17 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
             setReturnItems(items);
             setNotes('');
             setSnackMsg('');
+            setIsRefunded(false);
+            setRefundAccountId('');
         }
     }, [dispatch, open, po]);
 
     const handleQtyChange = (index, value) => {
         setReturnItems((prev) => {
             const updated = [...prev];
-            updated[index] = { ...updated[index], return_qty: value };
+            const max = updated[index].max_qty;
+            const clamped = value === '' ? '' : Math.min(parseFloat(value) || 0, max);
+            updated[index] = { ...updated[index], return_qty: clamped === '' ? '' : String(clamped) };
             return updated;
         });
     };
@@ -106,12 +123,21 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
             }
         }
 
+        if (isRefunded && !refundAccountId) {
+            setSnackMsg('Kripya refund credit karne ke liye Bank ya Cash account chunein.');
+            return;
+        }
+
         try {
             setSubmitting(true);
             await dispatch(createPurchaseReturn({
                 original_po_id: po.id,
                 return_date:    returnDate,
                 notes:          notes,
+                is_refunded:    isRefunded,
+                account_id:     isRefunded && refundAccountId ? Number(refundAccountId) : undefined,
+                refund_amount:  isRefunded ? totalReturnAmount : undefined,
+                payment_method: isRefunded ? refundPaymentMethod : undefined,
                 items: selectedItems.map((i) => ({
                     product_id: i.product_id,
                     qty:        parseFloat(i.return_qty),
@@ -120,7 +146,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                 })),
             })).unwrap();
 
-            onSuccess?.('Purchase return created! Stock updated. ✅');
+            onSuccess?.('Purchase return created! Stock & Cashbook updated. ✅');
             onClose();
         } catch (err) {
             setSnackMsg(typeof err === 'string' ? err : 'Purchase return failed!');
@@ -135,6 +161,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
             PaperProps={{ sx: { borderRadius: '20px' } }}>
 
+            {/* ── Title ── */}
             <DialogTitle sx={{ pb: 0 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack direction="row" spacing={1.5} alignItems="center">
@@ -154,6 +181,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
             </DialogTitle>
 
             <DialogContent sx={{ pt: 2 }}>
+                {/* Return Date + Notes */}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
                     <TextField fullWidth size="small" label="Return Date" type="date"
                         value={returnDate}
@@ -179,6 +207,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                     Enter the quantity for each item to return to the vendor. The quantity will be deducted from inventory.
                 </Alert>
 
+                {/* Items Table */}
                 <TableContainer component={Paper} elevation={0}
                     sx={{ border: '1px solid #e2e8f0', borderRadius: '12px' }}>
                     <Table size="small">
@@ -191,11 +220,10 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                         </TableHead>
                         <TableBody>
                             {returnItems.map((item, index) => {
-                                const maxQty    = item.max_qty;
-                                const returnQty = parseFloat(item.return_qty) || 0;
-                                const isOver    = returnQty > maxQty;
-                                const isFullyRet= maxQty <= 0;
-                                const lineTotal = returnQty * item.rate;
+                                const maxQty     = item.max_qty;
+                                const returnQty  = parseFloat(item.return_qty) || 0;
+                                const isFullyRet = maxQty <= 0;
+                                const lineTotal  = returnQty * item.rate;
 
                                 return (
                                     <TableRow key={index} sx={{
@@ -247,14 +275,12 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                                                 inputProps={{ min: 0, max: maxQty, step: 'any' }}
                                                 value={item.return_qty}
                                                 onChange={(e) => handleQtyChange(index, e.target.value)}
-                                                error={isOver}
-                                                helperText={isOver ? `Max: ${maxQty}` : ''}
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiOutlinedInput-root': { borderRadius: '8px' },
                                                 }}
                                             />
-                                            {returnQty > 0 && !isOver && (
+                                            {returnQty > 0 && (
                                                 <Typography variant="caption" color="warning.main" display="block">
                                                     {fmt(lineTotal)}
                                                 </Typography>
@@ -288,6 +314,7 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                     </Table>
                 </TableContainer>
 
+                {/* Summary & Instant Refund Settlement */}
                 {selectedItems.length > 0 && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                         <Paper elevation={0} sx={{
@@ -313,6 +340,79 @@ const PurchaseReturnDialog = ({ open, onClose, po, onSuccess }) => {
                                     </Typography>
                                 </Box>
                             </Stack>
+                        </Paper>
+
+                        {/* Instant Vendor Refund Card */}
+                        <Paper elevation={0} sx={{
+                            mt: 1.5, p: 2, borderRadius: '12px',
+                            bgcolor: isRefunded ? 'rgba(245, 158, 11, 0.05)' : '#f8fafc',
+                            border: '1px solid',
+                            borderColor: isRefunded ? '#fcd34d' : '#e2e8f0',
+                        }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={isRefunded}
+                                        onChange={(e) => {
+                                            setIsRefunded(e.target.checked);
+                                            if (e.target.checked && !refundAccountId) {
+                                                const def = orgAccounts.find(a => a.is_default) || orgAccounts[0];
+                                                if (def) setRefundAccountId(def.id);
+                                            }
+                                        }}
+                                        color="warning"
+                                    />
+                                }
+                                label={
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={700} color={isRefunded ? 'warning.dark' : 'text.primary'}>
+                                            Refund Received from Vendor Immediately (Credit Company Account)
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {isRefunded
+                                                ? 'Vendor ne refund lautaya hai — Bank/Cash account me paisa judega aur Cashbook me green entry banegi.'
+                                                : 'Uncheck rehne par vendor ledger me Debit Note banega bina bank balance hilaye.'}
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
+
+                            {isRefunded && (
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={2}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Deposit To Account</InputLabel>
+                                        <Select
+                                            value={refundAccountId}
+                                            label="Deposit To Account"
+                                            onChange={(e) => setRefundAccountId(e.target.value)}
+                                            sx={{ borderRadius: '10px' }}
+                                        >
+                                            {orgAccounts.map((a) => (
+                                                <MenuItem key={a.id} value={a.id}>
+                                                    {a.account_type === 'cash' ? '💵 ' : '🏦 '}
+                                                    {a.account_name || a.name}
+                                                    {canViewBalance ? ` (₹${Number(a.current_balance || 0).toLocaleString('en-IN')})` : ''}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Payment Method</InputLabel>
+                                        <Select
+                                            value={refundPaymentMethod}
+                                            label="Payment Method"
+                                            onChange={(e) => setRefundPaymentMethod(e.target.value)}
+                                            sx={{ borderRadius: '10px' }}
+                                        >
+                                            <MenuItem value="bank_transfer">🏦 Bank Transfer</MenuItem>
+                                            <MenuItem value="upi">📱 UPI</MenuItem>
+                                            <MenuItem value="cash">💵 Cash</MenuItem>
+                                            <MenuItem value="cheque">📝 Cheque</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Stack>
+                            )}
                         </Paper>
                     </motion.div>
                 )}

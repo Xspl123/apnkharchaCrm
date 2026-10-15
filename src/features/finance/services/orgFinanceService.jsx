@@ -13,6 +13,11 @@ const orgFinanceService = {
     getTransactions:    (params) => axiosClient.get('/org-transactions', { params }),
     getCashflowSummary: (params) => axiosClient.get('/org-transactions/cashflow', { params }),
     createTransaction:  (data)   => axiosClient.post('/org-transactions', data),
+
+    // Dynamic Categories Master
+    getCategories:      (params) => axiosClient.get('/org-categories', { params }),
+    createCategory:     (data)   => axiosClient.post('/org-categories', data),
+    deleteCategory:     (id)     => axiosClient.delete(`/org-categories/${id}`),
 };
 
 export default orgFinanceService;

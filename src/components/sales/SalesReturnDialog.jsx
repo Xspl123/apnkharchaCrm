@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createSalesReturn, getSalesReturnsByInvoice } from '../../redux/features/salesReturnSlice';
+import { getOrgAccounts } from '../../features/finance/state/orgFinanceSlice';
+import usePermission from '../../hooks/usePermission';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Box, Stack, Typography, Avatar, Divider, Button,
     Table, TableHead, TableRow, TableCell, TableBody,
     TableContainer, Paper, TextField, Chip, Alert,
+    FormControl, FormControlLabel, Switch, InputLabel, Select, MenuItem,
     CircularProgress, IconButton,
 } from '@mui/material';
 import {
@@ -16,7 +19,6 @@ import {
     CheckCircle as DoneIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-
 import { motion } from 'framer-motion';
 
 const GradientButton = styled(Button)(() => ({
@@ -30,24 +32,33 @@ const GradientButton = styled(Button)(() => ({
 }));
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
 const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((s) => s.salesReturns);
+    const { accounts: orgAccounts = [] } = useSelector((s) => s.orgFinance || {});
 
-    const [returnDate,   setReturnDate]   = useState(new Date().toISOString().split('T')[0]);
-    const [notes,        setNotes]        = useState('');
-    const [returnItems,  setReturnItems]  = useState([]);
-    const [snackMsg,     setSnackMsg]     = useState('');
-    const [submitting,   setSubmitting]   = useState(false);
+    const permissionApi = usePermission();
+    const canViewBalance = permissionApi.can('org_accounts.view');
 
-    // Invoice items se return form initialize karo
+    const [returnDate,          setReturnDate]          = useState(new Date().toISOString().split('T')[0]);
+    const [notes,               setNotes]               = useState('');
+    const [returnItems,         setReturnItems]         = useState([]);
+    const [snackMsg,            setSnackMsg]            = useState('');
+    const [submitting,          setSubmitting]          = useState(false);
+
+    // ── Instant Refund States ──────────────────────────────────
+    const [isRefunded,          setIsRefunded]          = useState(false);
+    const [refundAccountId,     setRefundAccountId]     = useState('');
+    const [refundPaymentMethod, setRefundPaymentMethod] = useState('bank_transfer');
+
     useEffect(() => {
         if (open && invoice) {
-            // Pehle se hue returns fetch karo
             dispatch(getSalesReturnsByInvoice(invoice.id));
+            dispatch(getOrgAccounts());
 
             const items = (invoice.items || []).map((item) => ({
-                invoice_item_id: item.id,                           
+                invoice_item_id: item.id,
                 product_id:    item.product_id,
                 item_name:     item.item_name || item.product?.name || '',
                 hsn_code:      item.hsn_code  || '',
@@ -62,6 +73,8 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
             }));
             setReturnItems(items);
             setNotes('');
+            setIsRefunded(false);
+            setRefundAccountId('');
         }
     }, [dispatch, open, invoice]);
 
@@ -71,7 +84,6 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
             const max = updated[index].max_qty;
             const clamped = value === '' ? '' : Math.min(parseFloat(value) || 0, max);
             updated[index] = { ...updated[index], return_qty: clamped === '' ? '' : String(clamped) };
-
             return updated;
         });
     };
@@ -111,14 +123,23 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
             }
         }
 
+        if (isRefunded && !refundAccountId) {
+            setSnackMsg('Kripya refund debit karne ke liye Bank ya Cash account chunein.');
+            return;
+        }
+
         try {
             setSubmitting(true);
             await dispatch(createSalesReturn({
                 original_invoice_id: invoice.id,
                 return_date:         returnDate,
                 notes:               notes,
+                is_refunded:         isRefunded,
+                account_id:          isRefunded && refundAccountId ? Number(refundAccountId) : undefined,
+                refund_amount:       isRefunded ? totalReturnAmount : undefined,
+                payment_method:      isRefunded ? refundPaymentMethod : undefined,
                 items: selectedItems.map((i) => ({
-                    invoice_item_id: i.invoice_item_id,                 // ✅ direct ID
+                    invoice_item_id: i.invoice_item_id,
                     ...(i.product_id && { product_id: i.product_id }),
                     item_name:  i.item_name,
                     qty:        parseFloat(i.return_qty),
@@ -127,7 +148,7 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
                 })),
             })).unwrap();
 
-            onSuccess?.('Sales return created successfully! Stock updated. ✅');
+            onSuccess?.('Sales return created successfully! Stock and Cashbook updated. ✅');
             onClose();
         } catch (err) {
             setSnackMsg(typeof err === 'string' ? err : 'Sales return failed!');
@@ -215,7 +236,6 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
                             {returnItems.map((item, index) => {
                                 const maxQty     = item.max_qty;
                                 const returnQty  = parseFloat(item.return_qty) || 0;
-                                const isOver     = false; 
                                 const isFullyRet = maxQty <= 0;
                                 const lineTotal  = returnQty * item.rate;
 
@@ -269,14 +289,12 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
                                                 inputProps={{ min: 0, max: maxQty, step: 'any' }}
                                                 value={item.return_qty}
                                                 onChange={(e) => handleQtyChange(index, e.target.value)}
-                                                error={isOver}
-                                                helperText={isOver ? `Max: ${maxQty}` : ''}
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiOutlinedInput-root': { borderRadius: '8px' },
                                                 }}
                                             />
-                                            {returnQty > 0 && !isOver && (
+                                            {returnQty > 0 && (
                                                 <Typography variant="caption" color="error.main" display="block">
                                                     {fmt(lineTotal)}
                                                 </Typography>
@@ -310,7 +328,7 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
                     </Table>
                 </TableContainer>
 
-                {/* Summary */}
+                {/* Summary & Instant Refund Section */}
                 {selectedItems.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -338,6 +356,79 @@ const SalesReturnDialog = ({ open, onClose, invoice, onSuccess }) => {
                                     </Typography>
                                 </Box>
                             </Stack>
+                        </Paper>
+
+                        {/* Instant Refund Settlement */}
+                        <Paper elevation={0} sx={{
+                            mt: 1.5, p: 2, borderRadius: '12px',
+                            bgcolor: isRefunded ? 'rgba(239, 68, 68, 0.05)' : '#f8fafc',
+                            border: '1px solid',
+                            borderColor: isRefunded ? '#fca5a5' : '#e2e8f0',
+                        }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={isRefunded}
+                                        onChange={(e) => {
+                                            setIsRefunded(e.target.checked);
+                                            if (e.target.checked && !refundAccountId) {
+                                                const def = orgAccounts.find(a => a.is_default) || orgAccounts[0];
+                                                if (def) setRefundAccountId(def.id);
+                                            }
+                                        }}
+                                        color="error"
+                                    />
+                                }
+                                label={
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={700} color={isRefunded ? 'error.main' : 'text.primary'}>
+                                            Refund Paid to Client Immediately (Debit Company Account)
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {isRefunded
+                                                ? 'Bank/Cash account se paisa minus hoga aur Cashbook me entry banegi.'
+                                                : 'Uncheck rehne par client ledger me Credit Note banega bina bank balance hilaye.'}
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
+
+                            {isRefunded && (
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={2}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Refund From Account</InputLabel>
+                                        <Select
+                                            value={refundAccountId}
+                                            label="Refund From Account"
+                                            onChange={(e) => setRefundAccountId(e.target.value)}
+                                            sx={{ borderRadius: '10px' }}
+                                        >
+                                            {orgAccounts.map((a) => (
+                                                <MenuItem key={a.id} value={a.id}>
+                                                    {a.account_type === 'cash' ? '💵 ' : '🏦 '}
+                                                    {a.account_name || a.name}
+                                                    {canViewBalance ? ` (₹${Number(a.current_balance || 0).toLocaleString('en-IN')})` : ''}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Payment Method</InputLabel>
+                                        <Select
+                                            value={refundPaymentMethod}
+                                            label="Payment Method"
+                                            onChange={(e) => setRefundPaymentMethod(e.target.value)}
+                                            sx={{ borderRadius: '10px' }}
+                                        >
+                                            <MenuItem value="bank_transfer">🏦 Bank Transfer</MenuItem>
+                                            <MenuItem value="upi">📱 UPI</MenuItem>
+                                            <MenuItem value="cash">💵 Cash</MenuItem>
+                                            <MenuItem value="cheque">📝 Cheque</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Stack>
+                            )}
                         </Paper>
                     </motion.div>
                 )}

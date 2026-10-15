@@ -19,6 +19,7 @@ import CampaignIcon from "@mui/icons-material/Campaign";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { matchPath } from "react-router-dom";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import { isCrmEnabled, isCrmOnlyEdition, isExpenseOnlyEdition } from "./moduleConfig";
 const VendorLedgerPage = lazy(() => import("../features/vendors/pages/VendorLedgerPage"));
@@ -67,6 +68,9 @@ const LeadPipeline = lazy(() => import("../features/crm/pages/LeadPipeline"));
 const CampaignList = lazy(() => import("../features/crm/pages/CampaignList"));
 const OrgAccountsList = lazy(() => import("../features/finance/pages/OrgAccountsList"));
 const OrgCashbook = lazy(() => import("../features/finance/pages/OrgCashbook"));
+const OrgProfitLossReport = lazy(() => import("../features/finance/pages/OrgProfitLossReport"));
+const OrgFinanceDashboard = lazy(() => import("../features/finance/pages/OrgFinanceDashboard"));
+
 
 
 export const publicRoutes = [
@@ -93,6 +97,18 @@ export const menuSections = [
 const allProtectedRoutes = [
 
   {
+    key: "org-finance-dashboard",
+    path: "/org/finance-dashboard",
+    label: "Finance Dashboard",
+    icon: <DashboardIcon />,
+    element: <OrgFinanceDashboard />,
+    permission: "org_accounts.view",
+    group: "finance",
+    showInSidebar: true,
+    requiresOrg: true,
+  },
+  
+  {
     key: "org-accounts",
     path: "/org/accounts",
     label: "Org Accounts",
@@ -109,6 +125,18 @@ const allProtectedRoutes = [
     label: "Cash & Bank Book",
     icon: <ReceiptLongIcon />,
     element: <OrgCashbook />,
+    permission: "org_accounts.view",
+    group: "finance",
+    showInSidebar: true,
+    requiresOrg: true,
+  },
+
+    {
+    key: "org-profit-loss",
+    path: "/org/profit-loss",
+    label: "Business P&L",
+    icon: <TrendingUpIcon />,
+    element: <OrgProfitLossReport />,
     permission: "org_accounts.view",
     group: "finance",
     showInSidebar: true,
