@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import usePermission from "../../../hooks/usePermission";
 import { getOrgAccounts } from "../../../features/finance/state/orgFinanceSlice";
 import {
     Dialog,
@@ -33,6 +34,8 @@ const InvoicePaymentDialog = ({
     formatDate,
     loading = false,
 }) => {
+    const permissionApi = usePermission();
+    const canViewBalance = permissionApi.can("org_accounts.view");
     const dispatch = useDispatch();
     const { accounts = [] } = useSelector((s) => s.orgFinance || {});
     const [accountId, setAccountId] = useState("");
@@ -201,13 +204,14 @@ const InvoicePaymentDialog = ({
                                 onChange={(e) => setAccountId(e.target.value)}
                                 displayEmpty
                             >
-                                <MenuItem value=""><em>-- Don't link to Org Account --</em></MenuItem>
-                                {accounts.map((a) => (
-                                    <MenuItem key={a.id} value={a.id}>
-                                        {a.account_type === "cash" ? "💵 " : "🏦 "}
-                                        {a.account_name || a.name} ({formatCurrency(a.current_balance)})
-                                    </MenuItem>
-                                ))}
+                                <MenuItem value=""><em>-- Don't link account --</em></MenuItem>
+                                    {accounts.map((a) => (
+                                        <MenuItem key={a.id} value={a.id}>
+                                            {a.account_type === "cash" ? "💵 " : "🏦 "}
+                                            {a.account_name || a.name}
+                                            {canViewBalance ? ` (${formatCurrency(a.current_balance)})` : ""}
+                                        </MenuItem>
+                                    ))}
                             </Select>
                         </Grid>
 
