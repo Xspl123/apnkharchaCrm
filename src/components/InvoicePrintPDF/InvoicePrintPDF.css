@@ -27,6 +27,62 @@ body {
     border: none;
 }
 
+/* Official E-Invoice Seal Banner */
+.einvoice-seal-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+    border-radius: 8px;
+    padding: 6px 14px;
+    margin-bottom: 12px;
+    font-size: 11px;
+}
+.einvoice-seal-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.einvoice-icon {
+    font-size: 20px;
+}
+.einvoice-titles {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+.einvoice-titles strong {
+    color: #166534;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+.einvoice-titles small {
+    color: #15803d;
+    font-size: 9px;
+    font-weight: 500;
+}
+.einvoice-seal-details {
+    text-align: right;
+    font-size: 10px;
+    color: #1e293b;
+    line-height: 1.3;
+}
+.einvoice-irn code {
+    font-family: monospace;
+    font-size: 9px;
+    color: #0f172a;
+    background: #dcfce7;
+    padding: 1px 4px;
+    border-radius: 4px;
+    word-break: break-all;
+}
+.einvoice-ack {
+    color: #475569;
+    font-size: 9.5px;
+    margin-top: 2px;
+}
+
 /* ===== HEADER WITH LOGO - EXTRA COMPACT ===== */
 .header {
     display: flex;

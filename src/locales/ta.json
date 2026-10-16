@@ -1,0 +1,13 @@
+{
+  "common": {
+    "save": "சேமிக்க", "cancel": "ரத்துசெய்", "delete": "நீக்கு", "edit": "திருத்து", "view": "பார்வை",
+    "create": "உருவாக்கு", "apply": "பயன்படுத்து", "refresh": "புதுப்பி", "search": "தேடு...", "close": "மூடு",
+    "print": "அச்சிடு", "pdf": "PDF", "excel": "எக்செல்", "download": "பதிவிறக்கு", "actions": "செயல்கள்",
+    "status": "நிலை", "date": "தேதி", "amount": "தொகை", "total": "மொத்தம்", "paid": "செலுத்தப்பட்டது"
+  },
+  "nav": {
+    "dashboard": "டாஷ்போர்டு", "finance": "நிதி (Finance)", "cashbook": "ரொக்க புத்தகம்",
+    "balance_sheet": "இருப்புநிலை (Balance Sheet)", "trial_balance": "இருப்பாய்வு (Trial Balance)",
+    "sales": "விற்பனை (Sales)", "clients": "வாடிக்கையாளர்கள்", "invoices": "விலைப் பட்டியல்"
+  }
+}

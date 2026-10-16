@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { logout, logoutUser } from "../features/auth/state/authSlice";
+import LanguageSelector from "./LanguageSelector";
 import axiosClient from "../api/axiosClient";
 import {
     AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Avatar,
@@ -253,8 +254,12 @@ const Navbar = ({ toggleSidebar, colorMode, toggleColorMode }) => {
                         </div>
                     </div>
 
-                    {/* Follow-up Reminders — visible on every page, not just Lead List */}
-                    <FollowUpReminderBell />
+                    {/* Follow-up Reminders — visible on every page */}
+                        <FollowUpReminderBell />
+
+                        {/* 🌐 Multi-Language Dropdown Selector */}
+                        <LanguageSelector />
+
 
                     {/* Profile Avatar */}
                     <IconButton onClick={handleProfileMenuOpen} className="app-navbar__avatar-button">

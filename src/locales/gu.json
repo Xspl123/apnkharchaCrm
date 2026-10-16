@@ -1,0 +1,15 @@
+{
+  "common": {
+    "save": "સાચવો", "cancel": "રદ કરો", "delete": "કાઢી નાખો", "edit": "ફેરફાર કરો", "view": "જુઓ",
+    "create": "બનાવો", "apply": "લાગુ કરો", "refresh": "તાજું કરો", "search": "શોધો...", "close": "બંધ કરો",
+    "print": "પ્રિન્ટ", "pdf": "પીડીએફ", "excel": "એક્સેલ", "download": "ડાઉનલોડ", "actions": "ક્રિયાઓ",
+    "status": "સ્થિતિ", "date": "તારીખ", "amount": "રકમ", "total": "કુલ", "paid": "ચૂકવેલ",
+    "unpaid": "બાકી", "partial": "અંશતઃ", "balance": "બાકી રકમ", "return": "વાપસી", "today": "આજે"
+  },
+  "nav": {
+    "dashboard": "ડેશબોર્ડ", "finance": "નાણાં (Finance)", "org_accounts": "ખાતાઓ", "cashbook": "રોકડ મેળ",
+    "pnl": "નફો-નુકસાન", "balance_sheet": "સરવૈયું (Balance Sheet)", "trial_balance": "કાચું સરવૈયું (Trial Balance)",
+    "sales": "વેચાણ (Sales)", "companies": "કંપનીઓ", "clients": "ગ્રાહકો", "invoices": "ચલણ / બિલ",
+    "purchase": "ખરીદી", "vendors": "વેપારીઓ", "inventory": "સ્ટોક", "products": "ઉત્પાદનો"
+  }
+}

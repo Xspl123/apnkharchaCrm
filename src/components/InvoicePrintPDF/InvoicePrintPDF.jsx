@@ -180,6 +180,11 @@ class InvoicePrintPDF {
         const isInter       = (invoice?.supply_type || 'intra') === 'inter';
         const hasRCM        = !!invoice?.is_reverse_charge;
         const hasGSTInfo    = !!(invoice?.invoice_type || invoice?.supply_type || invoice?.place_of_supply);
+       // 🧪 Testing ke liye (taaki turant banner dikhe):
+const hasEInvoice = true; 
+const irnStr      = invoice?.irn || 'b91dc88cfd221e1f0a51664e6792530136f7684fb4599b1ad308881ec5e384c1';
+const ackNoStr    = invoice?.ack_no || '112610120000009';
+const ackDateStr  = invoice?.ack_date ? this.formatDate(invoice.ack_date) : '16 Oct 2026';
 
         return `
             <!DOCTYPE html>
@@ -194,6 +199,28 @@ class InvoicePrintPDF {
                 <body>
                     <div class="print-container">
 
+
+                        <!-- ═══ OFFICIAL E-INVOICE / IRN BANNER ═══ -->
+                        ${hasEInvoice ? `
+                            <div class="einvoice-seal-banner">
+                                <div class="einvoice-seal-badge">
+                                    <span class="einvoice-icon">🏛️</span>
+                                    <div class="einvoice-titles">
+                                        <strong>GST E-INVOICE SYSTEM</strong>
+                                        <small>NIC · Government of India</small>
+                                    </div>
+                                </div>
+                                <div class="einvoice-seal-details">
+                                    <div class="einvoice-irn">
+                                        <strong>IRN:</strong> <code>${irnStr}</code>
+                                    </div>
+                                    <div class="einvoice-ack">
+                                        <span><strong>Ack No:</strong> ${ackNoStr}</span>
+                                        ${ackDateStr ? `<span> · <strong>Ack Date:</strong> ${ackDateStr}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
                         <!-- ═══ HEADER ═══ -->
                         <div class="header">
                             <div class="logo-area">
@@ -284,6 +311,33 @@ class InvoicePrintPDF {
                                 </div>
                             </div>
                         </div>
+
+                        ${invoice?.irn ? `
+                            <!-- ═══ E-INVOICE (IRP VERIFIED) BANNER ═══ -->
+                            <div class="e-invoice-banner" style="background:#f8fafc; border:1px solid #cbd5e1; border-left:4px solid #16a34a; border-radius:8px; padding:10px 14px; margin-bottom:18px; font-size:11px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span style="background:#dcfce7; color:#15803d; font-weight:700; font-size:10px; padding:2px 8px; border-radius:4px; border:1px solid #86efac; text-transform:uppercase;">
+                                            ✓ E-INVOICE (IRP VERIFIED)
+                                        </span>
+                                        <span style="color:#64748b; font-size:10px;">NIC E-Invoice System (Schema v1.03)</span>
+                                    </div>
+                                    <div style="color:#475569; font-size:10px;">
+                                        <strong>Ack No:</strong> ${this.escapeHtml(invoice.ack_no || '—')} &nbsp;|&nbsp; 
+                                        <strong>Ack Date:</strong> ${this.escapeHtml(invoice.ack_date ? this.formatDate(invoice.ack_date) : invoiceDateStr)}
+                                    </div>
+                                </div>
+                                <div style="color:#0f172a; word-break:break-all; font-family:monospace; font-size:10px; background:#ffffff; padding:5px 8px; border-radius:4px; border:1px solid #e2e8f0; line-height:1.4;">
+                                    <strong style="color:#475569; font-family:'Inter', sans-serif;">IRN:</strong> ${this.escapeHtml(invoice.irn)}
+                                </div>
+                                ${invoice?.eway_bill_no ? `
+                                    <div style="margin-top:5px; color:#475569; font-size:10.5px; display:flex; gap:16px;">
+                                        <span><strong>e-Way Bill No:</strong> ${this.escapeHtml(invoice.eway_bill_no)}</span>${invoice.vehicle_no ? `<span><strong>Vehicle:</strong> ${this.escapeHtml(invoice.vehicle_no)}</span>` : ''}
+                                        ${invoice.transporter_name ? `<span><strong>Transporter:</strong> ${this.escapeHtml(invoice.transporter_name)}</span>` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
 
                         <!-- ═══ BILL TO ═══ -->
                         <div class="bill-to">

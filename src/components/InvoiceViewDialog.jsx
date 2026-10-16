@@ -390,6 +390,38 @@ const InvoiceViewDialog = ({
                             opacity: 0.7
                         }} />
 
+                        {/* ========== E-INVOICE (IRP VERIFIED) BANNER ========== */}
+                        {invoiceToView?.irn && (
+                            <Box sx={{
+                                mb: 3,
+                                p: 2,
+                                bgcolor: '#f0fdf4',
+                                border: '1px solid #86efac',
+                                borderLeft: '4px solid #16a34a',
+                                borderRadius: '10px'
+                            }}>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Chip label="✓ E-INVOICE (IRP VERIFIED)" size="small" color="success" sx={{ fontWeight: 700, fontSize: '10px', height: 22 }} />
+                                        <Typography variant="caption" sx={{ color: '#64748b' }}>NIC E-Invoice System (v1.03)</Typography>
+                                    </Stack>
+                                    <Typography variant="caption" sx={{ color: '#475569' }}>
+                                        Ack No: <strong>{invoiceToView.ack_no || '—'}</strong> | Ack Date: <strong>{formatDate(invoiceToView.ack_date || invoiceToView.invoice_date)}</strong>
+                                    </Typography>
+                                </Stack>
+                                <Box sx={{ bgcolor: 'white', p: 1, borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                                    <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', fontWeight: 600, color: '#0f172a' }}>
+                                        <strong style={{ color: '#475569', fontFamily: 'sans-serif' }}>IRN: </strong>{invoiceToView.irn}
+                                    </Typography>
+                                </Box>
+                                {invoiceToView.eway_bill_no && (
+                                    <Typography variant="caption" sx={{ color: '#475569', display: 'block', mt: 0.8 }}>
+                                        e-Way Bill No: <strong>{invoiceToView.eway_bill_no}</strong> {invoiceToView.vehicle_no ? `| Vehicle: ${invoiceToView.vehicle_no}` : ''}
+                                    </Typography>
+                                )}
+                            </Box>
+                        )}
+
                         {/* ========== BILL TO SECTION ========== */}
                         <Grid container spacing={3} sx={{ mb: 4 }}>
                             <Grid item xs={12}>

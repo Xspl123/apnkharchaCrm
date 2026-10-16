@@ -1,0 +1,15 @@
+{
+  "common": {
+    "save": "जतन करा", "cancel": "रद्द करा", "delete": "हटवा", "edit": "संपादित करा", "view": "पहा",
+    "create": "तयार करा", "apply": "लागू करा", "refresh": "ताजे करा", "search": "शोधा...", "close": "बंद करा",
+    "print": "प्रिंट", "pdf": "पीडीएफ", "excel": "एक्सेल", "download": "डाउनलोड", "actions": "क्रिया",
+    "status": "स्थिती", "date": "दिनांक", "amount": "रक्कम", "total": "एकूण", "paid": "जमा",
+    "unpaid": "बाकी", "partial": "अंशतः", "balance": "शिल्लक", "return": "परतावा", "today": "आज"
+  },
+  "nav": {
+    "dashboard": "डॅशबोर्ड", "finance": "वित्त (Finance)", "org_accounts": "संस्था खाती", "cashbook": "रोकड वही",
+    "pnl": "नफा-तोटा", "balance_sheet": "ताळेबंद (Balance Sheet)", "trial_balance": "तेरीज पत्रક (Trial Balance)",
+    "sales": "विक्री (Sales)", "companies": "कंपन्या", "clients": "ग्राहक", "invoices": "बील / चलन",
+    "purchase": "खरेदी", "vendors": "पुरवठादार", "inventory": "मालसाठा", "products": "उत्पादने"
+  }
+}

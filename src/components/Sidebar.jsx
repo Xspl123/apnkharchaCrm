@@ -13,6 +13,7 @@ import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import { useNavigate, useLocation } from "react-router-dom";
 import usePermission from "../hooks/usePermission";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { getSidebarSections, getStandaloneSidebarRoutes } from "../config/appRoutes";
 import "./Sidebar.css";
 
@@ -24,6 +25,7 @@ const EMPTY_COMPANIES = [];
 const APP_BRAND_LOGO = "/pwa/icon-512.png";
 
 export default function Sidebar({ open, toggleSidebar, isMobile }) {
+    const { t }      = useTranslation();
     const navigate   = useNavigate();
     const location   = useLocation();
     const theme      = useTheme();
@@ -91,18 +93,21 @@ export default function Sidebar({ open, toggleSidebar, isMobile }) {
 
     const renderBtn = (route, nested = false) => {
         const active = isActive(route.path);
+        // Translation with fallback to original route.label
+        const label = t(`nav.${route.key}`, { defaultValue: route.label });
+
         const btn = (
             <ListItemButton key={route.key} onClick={() => { navigate(route.path); if (isMobile) toggleSidebar(); }}
                 sx={itemSx(active, nested)}>
                 <ListItemIcon>{route.icon || <Category />}</ListItemIcon>
-                {open && <ListItemText primary={route.label} />}
+                {open && <ListItemText primary={label} />}
                 {open && active && (
                     <DotIcon className="app-sidebar__active-dot" />
                 )}
             </ListItemButton>
         );
         return !open ? (
-            <Tooltip key={route.key} title={route.label} placement="right" arrow>
+            <Tooltip key={route.key} title={label} placement="right" arrow>
                 {btn}
             </Tooltip>
         ) : btn;
@@ -183,20 +188,21 @@ export default function Sidebar({ open, toggleSidebar, isMobile }) {
                     {open && standaloneRoutes.length > 0 && <Divider className="app-sidebar__divider" />}
 
                     {groupedSections.map((section) => {
-                        const isOpen   = openMenus[section.key] || false;
-                        const anyActive = section.children.some((c) => isActive(c.path));
+                        const isOpen       = openMenus[section.key] || false;
+                        const anyActive    = section.children.some((c) => isActive(c.path));
+                        const sectionLabel = t(`nav.${section.key}`, { defaultValue: section.label });
 
                         return (
                             <React.Fragment key={section.key}>
                                 {open && (
                                     <Typography variant="overline"
                                         className="app-sidebar__section-label">
-                                        {section.label}
+                                        {sectionLabel}
                                     </Typography>
                                 )}
 
                                 {!open ? (
-                                    <Tooltip title={section.label} placement="right" arrow>
+                                    <Tooltip title={sectionLabel} placement="right" arrow>
                                         <ListItemButton onClick={() => handleToggle(section.key)}
                                             sx={itemSx(anyActive, false)}>
                                             <ListItemIcon>{section.icon}</ListItemIcon>
@@ -206,7 +212,7 @@ export default function Sidebar({ open, toggleSidebar, isMobile }) {
                                     <ListItemButton onClick={() => handleToggle(section.key)}
                                         sx={itemSx(anyActive, false)}>
                                         <ListItemIcon>{section.icon}</ListItemIcon>
-                                        <ListItemText primary={section.label} />
+                                        <ListItemText primary={sectionLabel} />
                                         {isOpen ? <ExpandLess className="app-sidebar__toggle-icon" />
                                                 : <ExpandMore className="app-sidebar__toggle-icon" />}
                                     </ListItemButton>

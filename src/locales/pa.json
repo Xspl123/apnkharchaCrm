@@ -1,0 +1,13 @@
+{
+  "common": {
+    "save": "ਸੰਭਾਲੋ", "cancel": "ਰੱਦ ਕਰੋ", "delete": "ਮਿਟਾਓ", "edit": "ਸੋਧੋ", "view": "ਵੇਖੋ",
+    "create": "ਬਣਾਓ", "apply": "ਲਾਗੂ ਕਰੋ", "refresh": "ਤਾਜ਼ਾ ਕਰੋ", "search": "ਖੋਜੋ...", "close": "ਬੰਦ ਕਰੋ",
+    "print": "ਪ੍ਰਿੰਟ", "pdf": "PDF", "excel": "ਐਕਸਲ", "download": "ਡਾਊਨਲੋਡ", "actions": "ਕਾਰਵਾਈਆਂ",
+    "status": "ਸਥਿਤੀ", "date": "ਮਿਤੀ", "amount": "ਰਕਮ", "total": "ਕੁੱਲ", "paid": "ਭੁਗਤਾਨ ਹੋਇਆ"
+  },
+  "nav": {
+    "dashboard": "ਡੈਸ਼ਬੋਰਡ", "finance": "ਵਿੱਤ ਤੇ ਹਿਸਾਬ", "cashbook": "ਰੋਕੜ ਵਹੀ",
+    "balance_sheet": "ਬੈਲੇਂਸ ਸ਼ੀਟ", "trial_balance": "ਤਲਪਟ (ਟਰਾਇਲ ਬੈਲੇਂਸ)",
+    "sales": "ਵਿਕਰੀ (Sales)", "clients": "ਗਾਹਕ", "invoices": "ਬਿੱਲ ਤੇ ਚਲਾਨ"
+  }
+}
