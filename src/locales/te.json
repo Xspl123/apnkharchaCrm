@@ -1,0 +1,13 @@
+{
+  "common": {
+    "save": "భద్రపరచు", "cancel": "రద్దు చేయి", "delete": "తొలగించు", "edit": "సవరించు", "view": "చూడు",
+    "create": "సృష్టించు", "apply": "వర్తింపజేయి", "refresh": "రిఫ్రెష్", "search": "శోధించండి...", "close": "మూసివేయి",
+    "print": "ప్రింట్", "pdf": "PDF", "excel": "ఎక్సెల్", "download": "డౌన్‌లోడ్", "actions": "చర్యలు",
+    "status": "స్థితి", "date": "తేదీ", "amount": "మొత్తం", "total": "మొత్తం", "paid": "చెల్లించినది"
+  },
+  "nav": {
+    "dashboard": "డాష్‌బోర్డ్", "finance": "ఆర్థిక (Finance)", "cashbook": "నగదు పుస్తకం",
+    "balance_sheet": "ఆస్తి అప్పుల పట్టిక", "trial_balance": "అంకణా (Trial Balance)",
+    "sales": "అమ్మకాలు (Sales)", "clients": "కస్టమర్లు", "invoices": "ఇన్‌వాయిస్‌లు"
+  }
+}

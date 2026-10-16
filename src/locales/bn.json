@@ -1,0 +1,13 @@
+{
+  "common": {
+    "save": "সংরক্ষণ করুন", "cancel": "বাতিল", "delete": "মুছে ফেলুন", "edit": "সম্পাদনা", "view": "দেখুন",
+    "create": "তৈরি করুন", "apply": "প্রয়োগ করুন", "refresh": "রিফ্রেশ", "search": "খুঁজুন...", "close": "বন্ধ করুন",
+    "print": "প্রিন্ট", "pdf": "PDF", "excel": "এক্সেল", "download": "ডাউনলোড", "actions": "পদক্ষেপ",
+    "status": "অবস্থা", "date": "তারিখ", "amount": "পরিমাণ", "total": "মোট", "paid": "পরিশোধিত"
+  },
+  "nav": {
+    "dashboard": "ড্যাশবোর্ড", "finance": "অর্থ ও হিসাব", "cashbook": "নগদ বই",
+    "balance_sheet": "ব্যালেন্স শিট", "trial_balance": "রেওয়ামিল (Trial Balance)",
+    "sales": "বিক্রয় (Sales)", "clients": "ক্রেতা", "invoices": "চালান ও বিল"
+  }
+}

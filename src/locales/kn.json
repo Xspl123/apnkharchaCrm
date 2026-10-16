@@ -1,0 +1,13 @@
+{
+  "common": {
+    "save": "ಉಳಿಸಿ", "cancel": "ರದ್ದುಮಾಡಿ", "delete": "ಅಳಿಸಿ", "edit": "ತಿದ್ದುಪಡಿ", "view": "ನೋಡಿ",
+    "create": "ರಚಿಸಿ", "apply": "ಅನ್ವಯಿಸಿ", "refresh": "ರಿಫ್ರೆಶ್", "search": "ಹುಡುಕಿ...", "close": "ಮುಚ್ಚಿ",
+    "print": "ಮುದ್ರಿಸಿ", "pdf": "PDF", "excel": "ಎಕ್ಸೆಲ್", "download": "ಡೌನ್‌ಲೋಡ್", "actions": "ಕ್ರಮಗಳು",
+    "status": "ಸ್ಥಿತಿ", "date": "ದಿನಾಂಕ", "amount": "ಮೊತ್ತ", "total": "ಒಟ್ಟು", "paid": "ಪಾವತಿಸಲಾಗಿದೆ"
+  },
+  "nav": {
+    "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", "finance": "ಹಣಕಾಸು (Finance)", "cashbook": "ನಗದು ಪುಸ್ತಕ",
+    "balance_sheet": "ಆಸ್ತಿ ಜವಾಬ್ದಾರಿ ಪಟ್ಟಿ", "trial_balance": "ತಾಳೆಪಟ್ಟಿ (Trial Balance)",
+    "sales": "ಮಾರಾಟ (Sales)", "clients": "ಗ್ರಾಹಕರು", "invoices": "ಇನ್‌ವಾಯ್ಸ್‌ಗಳು"
+  }
+}

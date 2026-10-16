@@ -70,6 +70,8 @@ const OrgAccountsList = lazy(() => import("../features/finance/pages/OrgAccounts
 const OrgCashbook = lazy(() => import("../features/finance/pages/OrgCashbook"));
 const OrgProfitLossReport = lazy(() => import("../features/finance/pages/OrgProfitLossReport"));
 const OrgFinanceDashboard = lazy(() => import("../features/finance/pages/OrgFinanceDashboard"));
+const OrgBalanceSheet = lazy(() => import("../features/finance/pages/OrgBalanceSheet"));
+const OrgTrialBalance = lazy(() => import("../features/finance/pages/OrgTrialBalance"));
 
 
 
@@ -143,6 +145,29 @@ const allProtectedRoutes = [
     requiresOrg: true,
   },
 
+  {
+    key: "org-balance-sheet",
+    path: "/org/balance-sheet",
+    label: "Balance Sheet",
+    icon: <AccountBalanceIcon />,
+    element: <OrgBalanceSheet />,
+    permission: "org_accounts.view",
+    group: "finance",
+    showInSidebar: true,
+    requiresOrg: true,
+  },
+  {
+    key: "org-trial-balance",
+    path: "/org/trial-balance",
+    label: "Trial Balance",
+    icon: <AssessmentIcon />,
+    element: <OrgTrialBalance />,
+    permission: "org_accounts.view",
+    group: "finance",
+    showInSidebar: true,
+    requiresOrg: true,
+  },
+  
   {
     key: "dashboard",
     path: "/dashboard",

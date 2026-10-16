@@ -32,6 +32,7 @@ import {
     Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { GlassCard, StyledTableCell, StyledTableRow } from "./invoiceStyledComponents";
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 
 const getStatusColor = (status) => {
     const map = { paid: 'success', unpaid: 'error', partial: 'warning', overdue: 'error', draft: 'default' };
@@ -55,6 +56,7 @@ const InvoiceTableSection = ({
     handleOpenForm,
     handleReturnClick,
     handleView,
+    handleOpenEWayDialog,
     page,
     paginatedInvoices,
     rowsPerPage,
@@ -170,6 +172,22 @@ const InvoiceTableSection = ({
                                                     <EditIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
+
+                                                {/* E-Way Bill & E-Invoice Button */}
+                                                {handleOpenEWayDialog && (
+                                                    <Tooltip title="E-Way Bill & E-Invoice (NIC)" arrow TransitionComponent={Zoom}>
+                                                        <IconButton size="small"
+                                                            onClick={() => handleOpenEWayDialog(invoice)}
+                                                            sx={{
+                                                                color: invoice.eway_bill_no || invoice.irn ? '#10b981' : '#3b82f6',
+                                                                bgcolor: Number(invoice.total_amount || 0) >= 50000 ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                                                '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.2)' }
+                                                            }}
+                                                            className="invoice-page__action-eway">
+                                                            <LocalShippingIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
 
                                             {/* Direct Receive Payment button for unpaid / partial invoices */}
                                             {invoice.status !== 'return' && invoice.status !== 'cancelled' && (parseFloat(invoice.balance_amount || 0) > 0 || invoice.status !== 'paid') && (

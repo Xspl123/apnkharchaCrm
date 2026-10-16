@@ -7,6 +7,7 @@ import App from "./App";
 import SessionHandler from "./components/SessionHandler";
 import "./index.css";
 import "./styles/common.css";
+import "./i18n";
 
 // 👇 ADD THIS
 if ("serviceWorker" in navigator) {

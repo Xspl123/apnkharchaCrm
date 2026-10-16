@@ -1,0 +1,15 @@
+{
+  "common": {
+    "save": "Save Karein", "cancel": "Cancel", "delete": "Delete", "edit": "Edit Karein", "view": "Dekhein",
+    "create": "Create Karein", "apply": "Apply Karein", "refresh": "Refresh", "search": "Search...", "close": "Band Karein",
+    "print": "Print", "pdf": "PDF", "excel": "Excel", "download": "Download", "actions": "Actions",
+    "status": "Status", "date": "Date", "amount": "Amount", "total": "Total", "paid": "Paid",
+    "unpaid": "Baki", "partial": "Adha Paid", "balance": "Baki Balance", "return": "Wapsi", "today": "Aaj"
+  },
+  "nav": {
+    "dashboard": "Dashboard", "finance": "Finance & Hisab", "org_accounts": "Accounts", "cashbook": "Cash-Bank Book",
+    "pnl": "Munafa-Nuksan (P&L)", "balance_sheet": "Balance Sheet", "trial_balance": "Trial Balance (Talpat)",
+    "sales": "Sales & Bikri", "companies": "Companies", "clients": "Parties & Clients", "invoices": "Bills & Invoices",
+    "purchase": "Purchase & Kharid", "vendors": "Suppliers", "inventory": "Stock & Maal", "products": "Products"
+  }
+}
