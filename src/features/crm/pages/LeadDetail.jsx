@@ -247,10 +247,6 @@ export default function LeadDetail() {
         if (lead?.id) dispatch(getQuotations({ lead_id: lead.id }));
     }, [dispatch, lead?.id]);
 
-    if (isLoading || !lead) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
-    }
-
     const linkedClient = useMemo(() => {
         if (!lead || !Array.isArray(clients)) return null;
         return clients.find((c) => {
@@ -274,6 +270,12 @@ export default function LeadDetail() {
             return false;
         });
     }, [lead, invoices, linkedClient]);
+
+    if (isLoading || !lead) {
+        return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
+    }
+
+
 
     const sc = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new;
     const createdDate = lead.created_at ? new Date(lead.created_at) : null;
