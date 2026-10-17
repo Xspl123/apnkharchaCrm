@@ -11,9 +11,10 @@ import {
     getWorkflowRules, createWorkflowRule, updateWorkflowRule, deleteWorkflowRule,
 } from '../state/leadSlice';
 import { getOrgMembers } from '../../organisation/state/orgSlice';
+import { getProducts } from '../../inventory/state/inventorySlice';
 import usePermission from '../../../hooks/usePermission';
 import {
-    Box, Card, CardContent, Typography, Button, TextField,
+    Box, Card, CardContent, Autocomplete, Typography, Button, TextField,
     Dialog, DialogTitle, DialogContent, DialogActions,
     Table, TableBody, TableCell, TableContainer, TableHead,
     TableRow, IconButton, Chip, Stack, Avatar, Tooltip,
@@ -517,6 +518,7 @@ function LeadListComponent() {
     const { can } = usePermission();
     const { user: currentUser } = useSelector((s) => s.auth || {});
     const { members: orgMembers = [] } = useSelector((s) => s.orgs || {});
+    const { products = [] } = useSelector((s) => s.inventory || {});
     const assignableUsers = Array.isArray(orgMembers) ? orgMembers : [];
 
     const [search, setSearch] = useState('');
@@ -573,6 +575,7 @@ function LeadListComponent() {
         dispatch(getScoreRules());
         dispatch(getCustomFields());
         dispatch(getWorkflowRules());
+        dispatch(getProducts());
     }, [dispatch]);
 
     const leadSignals = useMemo(() => {
@@ -1841,9 +1844,33 @@ function LeadListComponent() {
                                 </FormControl>
                             </Grid>
                             <Grid item xs={12} sm={6}>
-                                <TextField fullWidth size="small" label="Product Interest" name="product_interest"
-                                    value={formData.product_interest} onChange={handleChange}
-                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
+                                <Autocomplete
+                                    freeSolo
+                                    size="small"
+                                    options={products}
+                                    getOptionLabel={(option) => typeof option === 'string' ? option : `${option.name} (₹${parseFloat(option.selling_price || 0).toLocaleString('en-IN')})`}
+                                    value={formData.product_interest || ''}
+                                    onChange={(_, newValue) => {
+                                        const prodName = typeof newValue === 'string' ? newValue : (newValue?.name || '');
+                                        const prodPrice = newValue?.selling_price ? parseFloat(newValue.selling_price) : null;
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            product_interest: prodName,
+                                            budget: (!prev.budget || prev.budget === '0' || prev.budget === '') && prodPrice ? String(prodPrice) : prev.budget
+                                        }));
+                                    }}
+                                    onInputChange={(_, newInputValue) => {
+                                        setFormData(prev => ({ ...prev, product_interest: newInputValue }));
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Product Interest (Inventory Select)"
+                                            placeholder="Select product from inventory..."
+                                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                        />
+                                    )}
+                                />
                             </Grid>
                             <Grid item xs={12} sm={4}>
                                 <TextField fullWidth size="small" label="Budget" name="budget" type="number"
