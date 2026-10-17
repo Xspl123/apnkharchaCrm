@@ -438,7 +438,7 @@ const InvoiceFormSection = ({
                                             <Stack spacing={2} className="invoice-page__totals-stack">
                                                 <Stack direction="row" justifyContent="space-between">
                                                     <Typography color="textSecondary">Subtotal:</Typography>
-                                                    <Typography fontWeight={600}>{formatCurrency(totals.subTotal)}</Typography>
+                                                    <Typography fontWeight={600}>{formatCurrency(totals?.subTotal ?? totals?.subtotal ?? totals?.sub_total ?? 0)}</Typography>
                                                 </Stack>
 
                                                 {gstType === 'intra' ? (
@@ -464,7 +464,7 @@ const InvoiceFormSection = ({
                                                 <Stack direction="row" justifyContent="space-between" className="invoice-page__grand-total-row">
                                                     <Typography variant="h6" fontWeight={700}>Total Amount:</Typography>
                                                     <Typography variant="h6" fontWeight={700} color="primary.main">
-                                                        {formatCurrency(totals.grandTotal)}
+                                                        {formatCurrency(totals?.grandTotal ?? totals?.total ?? totals?.total_amount ?? 0)}
                                                     </Typography>
                                                 </Stack>
                                             </Stack>
