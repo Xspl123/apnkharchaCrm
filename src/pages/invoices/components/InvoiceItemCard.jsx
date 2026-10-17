@@ -185,7 +185,7 @@ const InvoiceItemCard = ({
                             getOptionLabel={(option) =>
                                 `${option.hsn_code} - ${option.description}`
                             }
-                            value={hsnCodes.find(h => h.hsn_code === item.hsn_code) || null}
+                            value={hsnCodes.find(h => String(h.hsn_code) === String(item.hsn_code)) || (item.hsn_code ? { hsn_code: item.hsn_code, description: item.description || item.item_name || 'HSN/SAC' } : null)}
                             onChange={(_, newValue) => handleHsnSelect(index, newValue)}
                             renderInput={(params) => (
                                 <TextField {...params}

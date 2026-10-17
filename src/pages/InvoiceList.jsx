@@ -291,8 +291,9 @@ const InvoiceList = () => {
                             qty: 1,
                             unit: foundProd.unit || 'pcs',
                             rate: rate,
-                            amount: rate,
+                            amount: (rate).toFixed(2),
                             tax_rate: taxRate,
+                            tax_amount: ((rate * taxRate) / 100).toFixed(2),
                             attributes: []
                         }];
                     }
