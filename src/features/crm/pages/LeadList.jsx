@@ -11,6 +11,7 @@ import {
     getWorkflowRules, createWorkflowRule, updateWorkflowRule, deleteWorkflowRule,
 } from '../state/leadSlice';
 import { getOrgMembers } from '../../organisation/state/orgSlice';
+import { getInvoices } from '../../../redux/features/invoiceSlice';
 import { getProducts } from '../../inventory/state/inventorySlice';
 import usePermission from '../../../hooks/usePermission';
 import {
@@ -515,6 +516,7 @@ function LeadListComponent() {
     const navigate = useNavigate();
     const theme = useTheme();
     const { leads = [], summary, isLoading, actionLoading, scoreRules: remoteScoreRules, customFields = [], workflowRules = [] } = useSelector((s) => s.leads || { leads: [] });
+    const { invoices = [] } = useSelector((s) => s.invoices || {});
     const { can } = usePermission();
     const { user: currentUser } = useSelector((s) => s.auth || {});
     const { members: orgMembers = [] } = useSelector((s) => s.orgs || {});
@@ -571,6 +573,7 @@ function LeadListComponent() {
     useEffect(() => {
         dispatch(getLeads());
         dispatch(getLeadSummary());
+        dispatch(getInvoices());
         dispatch(getOrgMembers());
         dispatch(getScoreRules());
         dispatch(getCustomFields());
@@ -679,11 +682,18 @@ function LeadListComponent() {
             if (lead?.status === 'closed_won') {
                 current.won += 1;
                 current.revenue += value;
+                const leadComp = (lead.company_name || '').toLowerCase().trim();
+                const matchedInvs = (invoices || []).filter((inv) => {
+                    if (lead.client_id && String(inv.client_id || inv.client?.id) === String(lead.client_id)) return true;
+                    const invComp = (inv.client?.company_name || '').toLowerCase().trim();
+                    return leadComp && invComp && leadComp === invComp;
+                });
+                current.billedRevenue = (current.billedRevenue || 0) + matchedInvs.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
             }
             grouped.set(key, current);
         });
         return [...grouped.values()].sort((a, b) => b.pipeline - a.pipeline).slice(0, 5);
-    }, [leads, scoreRules?.stageWeights]);
+    }, [leads, invoices, scoreRules?.stageWeights]);
 
     // Same idea as sourceAttribution, but grouped by utm_campaign instead —
     // only leads that actually carry a UTM tag (from the public lead form's
@@ -704,11 +714,18 @@ function LeadListComponent() {
             if (lead?.status === 'closed_won') {
                 current.won += 1;
                 current.revenue += value;
+                const leadComp = (lead.company_name || '').toLowerCase().trim();
+                const matchedInvs = (invoices || []).filter((inv) => {
+                    if (lead.client_id && String(inv.client_id || inv.client?.id) === String(lead.client_id)) return true;
+                    const invComp = (inv.client?.company_name || '').toLowerCase().trim();
+                    return leadComp && invComp && leadComp === invComp;
+                });
+                current.billedRevenue = (current.billedRevenue || 0) + matchedInvs.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
             }
             grouped.set(key, current);
         });
         return [...grouped.values()].sort((a, b) => b.pipeline - a.pipeline).slice(0, 5);
-    }, [leads, scoreRules?.stageWeights]);
+    }, [leads, invoices, scoreRules?.stageWeights]);
 
     const duplicateGroups = useMemo(() => {
         const buckets = new Map();
@@ -789,6 +806,7 @@ function LeadListComponent() {
             closeMergeDialog();
             dispatch(getLeads());
             dispatch(getLeadSummary());
+        dispatch(getInvoices());
         } catch (err) {
             setMergeError(err || 'Could not merge leads.');
         } finally {
@@ -861,6 +879,7 @@ function LeadListComponent() {
             closeBulkDialog();
             dispatch(getLeads());
             dispatch(getLeadSummary());
+        dispatch(getInvoices());
         } catch (err) {
             setBulkError(err || 'Bulk status update failed');
         }
@@ -873,6 +892,7 @@ function LeadListComponent() {
             setSelectedIds([]);
             closeBulkDialog();
             dispatch(getLeadSummary());
+        dispatch(getInvoices());
         } catch (err) {
             setBulkError(err || 'Bulk delete failed');
         }
@@ -897,6 +917,7 @@ function LeadListComponent() {
             setPageMsg(`${unassignedLeads.length} unassigned leads round-robin se assign ho gaye`);
             dispatch(getLeads());
             dispatch(getLeadSummary());
+        dispatch(getInvoices());
         } catch (err) {
             setPageMsg(err || 'Auto-assign failed');
         }
@@ -1015,6 +1036,7 @@ function LeadListComponent() {
             setPageMsg(`${payloads.length} leads import ho gaye`);
             dispatch(getLeads());
             dispatch(getLeadSummary());
+        dispatch(getInvoices());
         } catch (err) {
             setImportError(err?.message || err || 'Import failed');
         }
@@ -1249,6 +1271,7 @@ function LeadListComponent() {
             setDialog(false);
             dispatch(getLeads());
             dispatch(getLeadSummary());
+        dispatch(getInvoices());
         } catch (err) {
             setFormError(err || 'Something went wrong');
         }
@@ -1258,6 +1281,7 @@ function LeadListComponent() {
         await dispatch(deleteLead(deleteDialog));
         setDeleteDialog(null);
         dispatch(getLeadSummary());
+        dispatch(getInvoices());
     };
 
     return (
@@ -1322,7 +1346,14 @@ function LeadListComponent() {
                                     <Box sx={{ p: 1.5, border: `1px solid ${theme.palette.divider}`, borderRadius: '12px', bgcolor: theme.palette.background.paper }}>
                                         <Typography fontWeight={800} variant="body2">{item.source.replace('_', ' ').toUpperCase()}</Typography>
                                         <Typography variant="caption" color="text.secondary">{item.leads} leads | {item.won} won</Typography>
-                                        <Typography variant="body2" fontWeight={700} sx={{ mt: 1 }}>Won {formatMoney(item.revenue)}</Typography>
+                                        <Typography variant="body2" fontWeight={800} sx={{ mt: 1, color: item.billedRevenue > 0 ? '#16a34a' : 'inherit' }}>
+                                            Won {formatMoney(item.billedRevenue > 0 ? item.billedRevenue : item.revenue)}
+                                        </Typography>
+                                        {item.billedRevenue > 0 && item.revenue > item.billedRevenue && (
+                                            <Typography variant="caption" sx={{ color: '#0f766e', fontWeight: 700, display: 'block' }}>
+                                                Deal: {formatMoney(item.revenue)}
+                                            </Typography>
+                                        )}
                                         <Typography variant="caption" color="text.secondary">Weighted {formatMoney(item.pipeline)}</Typography>
                                     </Box>
                                 </Grid>
@@ -1349,7 +1380,14 @@ function LeadListComponent() {
                                         <Typography fontWeight={800} variant="body2" noWrap title={item.campaign}>{item.campaign}</Typography>
                                         <Typography variant="caption" color="text.secondary" display="block">via {item.source}</Typography>
                                         <Typography variant="caption" color="text.secondary">{item.leads} leads | {item.won} won</Typography>
-                                        <Typography variant="body2" fontWeight={700} sx={{ mt: 1 }}>Won {formatMoney(item.revenue)}</Typography>
+                                        <Typography variant="body2" fontWeight={800} sx={{ mt: 1, color: item.billedRevenue > 0 ? '#16a34a' : 'inherit' }}>
+                                            Won {formatMoney(item.billedRevenue > 0 ? item.billedRevenue : item.revenue)}
+                                        </Typography>
+                                        {item.billedRevenue > 0 && item.revenue > item.billedRevenue && (
+                                            <Typography variant="caption" sx={{ color: '#0f766e', fontWeight: 700, display: 'block' }}>
+                                                Deal: {formatMoney(item.revenue)}
+                                            </Typography>
+                                        )}
                                         <Typography variant="caption" color="text.secondary">Weighted {formatMoney(item.pipeline)}</Typography>
                                     </Box>
                                 </Grid>

@@ -32,6 +32,7 @@ import {
     getScoreRules, saveScoreRules, getUpcomingFollowUps,
 } from '../state/leadSlice';
 import { getOrganisation } from '../../organisation/state/orgSlice';
+import { getInvoices } from '../../../redux/features/invoiceSlice';
 import UtmLinkGenerator from '../components/UtmLinkGenerator'; // path apne folder structure ke hisaab se check karo
 
 const STATUS_CONFIG = {
@@ -197,6 +198,7 @@ export default function LeadDashboard() {
     const theme = useTheme();
     const { leads, summary, isLoading, scoreRules: remoteScoreRules, upcomingFollowUps: remoteUpcomingFollowUps } = useSelector((s) => s.leads);
     const organisation = useSelector((s) => s.orgs?.organisation);
+    const { invoices = [] } = useSelector((s) => s.invoices || {});
     const [pageMsg, setPageMsg] = useState('');
     const scoreRules = useMemo(() => mergeScoreRules(remoteScoreRules), [remoteScoreRules]);
     const [scoreDialog, setScoreDialog] = useState(false);
@@ -210,6 +212,7 @@ export default function LeadDashboard() {
         dispatch(getOrganisation());
         dispatch(getScoreRules());
         dispatch(getUpcomingFollowUps(7));
+        dispatch(getInvoices());
     }, [dispatch]);
 
     const metrics = useMemo(() => {
@@ -219,6 +222,7 @@ export default function LeadDashboard() {
         let pipelineValue = 0;
         let weightedPipeline = 0;
         let wonValue = 0;
+        let wonBilled = 0;
         let dueToday = 0;
         let overdueFollowUps = 0;
         let overdueLeads = 0;
@@ -234,7 +238,16 @@ export default function LeadDashboard() {
                 pipelineValue += value;
                 weightedPipeline += value * ((STAGE_WEIGHT[status] ?? 10) / 100);
             }
-            if (status === 'closed_won') wonValue += value;
+            if (status === 'closed_won') {
+                wonValue += value;
+                const leadComp = (lead.company_name || '').toLowerCase().trim();
+                const matchedInvs = (invoices || []).filter((inv) => {
+                    if (lead.client_id && String(inv.client_id || inv.client?.id) === String(lead.client_id)) return true;
+                    const invComp = (inv.client?.company_name || '').toLowerCase().trim();
+                    return leadComp && invComp && leadComp === invComp;
+                });
+                wonBilled += matchedInvs.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
+            }
 
             const followUps = getFollowUpCounts(lead);
             dueToday += followUps.dueToday;
@@ -287,7 +300,7 @@ export default function LeadDashboard() {
 
         return {
             total, open, won, lost, statusCounts,
-            pipelineValue, weightedPipeline, wonValue,
+            pipelineValue, weightedPipeline, wonValue, wonBilled,
             dueToday: summary?.due_today_followups ?? dueToday,
             // Client-computed to exactly match LeadList's "Overdue" chip
             // (leads.filter overdueFollowUps || isCloseOverdue), rather than
@@ -297,7 +310,7 @@ export default function LeadDashboard() {
             closeThisWeek, unassigned, conversionRate,
             statusChart, sourceRows, ownerRows, recentLeads,
         };
-    }, [leads, summary]);
+    }, [leads, summary, invoices]);
 
     // Last 30 days, day-wise count of leads created — purely client-side,
     // computed from the same `leads` list already loaded for everything
@@ -499,8 +512,20 @@ export default function LeadDashboard() {
                 {[
                     { label: 'Pipeline Value', value: formatMoney(metrics.pipelineValue), hint: 'Open lead budget', color: '#0f766e' },
                     { label: 'Weighted Pipeline', value: formatMoney(metrics.weightedPipeline), hint: 'Stage adjusted value', color: '#4338ca' },
-                    { label: 'Won Value', value: formatMoney(metrics.wonValue), hint: `${metrics.conversionRate}% conversion`, color: '#15803d' },
-                    { label: 'Close This Week', value: metrics.closeThisWeek, hint: `${metrics.unassigned} unassigned`, color: '#0284c7' },
+                    {
+                        label: metrics.wonBilled > 0 ? 'Won Value (Billed)' : 'Won Value',
+                        value: formatMoney(metrics.wonBilled > 0 ? metrics.wonBilled : metrics.wonValue),
+                        hint: metrics.wonBilled > 0
+                            ? `Deal: ${formatMoney(metrics.wonValue)} (${metrics.conversionRate}% conv)`
+                            : `${metrics.conversionRate}% conversion`,
+                        color: '#15803d',
+                    },
+                    {
+                        label: 'Close This Week',
+                        value: metrics.closeThisWeek,
+                        hint: metrics.closeThisWeek > 0 ? 'Closing in next 7 days' : 'No deals expiring this week',
+                        color: '#0284c7',
+                    },
                 ].map((item) => (
                     <Grid item xs={12} sm={6} md={3} key={item.label}>
                         <GlassCard sx={{ height: '100%' }}>
@@ -580,7 +605,12 @@ export default function LeadDashboard() {
                             <Divider sx={{ my: 1.5 }} />
                             <Stack spacing={1.5}>
                                 {lostReasons.rows.length === 0 ? (
-                                    <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>No lost leads yet</Typography>
+                                    <Box sx={{ py: 2.5, textAlign: 'center' }}>
+                                        <Chip label="🎉 100% Win Rate" sx={{ bgcolor: '#dcfce7', color: '#16a34a', fontWeight: 800, mb: 1 }} />
+                                        <Typography variant="body2" color="text.secondary">
+                                            Clean record — zero deals lost across all closed pipeline!
+                                        </Typography>
+                                    </Box>
                                 ) : lostReasons.rows.map((row) => {
                                     const pct = lostReasons.total > 0 ? Math.round((row.count / lostReasons.total) * 100) : 0;
                                     return (
@@ -749,7 +779,17 @@ export default function LeadDashboard() {
                             <Divider sx={{ my: 1.5 }} />
                             <Stack spacing={1.25}>
                                 {upcomingFollowUps.length === 0 ? (
-                                    <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>No upcoming follow-ups.</Typography>
+                                    <Box sx={{ py: 2.5, textAlign: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                                            No follow-ups due in the next 7 days.
+                                        </Typography>
+                                        {metrics.open > 0 && (
+                                            <Button size="small" variant="outlined" onClick={() => navigate('/crm/leads')}
+                                                sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 }}>
+                                                Schedule Touch for {metrics.open} Open Leads ➔
+                                            </Button>
+                                        )}
+                                    </Box>
                                 ) : upcomingFollowUps.map(({ lead, followUp, days }) => (
                                     <Stack key={followUp.id} direction="row" spacing={1.25} alignItems="center"
                                         onClick={() => navigate(`/crm/leads/${lead.id}`)}
