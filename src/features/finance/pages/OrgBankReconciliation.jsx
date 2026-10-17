@@ -225,7 +225,7 @@ export default function OrgBankReconciliation() {
 <body>
   <div class="header">
     <div class="org-title">APNAKHARCHA SERVICES</div>
-    <div class="report-title">Bank Reconciliation Statement (BRS)</div>
+    <div class="report-title">BRS</div>
   </div>
 
   <table class="meta-grid">
