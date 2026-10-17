@@ -122,12 +122,16 @@ const ACTIVITY_ICONS = {
     whatsapp:      <WhatsAppIcon sx={{ fontSize: 16 }} />,
     meeting:       <EventIcon sx={{ fontSize: 16 }} />,
     note:          <NoteIcon sx={{ fontSize: 16 }} />,
-    status_change: <EditIcon sx={{ fontSize: 16 }} />,
+    status_change:    <EditIcon sx={{ fontSize: 16 }} />,
+    client_converted: <GroupsIcon sx={{ fontSize: 16 }} />,
+    invoice_created:  <ReceiptLongIcon sx={{ fontSize: 16 }} />,
+    payment_received: <CheckIcon sx={{ fontSize: 16 }} />,
 };
 
 const ACTIVITY_COLORS = {
     call: '#16a34a', email: '#0284c7', whatsapp: '#25d366',
     meeting: '#7c3aed', note: '#6366f1', status_change: '#f59e0b',
+    client_converted: '#7c3aed', invoice_created: '#0284c7', payment_received: '#16a34a',
 };
 
 const STAGE_ORDER = [
@@ -271,6 +275,59 @@ export default function LeadDetail() {
         });
     }, [lead, invoices, linkedClient]);
 
+    const allActivities = useMemo(() => {
+        const manual = Array.isArray(lead?.activities) ? [...lead.activities] : [];
+        const systemEvents = [];
+
+        if (linkedClient) {
+            systemEvents.push({
+                id: 'sys-client-' + linkedClient.id,
+                type: 'client_converted',
+                note: `Lead successfully converted to Client: ${linkedClient.company_name || linkedClient.name}`,
+                created_at: linkedClient.created_at ? new Date(linkedClient.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Milestone Achieved',
+                is_system: true,
+                outcome: 'Converted ✅',
+                user: { name: 'System Auto-Pilot' },
+            });
+        }
+
+        (linkedInvoices || []).forEach((inv) => {
+            systemEvents.push({
+                id: 'sys-inv-' + inv.id,
+                type: 'invoice_created',
+                note: `Invoice ${inv.invoice_no} created for ₹${Number(inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                created_at: inv.created_at ? new Date(inv.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : (inv.invoice_date || 'Milestone Achieved'),
+                is_system: true,
+                outcome: inv.status?.toUpperCase(),
+                user: { name: 'Billing Engine' },
+            });
+
+            if (inv.status === 'paid' || Number(inv.balance_amount || 0) <= 0) {
+                systemEvents.push({
+                    id: 'sys-pay-' + inv.id,
+                    type: 'payment_received',
+                    note: `Full payment of ₹${Number(inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} received. Invoice status marked as PAID.`,
+                    created_at: inv.updated_at ? new Date(inv.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : (inv.invoice_date || 'Milestone Achieved'),
+                    is_system: true,
+                    outcome: 'PAID 100% ✅',
+                    user: { name: 'Accounts Engine' },
+                });
+            } else if (inv.status === 'partial' || Number(inv.paid_amount || 0) > 0) {
+                systemEvents.push({
+                    id: 'sys-pay-part-' + inv.id,
+                    type: 'payment_received',
+                    note: `Partial payment of ₹${Number(inv.paid_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} received. Balance due: ₹${Number(inv.balance_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                    created_at: inv.updated_at ? new Date(inv.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : (inv.invoice_date || 'Milestone Achieved'),
+                    is_system: true,
+                    outcome: 'PARTIAL',
+                    user: { name: 'Accounts Engine' },
+                });
+            }
+        });
+
+        return [...systemEvents, ...manual];
+    }, [lead?.activities, linkedClient, linkedInvoices]);
+
     if (isLoading || !lead) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
     }
@@ -346,7 +403,21 @@ export default function LeadDetail() {
         },
     ];
 
-    const recommendedActions = [
+    const isDealWon = lead.status === 'closed_won' || linkedInvoices.some((i) => i.status === 'paid');
+    const billedTotal = linkedInvoices.reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0);
+    const budgetVal = Number(lead.budget) || 0;
+    const remainingPotential = Math.max(0, budgetVal - billedTotal);
+
+    const recommendedActions = isDealWon ? [
+        `🏆 Deal Closed & Settled: ${linkedClient?.company_name || lead.company_name} converted to client. Invoice ${linkedInvoices[0]?.invoice_no || ''} (₹${billedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) is 100% PAID.`,
+        remainingPotential > 0
+            ? `📈 Revenue Upsell Potential: Approved budget was ${lead.currency} ${budgetVal.toLocaleString('en-IN')}; initial phase billed ₹${billedTotal.toLocaleString('en-IN')}. Remaining expansion pipeline: ₹${remainingPotential.toLocaleString('en-IN')} (Target for Q2 upsell).`
+            : `🎯 Full Value Realized: Total billed ₹${billedTotal.toLocaleString('en-IN')} matches full customer budget.`,
+        `🚀 Post-Sales Onboarding: ${lead.product_interest || 'Services'} contract is active. Schedule customer kickoff & SLA handover with ${lead.contact_person || 'client'} within 7 days.`,
+        lead.product_interest?.toLowerCase().includes('amc') || lead.product_interest?.toLowerCase().includes('contract')
+            ? `📅 AMC Contract Lifecycle: 1-Year coverage active (Oct 2026 – Oct 2027). Auto-renewal trigger active for Day 300 to secure recurring revenue.`
+            : `🤝 Customer Success: Trigger automated 30-day satisfaction review to secure Google review & testimonial.`,
+    ] : [
         overdueFollowUps.length
             ? 'Resolve overdue follow-ups first. Enterprise teams treat overdue follow-ups as the top response risk.'
             : 'Follow-up discipline is under control. Keep the next committed action visible on every update.',
@@ -934,7 +1005,7 @@ export default function LeadDetail() {
             <GlassCard sx={{ borderColor: 'divider' }}>
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', position: 'sticky', top: 0, zIndex: 1 }}>
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ px: 2, minHeight: 48 }}>
-                        <Tab label={`Activities (${lead.activities?.length || 0})`} />
+                        <Tab label={`Activities (${allActivities?.length || 0})`} />
                         <Tab label={`Follow-ups (${lead.follow_ups?.length || 0})`} />
                         <Tab label="Commercial" />
                         {lead.notes && <Tab label="Notes" />}
@@ -951,13 +1022,13 @@ export default function LeadDetail() {
                                     Log Activity
                                 </GradientButton>
                             </Stack>
-                            {lead.activities?.length === 0 ? (
+                            {allActivities?.length === 0 ? (
                                 <Typography color="text.secondary" textAlign="center" py={3}>
                                     No activities yet — log a call, email, or note!
                                 </Typography>
                             ) : (
                                 <Stack spacing={0}>
-                                    {lead.activities?.map((act, i) => (
+                                    {allActivities?.map((act, i) => (
                                         <Stack key={act.id} direction="row" spacing={2} sx={{ pb: 2 }}>
                                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                                 <Avatar sx={{ bgcolor: ACTIVITY_COLORS[act.type] + '20',
@@ -1336,7 +1407,7 @@ export default function LeadDetail() {
                             <Select value={activity.type} label="Activity Type"
                                 onChange={(e) => setActivity((p) => ({ ...p, type: e.target.value }))}
                                 sx={{ borderRadius: '10px' }}>
-                                {Object.entries(ACTIVITY_ICONS).map(([k, icon]) => (
+                                {Object.entries(ACTIVITY_ICONS).filter(([k]) => !['client_converted', 'invoice_created', 'payment_received'].includes(k)).map(([k, icon]) => (
                                     <MenuItem key={k} value={k}>
                                         <Stack direction="row" spacing={1} alignItems="center">
                                             {icon} <span style={{ textTransform: 'capitalize' }}>{k.replace('_', ' ')}</span>
