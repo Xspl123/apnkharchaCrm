@@ -108,14 +108,15 @@ export default function OrgBankReconciliation() {
     }, [accountTransactions, statementDate]);
 
     const bookBalance = useMemo(() => {
-        return Number(selectedAccount?.balance || 0);
+        return Number(selectedAccount?.current_balance ?? selectedAccount?.balance ?? 0);
     }, [selectedAccount]);
 
     useEffect(() => {
-        if (statementBalanceInput === '' && bookBalance !== 0) {
-            setStatementBalanceInput(String(bookBalance));
+        if (selectedAccount) {
+            const bal = Number(selectedAccount.current_balance ?? selectedAccount.balance ?? 0);
+            setStatementBalanceInput(String(bal));
         }
-    }, [bookBalance, statementBalanceInput]);
+    }, [selectedAccountId, selectedAccount]);
 
     const { unclearedDebits, unclearedCredits } = useMemo(() => {
         let debits = 0;
@@ -224,7 +225,7 @@ export default function OrgBankReconciliation() {
                                     <MenuItem key={acc.id} value={acc.id}>
                                         <Stack direction="row" justifyContent="space-between" sx={{ width: '100%' }}>
                                             <span>{acc.name} ({acc.bank_name || acc.type?.toUpperCase()})</span>
-                                            <span style={{ fontWeight: 700, color: '#16a34a' }}>{formatCurrency(acc.balance)}</span>
+                                            <span style={{ fontWeight: 700, color: '#16a34a' }}>{formatCurrency(acc.current_balance ?? acc.balance ?? 0)}</span>
                                         </Stack>
                                     </MenuItem>
                                 ))}
