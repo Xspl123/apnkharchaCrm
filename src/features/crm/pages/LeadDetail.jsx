@@ -335,6 +335,7 @@ export default function LeadDetail() {
         company_name: lead.company_name || '',
         contact_person: lead.contact_person || '',
         phone: lead.phone || '',
+        product_interest: lead.product_interest || '',
         email: lead.email || '',
     }).toString();
     const moduleLinks = [

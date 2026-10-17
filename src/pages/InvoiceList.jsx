@@ -262,6 +262,55 @@ const InvoiceList = () => {
         return () => { dispatch(reset()); };
     }, [dispatch, loadData]);
 
+    // crm-lead-auto-fill: Auto-open form with client & product from CRM Lead
+    const location = useLocation();
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const urlClientId = params.get('client_id');
+        const urlCompanyName = params.get('company_name');
+        const urlProduct = params.get('product_interest');
+
+        if ((urlClientId || urlCompanyName) && clients && clients.length > 0) {
+            const targetClient = clients.find(c =>
+                (urlClientId && String(c.id) === String(urlClientId)) ||
+                (urlCompanyName && c.company_name && c.company_name.toLowerCase() === urlCompanyName.toLowerCase())
+            );
+
+            if (targetClient) {
+                let initialItems = undefined;
+                if (urlProduct && products && products.length > 0) {
+                    const foundProd = products.find(p =>
+                        (p.name && p.name.toLowerCase().includes(urlProduct.toLowerCase())) ||
+                        (urlProduct.toLowerCase().includes(p.name ? p.name.toLowerCase() : ''))
+                    );
+                    if (foundProd) {
+                        const rate = parseFloat(foundProd.selling_price) || 0;
+                        const taxRate = parseFloat(foundProd.tax_rate) || 18;
+                        initialItems = [{
+                            product_id: foundProd.id,
+                            item_name: foundProd.name,
+                            description: foundProd.description || '',
+                            hsn_code: foundProd.hsn_code || '',
+                            qty: 1,
+                            unit: foundProd.unit || 'pcs',
+                            rate: rate,
+                            amount: rate,
+                            tax_rate: taxRate,
+                            attributes: []
+                        }];
+                    }
+                }
+
+                setFormData(prev => ({
+                    ...prev,
+                    client_id: targetClient.id,
+                    items: initialItems ? initialItems : prev.items
+                }));
+                setShowForm(true);
+            }
+        }
+    }, [location.search, clients, products]);
+
     // ⚡ Auto-open Create Invoice form with pre-selected client from CRM Lead
     useEffect(() => {
         const params = new URLSearchParams(location.search);
