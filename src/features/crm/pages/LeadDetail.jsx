@@ -328,6 +328,23 @@ export default function LeadDetail() {
         return [...systemEvents, ...manual];
     }, [lead?.activities, linkedClient, linkedInvoices]);
 
+    const closedDateText = useMemo(() => {
+        const isWon = lead?.status === 'closed_won' || (linkedInvoices || []).some((i) => i.status === 'paid');
+        if (!isWon) {
+            return lead?.expected_close_date || 'Not specified';
+        }
+        const statusActivity = (lead?.activities || []).find((a) =>
+            a.type === 'status_change' && (String(a.note).includes('closed_won') || String(a.outcome).includes('closed_won'))
+        );
+        const rawDate = lead?.won_at || statusActivity?.created_at || linkedInvoices[0]?.invoice_date || lead?.updated_at || lead?.created_at;
+        if (!rawDate) return 'Won & Closed ✅';
+        try {
+            return new Date(rawDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' (Won ✅)';
+        } catch {
+            return 'Won & Closed ✅';
+        }
+    }, [lead?.status, lead?.expected_close_date, lead?.activities, lead?.won_at, linkedInvoices, lead?.updated_at, lead?.created_at]);
+
     if (isLoading || !lead) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
     }
@@ -914,7 +931,7 @@ export default function LeadDetail() {
                     { label: 'Source',           value: lead.source?.replace('_',' ').toUpperCase() },
                     { label: 'Product Interest', value: lead.product_interest || '—' },
                     { label: 'Budget',           value: lead.budget ? `${lead.currency} ${Number(lead.budget).toLocaleString()}` : '—' },
-                    { label: 'Expected Close',   value: lead.expected_close_date || '—' },
+                    { label: isDealWon ? 'Closed Date' : 'Expected Close', value: closedDateText },
                     { label: 'Assigned To',      value: getLeadOwnerLabel(lead) },
                     { label: 'Created',          value: lead.created_at },
                 ].map((item) => (
@@ -1151,8 +1168,8 @@ export default function LeadDetail() {
                                     <Typography fontWeight={600} mb={1.5}>
                                         {lead.budget ? `${lead.currency} ${Number(lead.budget).toLocaleString()}` : 'Not captured yet'}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">Expected Close</Typography>
-                                    <Typography fontWeight={600}>{lead.expected_close_date || 'No target date'}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{isDealWon ? 'Closed Date' : 'Expected Close'}</Typography>
+                                    <Typography fontWeight={600} sx={{ color: isDealWon ? '#16a34a' : 'inherit' }}>{closedDateText}</Typography>
                                 </MetricCard>
                             </Grid>
                             <Grid item xs={12} md={6}>
