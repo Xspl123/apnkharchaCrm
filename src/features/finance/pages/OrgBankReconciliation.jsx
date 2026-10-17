@@ -374,7 +374,7 @@ export default function OrgBankReconciliation() {
 
             sheet.mergeCells('A1:H1');
             const titleCell = sheet.getCell('A1');
-            titleCell.value = 'APNAKHARCHA — BANK RECONCILIATION STATEMENT (BRS)';
+            titleCell.value = 'APNAKHARCHA — BRS';
             titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
             titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
@@ -504,7 +504,7 @@ export default function OrgBankReconciliation() {
                         </IconButton>
                         <Box>
                             <Typography variant="h5" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                Bank Reconciliation Statement (BRS)
+                                BRS)
                                 {isReconciled ? (
                                     <Chip label="RECONCILED & BALANCED ✅" size="small" sx={{ bgcolor: '#dcfce7', color: '#16a34a', fontWeight: 800 }} />
                                 ) : (
