@@ -341,6 +341,13 @@ const OrgCashbook = () => {
                     <Stack direction="row" spacing={1.5} flexWrap="wrap">
                         <Button
                             variant="outlined"
+                            onClick={() => navigate('/org/reconciliation', { state: { selectedAccountId } })}
+                            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.6)', borderRadius: '10px', textTransform: 'none', fontWeight: 700, bgcolor: 'rgba(255,255,255,0.1)' }}
+                        >
+                            🏦 Bank Reconciliation (BRS)
+                        </Button>
+                        <Button
+                            variant="outlined"
                             startIcon={<TransferIcon />}
                             onClick={handleOpenTransfer}
                             sx={{

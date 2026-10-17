@@ -21,6 +21,7 @@ import { matchPath } from "react-router-dom";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import { isCrmEnabled, isCrmOnlyEdition, isExpenseOnlyEdition } from "./moduleConfig";
 const VendorLedgerPage = lazy(() => import("../features/vendors/pages/VendorLedgerPage"));
 const Login = lazy(() => import("../features/auth/pages/Login"));
@@ -68,6 +69,7 @@ const LeadPipeline = lazy(() => import("../features/crm/pages/LeadPipeline"));
 const CampaignList = lazy(() => import("../features/crm/pages/CampaignList"));
 const OrgAccountsList = lazy(() => import("../features/finance/pages/OrgAccountsList"));
 const OrgCashbook = lazy(() => import("../features/finance/pages/OrgCashbook"));
+const OrgBankReconciliation = lazy(() => import("../features/finance/pages/OrgBankReconciliation"));
 const OrgProfitLossReport = lazy(() => import("../features/finance/pages/OrgProfitLossReport"));
 const OrgFinanceDashboard = lazy(() => import("../features/finance/pages/OrgFinanceDashboard"));
 const OrgBalanceSheet = lazy(() => import("../features/finance/pages/OrgBalanceSheet"));
@@ -117,6 +119,16 @@ const allProtectedRoutes = [
     icon: <AccountBalanceWalletIcon />,
     element: <OrgAccountsList />,
     permission: "org_accounts.view",
+    group: "finance",
+    showInSidebar: true,
+    requiresOrg: true,
+  },
+  {
+    key: "org-reconciliation",
+    path: "/org/reconciliation",
+    label: "Bank Reconciliation (BRS)",
+    icon: <FactCheckIcon />,
+    element: <OrgBankReconciliation />,
     group: "finance",
     showInSidebar: true,
     requiresOrg: true,

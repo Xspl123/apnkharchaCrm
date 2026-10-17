@@ -355,14 +355,23 @@ const OrgAccountsList = () => {
 
                                         {/* Actions */}
                                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                            <Button
-                                                size="small"
-                                                startIcon={<StatementIcon />}
-                                                onClick={() => navigate('/org/cashbook', { state: { selectedAccountId: acc.id } })}
-                                                sx={{ textTransform: 'none', borderRadius: '8px', fontSize: 11 }}
-                                            >
-                                                Passbook
-                                            </Button>
+                                            <Stack direction="row" spacing={0.5}>
+                                                <Button
+                                                    size="small"
+                                                    startIcon={<StatementIcon />}
+                                                    onClick={() => navigate('/org/cashbook', { state: { selectedAccountId: acc.id } })}
+                                                    sx={{ textTransform: 'none', borderRadius: '8px', fontSize: 11 }}
+                                                >
+                                                    Passbook
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => navigate('/org/reconciliation', { state: { selectedAccountId: acc.id } })}
+                                                    sx={{ textTransform: 'none', borderRadius: '8px', fontSize: 11, color: '#0284c7', fontWeight: 700 }}
+                                                >
+                                                    BRS
+                                                </Button>
+                                            </Stack>
                                             <Stack direction="row" spacing={0.5}>
                                                 <Tooltip title="Edit Account">
                                                     <IconButton size="small" color="primary" onClick={() => handleOpenEdit(acc)}>
