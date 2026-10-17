@@ -504,7 +504,7 @@ export default function OrgBankReconciliation() {
                         </IconButton>
                         <Box>
                             <Typography variant="h5" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                BRS)
+                                BRS
                                 {isReconciled ? (
                                     <Chip label="RECONCILED & BALANCED ✅" size="small" sx={{ bgcolor: '#dcfce7', color: '#16a34a', fontWeight: 800 }} />
                                 ) : (

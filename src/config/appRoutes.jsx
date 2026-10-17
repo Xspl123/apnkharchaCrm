@@ -126,7 +126,7 @@ const allProtectedRoutes = [
   {
     key: "org-reconciliation",
     path: "/org/reconciliation",
-    label: "Bank Reconciliation (BRS)",
+    label: "BRS",
     icon: <FactCheckIcon />,
     element: <OrgBankReconciliation />,
     group: "finance",
