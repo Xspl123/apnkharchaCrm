@@ -331,6 +331,7 @@ export default function LeadDetail() {
 
     const conversionQuery = new URLSearchParams({
         lead_id: String(lead.id),
+        client_id: lead.client_id ? String(lead.client_id) : '',
         company_name: lead.company_name || '',
         contact_person: lead.contact_person || '',
         phone: lead.phone || '',

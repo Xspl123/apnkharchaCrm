@@ -2,6 +2,7 @@ import { getErrorMessage } from "../utils/getErrorMessage";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Container, LinearProgress } from "@mui/material";
+import { useLocation } from "react-router-dom";
 import {
     getInvoices,
     getNextInvoiceNumber,
@@ -202,6 +203,9 @@ const InvoiceList = () => {
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [ewayModal, setEwayModal] = useState({ open: false, invoice: null });
     const [gstType, setGstType] = useState('intra');
+    const location = useLocation();
+
+    
     const [, setActiveStep] = useState(0);
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('all');
@@ -257,6 +261,28 @@ const InvoiceList = () => {
         loadData();
         return () => { dispatch(reset()); };
     }, [dispatch, loadData]);
+
+    // ⚡ Auto-open Create Invoice form with pre-selected client from CRM Lead
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const urlClientId = params.get("client_id");
+        const urlCompanyName = params.get("company_name");
+
+        if ((urlClientId || urlCompanyName) && clients && clients.length > 0) {
+            const targetClient = clients.find((c) =>
+                (urlClientId && String(c.id) === String(urlClientId)) ||
+                (urlCompanyName && c.company_name?.toLowerCase() === urlCompanyName.toLowerCase())
+            );
+
+            if (targetClient) {
+                setFormData((prev) => ({
+                    ...prev,
+                    client_id: targetClient.id,
+                }));
+                setShowForm(true); 
+            }
+        }
+    }, [location.search, clients]);
 
     useEffect(() => {
         if (!editMode && showForm) {
