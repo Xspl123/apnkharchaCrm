@@ -12,7 +12,7 @@ import {
     Button, IconButton, Chip, TextField, MenuItem, Select,
     FormControl, InputLabel, InputAdornment, Table, TableHead,
     TableRow, TableCell, TableBody, TableContainer, Snackbar, Alert,
-    Checkbox, Divider,
+    Checkbox,
 } from '@mui/material';
 import {
     Print as PrintIcon,
@@ -63,6 +63,7 @@ export default function OrgBankReconciliation() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [isExportingExcel, setIsExportingExcel] = useState(false);
+    const [isExportingPdf, setIsExportingPdf] = useState(false);
 
     useEffect(() => {
         dispatch(getOrgAccounts());
@@ -162,10 +163,202 @@ export default function OrgBankReconciliation() {
         }).format(val || 0);
     };
 
-    const handlePrintPDF = () => {
-        window.print();
+    // Dedicated Clean A4 HTML Generator (Zero Sidebar, Full Width Letterhead)
+    const generateBRSHTML = () => {
+        const accName = selectedAccount?.name || 'Bank Account';
+        const bankName = selectedAccount?.bank_name || 'Bank';
+        const accNo = selectedAccount?.account_number || 'N/A';
+        const ifsc = selectedAccount?.ifsc_code || 'N/A';
+
+        const statusHtml = isReconciled
+            ? '<span style="color:#16a34a;font-weight:800;background:#dcfce7;padding:4px 10px;border-radius:6px;border:1px solid #86efac;">RECONCILED & BALANCED &#10004;</span>'
+            : `<span style="color:#dc2626;font-weight:800;background:#fee2e2;padding:4px 10px;border-radius:6px;border:1px solid #fca5a5;">DISCREPANCY: ${formatCurrency(difference)} &#9888;</span>`;
+
+        let rowsHtml = '';
+        accountTransactions.forEach((tx, idx) => {
+            const isCleared = clearedMap[tx.id] !== false;
+            const isDebit = tx.type === 'debit' || tx.type === 'expense';
+            const isCredit = tx.type === 'credit' || tx.type === 'income';
+            const vDate = clearanceDates[tx.id] || tx.transaction_date || statementDate;
+
+            rowsHtml += `
+            <tr style="background:${isCleared ? (idx % 2 === 0 ? '#ffffff' : '#f8fafc') : '#fffbeb'};">
+                <td style="text-align:center;font-weight:700;color:${isCleared ? '#16a34a' : '#b45309'};">${isCleared ? 'CLEARED &#10004;' : 'UNPRESENTED &#9203;'}</td>
+                <td>${tx.transaction_date || 'N/A'}</td>
+                <td style="font-weight:700;">${tx.reference_no || 'TX-' + tx.id}</td>
+                <td>${tx.category || 'General'}</td>
+                <td style="color:#475569;">${tx.description || '—'}</td>
+                <td style="text-align:right;color:#dc2626;font-weight:${isDebit ? 700 : 400};">${isDebit ? formatCurrency(tx.amount) : '—'}</td>
+                <td style="text-align:right;color:#16a34a;font-weight:${isCredit ? 700 : 400};">${isCredit ? formatCurrency(tx.amount) : '—'}</td>
+                <td style="text-align:center;">${vDate}</td>
+            </tr>`;
+        });
+
+        return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>BRS - ${accName}</title>
+<style>
+  @page { size: A4 portrait; margin: 12mm 15mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 11px; color: #0f172a; margin: 0; padding: 15px; }
+  .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 15px; }
+  .org-title { font-size: 20px; font-weight: 900; color: #1e3a8a; text-transform: uppercase; margin: 0; }
+  .report-title { font-size: 13px; font-weight: 800; color: #0284c7; text-transform: uppercase; margin-top: 4px; }
+  .meta-grid { width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 1px solid #cbd5e1; background: #f8fafc; }
+  .meta-grid td { padding: 6px 12px; font-size: 11px; border: 1px solid #e2e8f0; }
+  .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; border: 1px solid #cbd5e1; }
+  .summary-table th { background: #1e3a8a; color: #ffffff; padding: 8px 12px; font-size: 11px; text-align: left; }
+  .summary-table td { padding: 7px 12px; border: 1px solid #e2e8f0; font-size: 11px; }
+  .amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .tx-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; border: 1px solid #cbd5e1; }
+  .tx-table th { background: #2563eb; color: #ffffff; padding: 7px 8px; font-size: 10px; text-align: left; border: 1px solid #3b82f6; }
+  .tx-table td { padding: 6px 8px; border: 1px solid #e2e8f0; font-size: 10px; }
+  .footer-sig { margin-top: 35px; width: 100%; display: flex; justify-content: space-between; page-break-inside: avoid; }
+  .sig-col { text-align: center; width: 220px; }
+  .sig-line { border-top: 1px solid #0f172a; margin-top: 40px; padding-top: 5px; font-weight: 700; font-size: 11px; }
+  @media print {
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="org-title">APNAKHARCHA SERVICES</div>
+    <div class="report-title">Bank Reconciliation Statement (BRS)</div>
+  </div>
+
+  <table class="meta-grid">
+    <tr>
+      <td><strong>Bank Account:</strong> ${accName} (${bankName})</td>
+      <td><strong>Cutoff / Statement Date:</strong> ${statementDate}</td>
+    </tr>
+    <tr>
+      <td><strong>Account No:</strong> ${accNo} | <strong>IFSC:</strong> ${ifsc}</td>
+      <td><strong>Audit Status:</strong> ${statusHtml}</td>
+    </tr>
+  </table>
+
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th>BRS Particulars</th>
+        <th class="amount" style="width: 150px;">Amount (INR)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Balance as per Cash Book / Company Books</strong></td>
+        <td class="amount"><strong>${formatCurrency(bookBalance)}</strong></td>
+      </tr>
+      <tr>
+        <td>2. (+) Add: Cheques / Payments Issued but not Cleared by Bank (Unpresented)</td>
+        <td class="amount">${formatCurrency(unclearedDebits)}</td>
+      </tr>
+      <tr>
+        <td>3. (-) Less: Deposits / Receipts In-Transit (Not Credited by Bank)</td>
+        <td class="amount">${formatCurrency(unclearedCredits)}</td>
+      </tr>
+      <tr style="background:#f1f5f9;">
+        <td><strong>4. Reconciled Calculated Bank Statement Balance</strong></td>
+        <td class="amount"><strong>${formatCurrency(calculatedStatementBalance)}</strong></td>
+      </tr>
+      <tr>
+        <td>5. Balance as per Actual Bank Passbook / Statement</td>
+        <td class="amount">${formatCurrency(actualStatementBalance)}</td>
+      </tr>
+      <tr style="background:${isReconciled ? '#f0fdf4' : '#fef2f2'};">
+        <td><strong>6. Net Difference / Discrepancy</strong></td>
+        <td class="amount" style="color:${isReconciled ? '#16a34a' : '#dc2626'};font-size:12px;"><strong>${isReconciled ? '₹0.00 (MATCHED &#10004;)' : formatCurrency(difference) + ' &#9888;'}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px; color: #1e3a8a;">Itemized Transactions Clearance Details:</div>
+  <table class="tx-table">
+    <thead>
+      <tr>
+        <th style="width: 75px; text-align: center;">Status</th>
+        <th style="width: 70px;">Date</th>
+        <th style="width: 120px;">Voucher / Ref</th>
+        <th style="width: 90px;">Category</th>
+        <th>Description</th>
+        <th class="amount" style="width: 95px;">Debit (- Out)</th>
+        <th class="amount" style="width: 95px;">Credit (+ In)</th>
+        <th style="width: 80px; text-align: center;">Value Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+  </table>
+
+  <div class="footer-sig">
+    <div class="sig-col">
+      <div class="sig-line">Prepared By (Accounts Executive)</div>
+    </div>
+    <div class="sig-col">
+      <div class="sig-line">Audited By (Chartered Accountant / CFO)</div>
+    </div>
+  </div>
+</body>
+</html>`;
     };
 
+    // 1. Separate Print: Clean popup window without sidebar/navbar
+    const handlePrint = () => {
+        const printWindow = window.open('', '_blank', 'width=1100,height=800,scrollbars=yes');
+        if (!printWindow) {
+            setSnackbar({ open: true, message: 'Pop-up blocked! Please allow popups.', severity: 'error' });
+            return;
+        }
+        printWindow.document.write(generateBRSHTML());
+        printWindow.document.close();
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+        }, 500);
+    };
+
+    // 2. Separate Download PDF: Direct .pdf file export
+    const handleDownloadPDF = async () => {
+        try {
+            setIsExportingPdf(true);
+            let html2pdfLib;
+            try {
+                const mod = await import('html2pdf.js');
+                html2pdfLib = mod.default || mod;
+            } catch {
+                handlePrint();
+                return;
+            }
+
+            const element = document.createElement('div');
+            element.innerHTML = generateBRSHTML();
+            document.body.appendChild(element);
+
+            const accName = (selectedAccount?.name || 'Bank').replace(/[^a-zA-Z0-9]/g, '_');
+            const opt = {
+                margin: [0.3, 0.4, 0.3, 0.4],
+                filename: `BRS_${accName}_${statementDate}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+            };
+
+            await html2pdfLib().from(element).set(opt).save();
+            document.body.removeChild(element);
+
+            setSnackbar({ open: true, message: 'PDF BRS Statement downloaded successfully! 📄', severity: 'success' });
+        } catch (err) {
+            console.error('PDF Export Error:', err);
+            handlePrint();
+        } finally {
+            setIsExportingPdf(false);
+        }
+    };
+
+    // 3. Separate Export Excel (.xlsx)
     const handleExportExcel = async () => {
         try {
             setIsExportingExcel(true);
@@ -174,16 +367,9 @@ export default function OrgBankReconciliation() {
             workbook.created = new Date();
 
             const sheet = workbook.addWorksheet('Bank Reconciliation');
-
             sheet.columns = [
-                { width: 14 },
-                { width: 14 },
-                { width: 28 },
-                { width: 22 },
-                { width: 38 },
-                { width: 18 },
-                { width: 18 },
-                { width: 18 },
+                { width: 14 }, { width: 14 }, { width: 28 }, { width: 22 },
+                { width: 38 }, { width: 18 }, { width: 18 }, { width: 18 },
             ];
 
             sheet.mergeCells('A1:H1');
@@ -289,8 +475,9 @@ export default function OrgBankReconciliation() {
     }, [accountTransactions, clearedMap, filterStatus, searchQuery]);
 
     return (
-        <Container maxWidth="xl" sx={{ py: 3 }} className="brs-view-container">
-            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2} sx={{ mb: 3 }} className="no-print">
+        <Container maxWidth="xl" sx={{ py: 3 }}>
+            {/* Top Action Bar with 3 Distinct Buttons */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2} sx={{ mb: 3 }}>
                 <Box>
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <IconButton onClick={() => navigate('/org/cashbook')} sx={{ border: `1px solid ${theme.palette.divider}` }}>
@@ -320,15 +507,28 @@ export default function OrgBankReconciliation() {
                         Uncheck All
                     </Button>
                     
+                    {/* Button 1: Dedicated Clean Window Print */}
+                    <Button
+                        variant="contained"
+                        startIcon={<PrintIcon />}
+                        onClick={handlePrint}
+                        sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#0284c7', '&:hover': { bgcolor: '#0369a1' }, fontWeight: 700 }}
+                    >
+                        Print Statement
+                    </Button>
+
+                    {/* Button 2: Dedicated PDF Download */}
                     <Button
                         variant="contained"
                         startIcon={<PdfIcon />}
-                        onClick={handlePrintPDF}
+                        onClick={handleDownloadPDF}
+                        disabled={isExportingPdf}
                         sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' }, fontWeight: 700 }}
                     >
-                        Print / PDF Statement
+                        {isExportingPdf ? 'Generating PDF...' : 'Download PDF'}
                     </Button>
 
+                    {/* Button 3: Dedicated Excel Download */}
                     <Button
                         variant="contained"
                         startIcon={<ExcelIcon />}
@@ -341,20 +541,8 @@ export default function OrgBankReconciliation() {
                 </Stack>
             </Stack>
 
-            <Box sx={{ display: 'none', '@media print': { display: 'block', mb: 3 } }}>
-                <Typography variant="h4" fontWeight={900} textAlign="center">
-                    APNAKHARCHA SERVICES
-                </Typography>
-                <Typography variant="h6" fontWeight={800} textAlign="center" sx={{ textTransform: 'uppercase', mt: 0.5 }}>
-                    Bank Reconciliation Statement (BRS)
-                </Typography>
-                <Typography variant="body2" textAlign="center" color="text.secondary">
-                    As on: {statementDate} | Account: {selectedAccount?.name} ({selectedAccount?.bank_name}) | A/c No: {selectedAccount?.account_number || 'N/A'}
-                </Typography>
-                <Divider sx={{ my: 2 }} />
-            </Box>
-
-            <GlassCard sx={{ mb: 3, p: 2 }} className="no-print">
+            {/* Config & Account Selector Card */}
+            <GlassCard sx={{ mb: 3, p: 2 }}>
                 <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={4}>
                         <FormControl fullWidth size="small">
@@ -413,6 +601,7 @@ export default function OrgBankReconciliation() {
                 </Grid>
             </GlassCard>
 
+            {/* BRS Audit Scoreboard */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
                     <MetricBox bordercolor="#93c5fd" bgcolor="#eff6ff">
@@ -451,9 +640,10 @@ export default function OrgBankReconciliation() {
                 </Grid>
             </Grid>
 
+            {/* Transactions Clearance Table */}
             <GlassCard>
                 <CardContent sx={{ pb: 1 }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5} sx={{ mb: 2 }} className="no-print">
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
                         <Box>
                             <Typography variant="h6" fontWeight={800}>Transactions for Clearance</Typography>
                             <Typography variant="caption" color="text.secondary">
@@ -482,7 +672,7 @@ export default function OrgBankReconciliation() {
                         <Table size="small">
                             <TableHead sx={{ bgcolor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 800, width: 60 }} align="center" className="no-print">Cleared</TableCell>
+                                    <TableCell sx={{ fontWeight: 800, width: 60 }} align="center">Cleared</TableCell>
                                     <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
                                     <TableCell sx={{ fontWeight: 800 }}>Voucher / Ref</TableCell>
                                     <TableCell sx={{ fontWeight: 800 }}>Category & Description</TableCell>
@@ -507,7 +697,7 @@ export default function OrgBankReconciliation() {
 
                                         return (
                                             <TableRow key={tx.id} hover sx={{ bgcolor: isCleared ? 'transparent' : '#fffbeb' }}>
-                                                <TableCell align="center" className="no-print">
+                                                <TableCell align="center">
                                                     <Checkbox checked={isCleared} onChange={() => handleToggleClearance(tx.id)} color="success" />
                                                 </TableCell>
                                                 <TableCell sx={{ whiteSpace: 'nowrap' }}>{tx.transaction_date || 'N/A'}</TableCell>
@@ -550,19 +740,6 @@ export default function OrgBankReconciliation() {
                             </TableBody>
                         </Table>
                     </TableContainer>
-
-                    <Box sx={{ display: 'none', '@media print': { display: 'block', mt: 4 } }}>
-                        <Stack direction="row" justifyContent="space-between" sx={{ pt: 4 }}>
-                            <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="body2" fontWeight={700}>___________________________________</Typography>
-                                <Typography variant="caption" fontWeight={700}>Prepared By (Accounts Executive)</Typography>
-                            </Box>
-                            <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="body2" fontWeight={700}>___________________________________</Typography>
-                                <Typography variant="caption" fontWeight={700}>Audited & Verified By (Chartered Accountant / CFO)</Typography>
-                            </Box>
-                        </Stack>
-                    </Box>
                 </CardContent>
             </GlassCard>
 
