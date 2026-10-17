@@ -359,23 +359,38 @@ export default function LeadDetail() {
     const stageIndex = Math.max(0, STAGE_ORDER.indexOf(lead.status));
     const progressPercent = Math.min(100, Math.round((stageIndex / (STAGE_ORDER.length - 2)) * 100));
     const budgetValue = Number(lead.budget || 0);
-    const healthScore = Math.max(
+    const isDealWon = lead.status === 'closed_won' || (linkedInvoices || []).some((i) => i.status === 'paid');
+    const isDealLost = lead.status === 'closed_lost';
+
+    const healthScore = isDealWon ? 100 : isDealLost ? 0 : Math.max(
         15,
         Math.min(
-            96,
+            95,
             55 +
-            (lead.status === 'closed_won' ? 30 : 0) +
-            (lead.status === 'positive_response' ? 12 : 0) +
-            (budgetValue > 0 ? 8 : 0) +
-            (openFollowUps.length > 0 ? 6 : -8) -
-            overdueFollowUps.length * 8 -
+            (lead.status === 'positive_response' ? 15 : 0) +
+            (budgetValue > 0 ? 10 : 0) +
+            (openFollowUps.length > 0 ? 8 : 0) -
+            overdueFollowUps.length * 10 -
             ((lastTouchDays ?? 10) > 7 ? 10 : 0)
         )
     );
-    const healthTone =
-        healthScore >= 75 ? { label: 'Healthy', color: '#16a34a', bg: '#dcfce7' } :
-        healthScore >= 50 ? { label: 'Watchlist', color: '#d97706', bg: '#fef3c7' } :
-            { label: 'At Risk', color: '#dc2626', bg: '#fee2e2' };
+
+    const healthTone = isDealWon
+        ? { label: 'Won & Settled', color: '#16a34a', bg: '#dcfce7' }
+        : isDealLost
+        ? { label: 'Closed Lost', color: '#dc2626', bg: '#fee2e2' }
+        : healthScore >= 75
+        ? { label: 'Healthy', color: '#16a34a', bg: '#dcfce7' }
+        : healthScore >= 50
+        ? { label: 'Watchlist', color: '#d97706', bg: '#fef3c7' }
+        : { label: 'At Risk', color: '#dc2626', bg: '#fee2e2' };
+
+    const formatLastTouch = (days) => {
+        if (days === null) return 'No activity logged yet';
+        if (days === 0) return 'Today (Just now)';
+        if (days === 1) return 'Yesterday';
+        return `${days} day(s) ago`;
+    };
     const metrics = [
         {
             label: 'Lead Health',
@@ -398,12 +413,11 @@ export default function LeadDetail() {
         {
             label: 'Open Follow-ups',
             value: openFollowUps.length,
-            hint: overdueFollowUps.length ? `${overdueFollowUps.length} overdue` : dueTodayFollowUps.length ? `${dueTodayFollowUps.length} due today` : 'No overdue items',
-            icon: <WarningAmberIcon sx={{ color: overdueFollowUps.length ? '#dc2626' : '#16a34a' }} />,
+            hint: isDealWon ? 'All clear (Deal Won)' : overdueFollowUps.length ? `${overdueFollowUps.length} overdue` : dueTodayFollowUps.length ? `${dueTodayFollowUps.length} due today` : 'All clear (No overdue)',
+            icon: overdueFollowUps.length ? <WarningAmberIcon sx={{ color: '#dc2626' }} /> : <CheckIcon sx={{ color: '#16a34a' }} />,
         },
     ];
 
-    const isDealWon = lead.status === 'closed_won' || linkedInvoices.some((i) => i.status === 'paid');
     const billedTotal = linkedInvoices.reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0);
     const budgetVal = Number(lead.budget) || 0;
     const remainingPotential = Math.max(0, budgetVal - billedTotal);
@@ -976,9 +990,11 @@ export default function LeadDetail() {
                                 <Typography variant="caption" color="text.secondary">Linked Campaigns</Typography>
                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
                                     {linkedCampaigns.length === 0 ? (
-                                        <Typography variant="body2" color="text.secondary">
-                                            No campaigns are linked.
-                                        </Typography>
+                                        <Chip
+                                            label={lead.source ? `Source: ${lead.source.replace('_', ' ').toUpperCase()} (Direct Inbound)` : 'Direct Inbound (Organic)'}
+                                            size="small"
+                                            sx={{ bgcolor: '#f1f5f9', color: '#475569', fontWeight: 600, fontSize: 11 }}
+                                        />
                                     ) : linkedCampaigns.map((campaign) => (
                                         <Chip
                                             key={campaign.id}
@@ -993,7 +1009,7 @@ export default function LeadDetail() {
                             <Box sx={{ mt: 2, p: 1.5, borderRadius: '12px', bgcolor: 'action.hover' }}>
                                 <Typography variant="caption" color="text.secondary">Last touch</Typography>
                                 <Typography variant="body2" fontWeight={600}>
-                                    {lastTouchDays === null ? 'No activity logged yet' : `${lastTouchDays} day(s) ago`}
+                                    {formatLastTouch(lastTouchDays)}
                                 </Typography>
                             </Box>
                         </CardContent>
