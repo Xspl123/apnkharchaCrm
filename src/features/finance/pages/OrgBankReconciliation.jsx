@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import {
     getOrgAccounts,
     getOrgTransactions,
@@ -10,11 +12,12 @@ import {
     Button, IconButton, Chip, TextField, MenuItem, Select,
     FormControl, InputLabel, InputAdornment, Table, TableHead,
     TableRow, TableCell, TableBody, TableContainer, Snackbar, Alert,
-    Checkbox,
+    Checkbox, Divider,
 } from '@mui/material';
 import {
-    FactCheck as FactCheckIcon,
     Print as PrintIcon,
+    PictureAsPdf as PdfIcon,
+    TableChart as ExcelIcon,
     ArrowBack as BackIcon,
     Search as SearchIcon,
     DoneAll as DoneAllIcon,
@@ -59,6 +62,7 @@ export default function OrgBankReconciliation() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [isExportingExcel, setIsExportingExcel] = useState(false);
 
     useEffect(() => {
         dispatch(getOrgAccounts());
@@ -147,7 +151,7 @@ export default function OrgBankReconciliation() {
         setClearedMap(next);
         setSnackbar({
             open: true,
-            message: status ? 'All transactions marked as Cleared!' : 'All transactions marked as Uncleared!',
+            message: status ? 'All transactions marked as Cleared in Bank!' : 'All transactions marked as Uncleared!',
             severity: 'info',
         });
     };
@@ -156,6 +160,117 @@ export default function OrgBankReconciliation() {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency', currency: 'INR', minimumFractionDigits: 2,
         }).format(val || 0);
+    };
+
+    const handlePrintPDF = () => {
+        window.print();
+    };
+
+    const handleExportExcel = async () => {
+        try {
+            setIsExportingExcel(true);
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'ApnaKharcha ERP';
+            workbook.created = new Date();
+
+            const sheet = workbook.addWorksheet('Bank Reconciliation');
+
+            sheet.columns = [
+                { width: 14 },
+                { width: 14 },
+                { width: 28 },
+                { width: 22 },
+                { width: 38 },
+                { width: 18 },
+                { width: 18 },
+                { width: 18 },
+            ];
+
+            sheet.mergeCells('A1:H1');
+            const titleCell = sheet.getCell('A1');
+            titleCell.value = 'APNAKHARCHA — BANK RECONCILIATION STATEMENT (BRS)';
+            titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+            titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+            sheet.getRow(1).height = 30;
+
+            sheet.addRow(['Bank Account:', selectedAccount?.name || 'Bank Account', '', '', 'Statement Date:', statementDate]);
+            sheet.addRow(['Bank Name:', selectedAccount?.bank_name || 'N/A', '', '', 'Audit Status:', isReconciled ? 'RECONCILED & BALANCED' : 'UNRECONCILED DIFFERENCE']);
+            sheet.addRow(['Account Number:', selectedAccount?.account_number || 'N/A', '', '', 'Generated On:', new Date().toLocaleDateString('en-IN')]);
+            sheet.addRow([]);
+
+            sheet.addRow(['BRS AUDIT SUMMARY', '', '', '', 'AMOUNT (INR)']);
+            const summHeaderRow = sheet.lastRow;
+            summHeaderRow.font = { bold: true };
+            summHeaderRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+
+            sheet.addRow(['1. Balance as per Cash Book / Company Books', '', '', '', bookBalance]);
+            sheet.addRow(['2. (+) Uncleared Cheques Issued (Not presented to bank)', '', '', '', unclearedDebits]);
+            sheet.addRow(['3. (-) Uncleared Deposits In-Transit (Not credited by bank)', '', '', '', unclearedCredits]);
+            sheet.addRow(['4. Calculated Balance as per Bank Statement', '', '', '', calculatedStatementBalance]);
+            sheet.addRow(['5. Balance as per Actual Bank Passbook / Statement', '', '', '', actualStatementBalance]);
+            sheet.addRow(['6. Net Difference / Discrepancy', '', '', '', difference]);
+            sheet.addRow([]);
+
+            for (let r = 7; r <= 12; r++) {
+                const cell = sheet.getCell(`E${r}`);
+                cell.numFmt = '₹#,##0.00';
+                cell.font = { bold: r === 7 || r === 12 };
+            }
+
+            sheet.addRow(['Clearance', 'Date', 'Voucher / Ref', 'Category', 'Description', 'Debit (- Out)', 'Credit (+ In)', 'Bank Value Date']);
+            const txHeaderRow = sheet.lastRow;
+            txHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            txHeaderRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+            txHeaderRow.alignment = { horizontal: 'center', vertical: 'middle' };
+            sheet.getRow(txHeaderRow.number).height = 24;
+
+            accountTransactions.forEach((tx) => {
+                const isCleared = clearedMap[tx.id] !== false;
+                const isDebit = tx.type === 'debit' || tx.type === 'expense';
+                const isCredit = tx.type === 'credit' || tx.type === 'income';
+                const amt = Number(tx.amount || 0);
+
+                const row = sheet.addRow([
+                    isCleared ? 'CLEARED' : 'UNPRESENTED',
+                    tx.transaction_date || 'N/A',
+                    tx.reference_no || `TX-${tx.id}`,
+                    tx.category || 'General',
+                    tx.description || '',
+                    isDebit ? amt : null,
+                    isCredit ? amt : null,
+                    clearanceDates[tx.id] || tx.transaction_date || statementDate,
+                ]);
+
+                row.getCell(6).numFmt = '₹#,##0.00';
+                row.getCell(7).numFmt = '₹#,##0.00';
+
+                if (!isCleared) {
+                    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+                }
+            });
+
+            sheet.addRow([]);
+            sheet.addRow([]);
+            sheet.addRow(['Prepared By: ___________________________', '', '', '', 'Audited & Verified By: ___________________________']);
+            sheet.lastRow.font = { bold: true };
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const accName = (selectedAccount?.name || 'Bank').replace(/[^a-zA-Z0-9]/g, '_');
+            saveAs(blob, `BRS_${accName}_${statementDate}.xlsx`);
+
+            setSnackbar({
+                open: true,
+                message: 'Excel BRS Statement exported successfully! 📊',
+                severity: 'success',
+            });
+        } catch (err) {
+            console.error('Excel Export Error:', err);
+            setSnackbar({ open: true, message: 'Failed to export Excel report', severity: 'error' });
+        } finally {
+            setIsExportingExcel(false);
+        }
     };
 
     const filteredList = useMemo(() => {
@@ -174,8 +289,8 @@ export default function OrgBankReconciliation() {
     }, [accountTransactions, clearedMap, filterStatus, searchQuery]);
 
     return (
-        <Container maxWidth="xl" sx={{ py: 3 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2} sx={{ mb: 3 }}>
+        <Container maxWidth="xl" sx={{ py: 3 }} className="brs-view-container">
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2} sx={{ mb: 3 }} className="no-print">
                 <Box>
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <IconButton onClick={() => navigate('/org/cashbook')} sx={{ border: `1px solid ${theme.palette.divider}` }}>
@@ -204,13 +319,42 @@ export default function OrgBankReconciliation() {
                     <Button variant="outlined" startIcon={<RemoveDoneIcon />} onClick={() => handleMarkAll(false)} sx={{ borderRadius: '10px', textTransform: 'none' }}>
                         Uncheck All
                     </Button>
-                    <Button variant="contained" startIcon={<PrintIcon />} onClick={() => window.print()} sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#0284c7' }}>
-                        Print BRS Statement
+                    
+                    <Button
+                        variant="contained"
+                        startIcon={<PdfIcon />}
+                        onClick={handlePrintPDF}
+                        sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' }, fontWeight: 700 }}
+                    >
+                        Print / PDF Statement
+                    </Button>
+
+                    <Button
+                        variant="contained"
+                        startIcon={<ExcelIcon />}
+                        onClick={handleExportExcel}
+                        disabled={isExportingExcel}
+                        sx={{ borderRadius: '10px', textTransform: 'none', bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, fontWeight: 700 }}
+                    >
+                        {isExportingExcel ? 'Exporting...' : 'Export Excel (.xlsx)'}
                     </Button>
                 </Stack>
             </Stack>
 
-            <GlassCard sx={{ mb: 3, p: 2 }}>
+            <Box sx={{ display: 'none', '@media print': { display: 'block', mb: 3 } }}>
+                <Typography variant="h4" fontWeight={900} textAlign="center">
+                    APNAKHARCHA SERVICES
+                </Typography>
+                <Typography variant="h6" fontWeight={800} textAlign="center" sx={{ textTransform: 'uppercase', mt: 0.5 }}>
+                    Bank Reconciliation Statement (BRS)
+                </Typography>
+                <Typography variant="body2" textAlign="center" color="text.secondary">
+                    As on: {statementDate} | Account: {selectedAccount?.name} ({selectedAccount?.bank_name}) | A/c No: {selectedAccount?.account_number || 'N/A'}
+                </Typography>
+                <Divider sx={{ my: 2 }} />
+            </Box>
+
+            <GlassCard sx={{ mb: 3, p: 2 }} className="no-print">
                 <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={4}>
                         <FormControl fullWidth size="small">
@@ -225,7 +369,9 @@ export default function OrgBankReconciliation() {
                                     <MenuItem key={acc.id} value={acc.id}>
                                         <Stack direction="row" justifyContent="space-between" sx={{ width: '100%' }}>
                                             <span>{acc.name} ({acc.bank_name || acc.type?.toUpperCase()})</span>
-                                            <span style={{ fontWeight: 700, color: '#16a34a' }}>{formatCurrency(acc.current_balance ?? acc.balance ?? 0)}</span>
+                                            <span style={{ fontWeight: 700, color: '#16a34a' }}>
+                                                {formatCurrency(acc.current_balance ?? acc.balance ?? 0)}
+                                            </span>
                                         </Stack>
                                     </MenuItem>
                                 ))}
@@ -307,7 +453,7 @@ export default function OrgBankReconciliation() {
 
             <GlassCard>
                 <CardContent sx={{ pb: 1 }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5} sx={{ mb: 2 }} className="no-print">
                         <Box>
                             <Typography variant="h6" fontWeight={800}>Transactions for Clearance</Typography>
                             <Typography variant="caption" color="text.secondary">
@@ -336,7 +482,7 @@ export default function OrgBankReconciliation() {
                         <Table size="small">
                             <TableHead sx={{ bgcolor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 800, width: 60 }} align="center">Cleared</TableCell>
+                                    <TableCell sx={{ fontWeight: 800, width: 60 }} align="center" className="no-print">Cleared</TableCell>
                                     <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
                                     <TableCell sx={{ fontWeight: 800 }}>Voucher / Ref</TableCell>
                                     <TableCell sx={{ fontWeight: 800 }}>Category & Description</TableCell>
@@ -361,7 +507,7 @@ export default function OrgBankReconciliation() {
 
                                         return (
                                             <TableRow key={tx.id} hover sx={{ bgcolor: isCleared ? 'transparent' : '#fffbeb' }}>
-                                                <TableCell align="center">
+                                                <TableCell align="center" className="no-print">
                                                     <Checkbox checked={isCleared} onChange={() => handleToggleClearance(tx.id)} color="success" />
                                                 </TableCell>
                                                 <TableCell sx={{ whiteSpace: 'nowrap' }}>{tx.transaction_date || 'N/A'}</TableCell>
@@ -404,6 +550,19 @@ export default function OrgBankReconciliation() {
                             </TableBody>
                         </Table>
                     </TableContainer>
+
+                    <Box sx={{ display: 'none', '@media print': { display: 'block', mt: 4 } }}>
+                        <Stack direction="row" justifyContent="space-between" sx={{ pt: 4 }}>
+                            <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="body2" fontWeight={700}>___________________________________</Typography>
+                                <Typography variant="caption" fontWeight={700}>Prepared By (Accounts Executive)</Typography>
+                            </Box>
+                            <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="body2" fontWeight={700}>___________________________________</Typography>
+                                <Typography variant="caption" fontWeight={700}>Audited & Verified By (Chartered Accountant / CFO)</Typography>
+                            </Box>
+                        </Stack>
+                    </Box>
                 </CardContent>
             </GlassCard>
 
