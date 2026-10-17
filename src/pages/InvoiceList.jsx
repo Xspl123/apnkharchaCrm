@@ -203,9 +203,6 @@ const InvoiceList = () => {
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [ewayModal, setEwayModal] = useState({ open: false, invoice: null });
     const [gstType, setGstType] = useState('intra');
-    const location = useLocation();
-
-    
     const [, setActiveStep] = useState(0);
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('all');
