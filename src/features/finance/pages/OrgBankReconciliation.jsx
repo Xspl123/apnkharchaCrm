@@ -476,6 +476,25 @@ export default function OrgBankReconciliation() {
 
     return (
         <Container maxWidth="xl" sx={{ py: 3 }}>
+            {/* Hide sidebar/navbar in print & expand to full width A4 */}
+            <style>{`
+                @media print {
+                    .MuiDrawer-root, .app-sidebar__drawer, .MuiAppBar-root, header, nav, .no-print, button, input {
+                        display: none !important;
+                    }
+                    body, main, .MuiContainer-root {
+                        margin: 0 !important;
+                        padding: 10px !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        background: #fff !important;
+                    }
+                    .MuiPaper-root, .MuiCard-root {
+                        box-shadow: none !important;
+                        border: 1px solid #cbd5e1 !important;
+                    }
+                }
+            `}</style>
             {/* Top Action Bar with 3 Distinct Buttons */}
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2} sx={{ mb: 3 }}>
                 <Box>
