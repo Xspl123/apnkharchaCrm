@@ -14,6 +14,8 @@ import {
     reviseQuotation,
 } from '../state/quotationSlice';
 import { getProducts } from '../../inventory/state/inventorySlice';
+import { getInvoices } from '../../../redux/features/invoiceSlice';
+import { getClients } from '../../../redux/features/clientSlice';
 import {
     Box, Card, CardContent, Typography, Button, TextField,
     Dialog, DialogTitle, DialogContent, DialogActions,
@@ -201,6 +203,8 @@ export default function LeadDetail() {
     const { campaigns } = useSelector((s) => s.campaigns);
     const { quotations = [], actionLoading: quotationSaving } = useSelector((s) => s.quotations || {});
     const { products = [] } = useSelector((s) => s.inventory || {});
+    const { invoices = [] } = useSelector((s) => s.invoices || {});
+    const { clients = [] } = useSelector((s) => s.clients || {});
 
     const [tab,           setTab]           = useState(0);
     const [statusDialog,  setStatusDialog]  = useState(false);
@@ -235,6 +239,8 @@ export default function LeadDetail() {
     useEffect(() => {
         dispatch(getLeadById(id));
         dispatch(getCampaigns());
+        dispatch(getInvoices());
+        dispatch(getClients());
     }, [dispatch, id]);
 
     useEffect(() => {
@@ -244,6 +250,30 @@ export default function LeadDetail() {
     if (isLoading || !lead) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
     }
+
+    const linkedClient = useMemo(() => {
+        if (!lead || !Array.isArray(clients)) return null;
+        return clients.find((c) => {
+            if (lead.client_id && String(c.id) === String(lead.client_id)) return true;
+            const leadComp = (lead.company_name || '').toLowerCase().trim();
+            const clientComp = (c.company_name || c.name || '').toLowerCase().trim();
+            if (leadComp && clientComp && leadComp === clientComp) return true;
+            if (lead.email && c.email && lead.email.toLowerCase() === c.email.toLowerCase()) return true;
+            if (lead.phone && c.phone && lead.phone.replace(/[^0-9]/g, '') === c.phone.replace(/[^0-9]/g, '')) return true;
+            return false;
+        });
+    }, [lead, clients]);
+
+    const linkedInvoices = useMemo(() => {
+        if (!lead || !Array.isArray(invoices)) return [];
+        return invoices.filter((inv) => {
+            if (linkedClient && String(inv.client_id || inv.client?.id) === String(linkedClient.id)) return true;
+            const leadComp = (lead.company_name || '').toLowerCase().trim();
+            const invComp = (inv.client?.company_name || '').toLowerCase().trim();
+            if (leadComp && invComp && leadComp === invComp) return true;
+            return false;
+        });
+    }, [lead, invoices, linkedClient]);
 
     const sc = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new;
     const createdDate = lead.created_at ? new Date(lead.created_at) : null;
@@ -339,9 +369,13 @@ export default function LeadDetail() {
         email: lead.email || '',
     }).toString();
     const moduleLinks = [
-        { label: 'Convert to Client', path: `/clients?${conversionQuery}`, icon: <GroupsIcon fontSize="small" /> },
+        linkedClient
+            ? { label: `Client: ${linkedClient.company_name || linkedClient.name} ✅`, path: `/clients`, icon: <GroupsIcon fontSize="small" sx={{ color: '#16a34a' }} /> }
+            : { label: 'Convert to Client', path: `/clients?${conversionQuery}`, icon: <GroupsIcon fontSize="small" /> },
         { label: 'Create Company', path: `/companies?${conversionQuery}`, icon: <BusinessIcon fontSize="small" /> },
-        { label: 'Invoice', path: `/invoices?${conversionQuery}`, icon: <ReceiptLongIcon fontSize="small" /> },
+        linkedInvoices.length > 0
+            ? { label: `Invoice: ${linkedInvoices[0].invoice_no} (${linkedInvoices[0].status?.toUpperCase()})`, path: `/invoices?search=${encodeURIComponent(linkedInvoices[0].invoice_no)}`, icon: <ReceiptLongIcon fontSize="small" sx={{ color: linkedInvoices[0].status === 'paid' ? '#16a34a' : '#0284c7' }} /> }
+            : { label: 'Invoice', path: `/invoices?${conversionQuery}`, icon: <ReceiptLongIcon fontSize="small" /> },
         { label: 'Campaigns', path: '/crm/campaigns', icon: <AccountTreeIcon fontSize="small" /> },
     ];
     const linkedCampaigns = getLeadCampaignItems(lead);
@@ -1039,9 +1073,14 @@ export default function LeadDetail() {
                                         <Typography fontWeight={700}>Commercial Readiness</Typography>
                                     </Stack>
                                     <Stack spacing={1}>
-                                        <Chip label={lead.status === 'quotation_sent' || lead.status === 'negotiation' || lead.status === 'po_received' || lead.status === 'invoice_generated' ? 'Quotation stage reached' : 'Quotation not linked yet'} sx={{ justifyContent: 'flex-start', bgcolor: '#eff6ff', color: '#1d4ed8' }} />
+                                        <Chip label={lead.status === 'quotation_sent' || lead.status === 'negotiation' || lead.status === 'po_received' || lead.status === 'invoice_generated' || quotations.length > 0 ? 'Quotation stage reached' : 'Quotation not linked yet'} sx={{ justifyContent: 'flex-start', bgcolor: '#eff6ff', color: '#1d4ed8' }} />
                                         <Chip label={lead.status === 'po_received' || lead.status === 'invoice_generated' || lead.status === 'closed_won' ? 'PO / commitment stage reached' : 'PO not confirmed yet'} sx={{ justifyContent: 'flex-start', bgcolor: '#f5f3ff', color: '#7c3aed' }} />
-                                        <Chip label={lead.status === 'invoice_generated' || lead.status === 'closed_won' ? 'Invoice workflow reached' : 'Invoice not linked yet'} sx={{ justifyContent: 'flex-start', bgcolor: '#ecfeff', color: '#0f766e' }} />
+                                        <Chip label={linkedInvoices.length > 0 || lead.status === 'invoice_generated' || lead.status === 'closed_won' ? `Invoice workflow reached ${linkedInvoices.length > 0 ? `(${linkedInvoices[0].invoice_no})` : ''}` : 'Invoice not linked yet'} sx={{ justifyContent: 'flex-start', bgcolor: '#ecfeff', color: '#0f766e' }} />
+                                        {linkedInvoices.some(i => i.status === 'paid' || Number(i.balance_amount) <= 0) ? (
+                                            <Chip label="🎉 Payment Received & Settled (PAID) ✅" sx={{ justifyContent: 'flex-start', bgcolor: '#dcfce7', color: '#16a34a', fontWeight: 700 }} />
+                                        ) : linkedInvoices.length > 0 ? (
+                                            <Chip label={`⚠️ Payment Pending: Balance Due ₹${Number(linkedInvoices[0].balance_amount || linkedInvoices[0].total_amount || 0).toLocaleString('en-IN')}`} sx={{ justifyContent: 'flex-start', bgcolor: '#fff7ed', color: '#ea580c', fontWeight: 600 }} />
+                                        ) : null}
                                     </Stack>
                                 </MetricCard>
                             </Grid>
@@ -1153,6 +1192,89 @@ export default function LeadDetail() {
                                                             </TableRow>
                                                         );
                                                     }); })()}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                    )}
+                                </MetricCard>
+                            </Grid>
+                            {/* Linked Invoices & Payment Card */}
+                            <Grid item xs={12}>
+                                <MetricCard>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1.5} mb={2}>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <ReceiptLongIcon sx={{ color: '#10b981' }} />
+                                            <Typography fontWeight={700}>Invoices & Payment Status</Typography>
+                                            {linkedInvoices.length > 0 && (
+                                                <Chip label={`${linkedInvoices.length} Invoiced`} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 700, bgcolor: '#ecfdf5', color: '#16a34a' }} />
+                                            )}
+                                        </Stack>
+                                        <Button size="small" variant="outlined" startIcon={<AddIcon />}
+                                            onClick={() => navigate(`/invoices?${conversionQuery}`)}
+                                            sx={{ borderRadius: '10px', textTransform: 'none', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: { xs: 'flex-start', sm: 'center' } }}>
+                                            Create Invoice
+                                        </Button>
+                                    </Stack>
+
+                                    {linkedInvoices.length === 0 ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                            No invoices have been linked to this client yet. Click "Create Invoice" to generate an invoice for this deal.
+                                        </Typography>
+                                    ) : (
+                                        <TableContainer>
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell sx={{ fontWeight: 700 }}>Invoice #</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }} align="right">Invoice Amount</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }} align="right">Balance Due</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700 }} align="right">Action</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {linkedInvoices.map((inv) => {
+                                                        const isPaid = inv.status === 'paid' || Number(inv.balance_amount || 0) <= 0;
+                                                        const isPartial = inv.status === 'partial' || (Number(inv.paid_amount || 0) > 0 && Number(inv.balance_amount || 0) > 0);
+                                                        const stStyle = isPaid
+                                                            ? { color: '#16a34a', bg: '#dcfce7', label: 'PAID' }
+                                                            : isPartial
+                                                            ? { color: '#f97316', bg: '#fff7ed', label: 'PARTIAL' }
+                                                            : { color: '#dc2626', bg: '#fee2e2', label: 'UNPAID' };
+
+                                                        return (
+                                                            <TableRow key={inv.id} hover>
+                                                                <TableCell>
+                                                                    <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a' }}>
+                                                                        {inv.invoice_no}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell>{inv.invoice_date || 'N/A'}</TableCell>
+                                                                <TableCell>
+                                                                    <Chip label={stStyle.label} size="small"
+                                                                        sx={{ bgcolor: stStyle.bg, color: stStyle.color, fontWeight: 800, fontSize: 11 }} />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Typography variant="body2" fontWeight={700}>
+                                                                        ₹{Number(inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Typography variant="body2" fontWeight={700} sx={{ color: isPaid ? '#16a34a' : '#dc2626' }}>
+                                                                        ₹{Number(inv.balance_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Button size="small" variant="text"
+                                                                        onClick={() => navigate(`/invoices?search=${encodeURIComponent(inv.invoice_no)}`)}
+                                                                        sx={{ textTransform: 'none', fontWeight: 600 }}>
+                                                                        View Invoice ➔
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
                                                 </TableBody>
                                             </Table>
                                         </TableContainer>
